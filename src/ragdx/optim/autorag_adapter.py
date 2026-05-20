@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from ragdx.schemas.models import OptimizationExperiment, ToolRunResult
 
 
 class AutoRAGAdapter:
-    def build_search_spec(self, experiment: OptimizationExperiment, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def build_search_spec(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> dict[str, Any]:
         retriever = parameters.get("retriever", "hybrid")
         reranker = parameters.get("reranker", "none")
         return {
@@ -38,7 +38,7 @@ class AutoRAGAdapter:
             "search_parameters": parameters,
         }
 
-    def run(self, experiment: OptimizationExperiment, parameters: Dict[str, Any]) -> ToolRunResult:
+    def run(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> ToolRunResult:
         return ToolRunResult(
             tool="autorag",
             success=True,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Dict, Optional
+from collections.abc import Callable
 
 from ragdx.config import LLMSettings
 from ragdx.errors import LLMConfigError
@@ -12,8 +12,7 @@ from ragdx.llm.providers.azure_provider import AzureOpenAIProvider
 from ragdx.llm.providers.ollama_provider import OllamaProvider
 from ragdx.llm.providers.openai_provider import OpenAIProvider
 
-
-DEFAULT_MODELS: Dict[str, str] = {
+DEFAULT_MODELS: dict[str, str] = {
     "openai": OpenAIProvider.default_model,
     "anthropic": AnthropicProvider.default_model,
     "azure": AzureOpenAIProvider.default_model,
@@ -68,7 +67,7 @@ def _ollama_factory(settings: LLMSettings) -> LLMProvider:
     )
 
 
-_REGISTRY: Dict[str, ProviderFactory] = {
+_REGISTRY: dict[str, ProviderFactory] = {
     "openai": _openai_factory,
     "anthropic": _anthropic_factory,
     "azure": _azure_factory,
@@ -88,7 +87,7 @@ def list_providers() -> list[str]:
     return sorted(_REGISTRY)
 
 
-def build_provider(settings: Optional[LLMSettings] = None) -> LLMProvider:
+def build_provider(settings: LLMSettings | None = None) -> LLMProvider:
     """Instantiate the LLM provider selected by ``settings``.
 
     If ``settings`` is omitted, the active environment is read via
@@ -104,7 +103,7 @@ def build_provider(settings: Optional[LLMSettings] = None) -> LLMProvider:
     return factory(settings)
 
 
-def get_llm_callable(settings: Optional[LLMSettings] = None) -> LLMCallable:
+def get_llm_callable(settings: LLMSettings | None = None) -> LLMCallable:
     """Return a ``Callable[[str], str]`` ready to plug into ragdx engines."""
 
     return build_provider(settings)

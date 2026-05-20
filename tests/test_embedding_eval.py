@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from ragdx.engines.embedding_eval import EmbeddingEvaluator
 from ragdx.schemas.models import DatasetRecord
 

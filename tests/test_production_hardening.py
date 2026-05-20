@@ -10,11 +10,10 @@ Covers:
 
 from __future__ import annotations
 
-import json
 import logging
 import threading
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -237,7 +236,7 @@ def _toy_pipeline_factory(**params: Any):
     with a configurable token-dropping probability based on top_k."""
     keep_ratio = min(1.0, params.get("top_k", 6) / 8.0)
 
-    def call(record: DatasetRecord) -> Dict[str, Any]:
+    def call(record: DatasetRecord) -> dict[str, Any]:
         tokens = (record.ground_truth or "").split()
         keep = max(1, int(len(tokens) * keep_ratio))
         return {

@@ -1,4 +1,3 @@
-import os
 
 from ragdx.optim.executor import OptimizationExecutor
 from ragdx.optim.planner import OptimizationPlanner

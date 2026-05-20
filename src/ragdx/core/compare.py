@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from ragdx.schemas.models import EvaluationResult, MetricComparison
 
-
 LOWER_IS_BETTER = {"noise_sensitivity", "hallucination"}
 
 

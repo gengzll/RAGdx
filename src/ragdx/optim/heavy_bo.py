@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ragdx.core.thresholds import LOWER_IS_BETTER
 from ragdx.schemas.models import OptimizationExperiment, OptimizationTrial
@@ -38,21 +38,21 @@ from ragdx.schemas.models import OptimizationExperiment, OptimizationTrial
 
 @dataclass
 class HeavyBOSuggestion:
-    parameters: Dict[str, Any]
-    trial_key: Optional[str] = None
+    parameters: dict[str, Any]
+    trial_key: str | None = None
     backend: str = "internal"
 
 
 class HeavyBOBackend:
     def __init__(self):
-        self._state: Dict[str, Any] = {}
+        self._state: dict[str, Any] = {}
 
-    def suggest(self, backend: str, experiment: OptimizationExperiment, candidates: List[Dict[str, Any]], trials: List[OptimizationTrial]) -> HeavyBOSuggestion | None:
+    def suggest(self, backend: str, experiment: OptimizationExperiment, candidates: list[dict[str, Any]], trials: list[OptimizationTrial]) -> HeavyBOSuggestion | None:
         if backend == "ax":
             return self._suggest_ax(experiment, candidates, trials)
         return None
 
-    def _suggest_ax(self, experiment: OptimizationExperiment, candidates: List[Dict[str, Any]], trials: List[OptimizationTrial]) -> HeavyBOSuggestion | None:
+    def _suggest_ax(self, experiment: OptimizationExperiment, candidates: list[dict[str, Any]], trials: list[OptimizationTrial]) -> HeavyBOSuggestion | None:
         try:
             from ax.service.ax_client import AxClient
             from ax.service.utils.instantiation import ObjectiveProperties

@@ -6,8 +6,6 @@ pulled in by this module — only ``httpx`` is required (already common).
 
 from __future__ import annotations
 
-from typing import Optional
-
 from ragdx.errors import DependencyError, LLMError
 from ragdx.llm.base import LLMProvider
 from ragdx.utils.logging import get_logger
@@ -33,10 +31,10 @@ class OllamaProvider(LLMProvider):
     def __init__(
         self,
         *,
-        host: Optional[str] = None,
-        model: Optional[str] = None,
+        host: str | None = None,
+        model: str | None = None,
         temperature: float = 0.0,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
         timeout: float = 60.0,
     ) -> None:
         super().__init__(model=model, temperature=temperature, max_tokens=max_tokens, timeout=timeout)

@@ -16,7 +16,8 @@ omitted (which in turn rely on ``OPENAI_API_KEY``).
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 from ragdx.core.normalization import RAGAS_MAP
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
@@ -59,7 +60,7 @@ class RagasAdapter:
     # ------------------------------------------------------------------ #
     # Real ragas evaluation                                               #
     # ------------------------------------------------------------------ #
-    def _default_metric_modules(self) -> List[Any] | None:
+    def _default_metric_modules(self) -> list[Any] | None:
         """Best-effort import of the most common ragas metrics.
 
         Returns ``None`` if ragas is not installed or none of the standard
@@ -71,7 +72,7 @@ class RagasAdapter:
             logger.warning("ragas metrics import failed: %s", exc)
             return None
 
-        chosen: List[Any] = []
+        chosen: list[Any] = []
         for attr in (
             "context_precision",
             "context_recall",
@@ -143,7 +144,7 @@ class RagasAdapter:
             else:
                 raise RuntimeError(
                     "Unable to extract scores from ragas result; install pandas or upgrade ragas."
-                )
+                ) from None
 
         out = self.normalize_scores(raw_scores)
         out.metadata.update(

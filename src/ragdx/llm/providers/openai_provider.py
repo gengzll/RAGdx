@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from ragdx.errors import DependencyError, LLMConfigError, LLMError
 from ragdx.llm.base import LLMProvider
 from ragdx.utils.logging import get_logger
@@ -31,11 +29,11 @@ class OpenAIProvider(LLMProvider):
     def __init__(
         self,
         *,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
         temperature: float = 0.0,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
         timeout: float = 60.0,
     ) -> None:
         super().__init__(model=model, temperature=temperature, max_tokens=max_tokens, timeout=timeout)
@@ -68,7 +66,7 @@ class OpenAIProvider(LLMProvider):
             if self.max_tokens is not None:
                 kwargs["max_tokens"] = self.max_tokens
             response = self._client.chat.completions.create(**kwargs)
-        except Exception as exc:  # noqa: BLE001 - any SDK error becomes LLMError
+        except Exception as exc:
             raise LLMError(f"OpenAI chat.completions call failed: {exc}") from exc
         try:
             content = response.choices[0].message.content

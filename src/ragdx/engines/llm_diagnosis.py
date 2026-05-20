@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Callable, Dict, List
+from collections.abc import Callable
+from typing import Any
 
 from ragdx.errors import LLMError
 from ragdx.schemas.models import DiagnosisReport, EvaluationResult
@@ -124,9 +125,9 @@ def _clip_confidence(value: Any) -> float:
     return max(0.0, min(1.0, f))
 
 
-def _normalize_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_payload(data: dict[str, Any]) -> dict[str, Any]:
     out = dict(data)
-    hypotheses: List[Dict[str, Any]] = []
+    hypotheses: list[dict[str, Any]] = []
     for raw in data.get("hypotheses", []) or []:
         if not isinstance(raw, dict):
             continue
@@ -136,7 +137,7 @@ def _normalize_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         item["confidence"] = _clip_confidence(item.get("confidence", 0.5))
         hypotheses.append(item)
     out["hypotheses"] = hypotheses
-    causal: List[Dict[str, Any]] = []
+    causal: list[dict[str, Any]] = []
     for raw in data.get("causal_signals", []) or []:
         if not isinstance(raw, dict):
             continue
@@ -150,7 +151,7 @@ def _normalize_payload(data: Dict[str, Any]) -> Dict[str, Any]:
 class LLMDiagnosisExplainer:
     def __init__(
         self,
-        llm_callable: Callable[[str], str | Dict[str, Any]],
+        llm_callable: Callable[[str], str | dict[str, Any]],
         prompt_template: str = DEFAULT_REFINE_PROMPT,
         summary_prompt_template: str = DEFAULT_SUMMARIZE_BOTH_PROMPT,
     ):
@@ -161,7 +162,7 @@ class LLMDiagnosisExplainer:
         self.summary_prompt_template = summary_prompt_template
 
     @staticmethod
-    def _coerce_json(raw: str | Dict[str, Any]) -> Dict[str, Any]:
+    def _coerce_json(raw: str | dict[str, Any]) -> dict[str, Any]:
         if isinstance(raw, dict):
             return raw
         if not isinstance(raw, str):
@@ -179,10 +180,10 @@ class LLMDiagnosisExplainer:
                     raise LLMError(f"LLM response was not valid JSON: {exc}") from exc
             raise LLMError("LLM response did not contain a JSON object.") from None
 
-    def _call(self, prompt: str) -> Dict[str, Any]:
+    def _call(self, prompt: str) -> dict[str, Any]:
         try:
             raw = self.llm_callable(prompt)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise LLMError(f"LLM call failed: {exc}") from exc
         return self._coerce_json(raw)
 
@@ -205,7 +206,7 @@ class LLMDiagnosisExplainer:
         data = _normalize_payload(self._call(prompt))
         try:
             return DiagnosisReport(**data)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise LLMError(f"LLM diagnosis output failed validation: {exc}") from exc
 
     def summarize_both(
@@ -232,8 +233,8 @@ class LLMDiagnosisExplainer:
         data = _normalize_payload(self._call(prompt))
         try:
             return DiagnosisReport(**data)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise LLMError(f"LLM synthesis output failed validation: {exc}") from exc
 
 
-__all__ = ["LLMDiagnosisExplainer", "DEFAULT_REFINE_PROMPT", "DEFAULT_SUMMARIZE_BOTH_PROMPT"]
+__all__ = ["DEFAULT_REFINE_PROMPT", "DEFAULT_SUMMARIZE_BOTH_PROMPT", "LLMDiagnosisExplainer"]

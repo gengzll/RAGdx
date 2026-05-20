@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from ragdx.schemas.models import OptimizationExperiment, ToolRunResult
 
 
 class LlamaIndexAdapter:
-    def build_runner_spec(self, experiment: OptimizationExperiment, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def build_runner_spec(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> dict[str, Any]:
         return {
             "framework": "llamaindex",
             "entrypoint": "examples/run_llamaindex_trial.py",
@@ -29,7 +29,7 @@ class LlamaIndexAdapter:
             "search_parameters": parameters,
         }
 
-    def run(self, experiment: OptimizationExperiment, parameters: Dict[str, Any]) -> ToolRunResult:
+    def run(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> ToolRunResult:
         return ToolRunResult(
             tool="llamaindex",
             success=True,

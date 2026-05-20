@@ -19,7 +19,8 @@ they emit the same key).
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, Optional
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 from ragdx.engines.embedding_eval import EmbeddingEvaluator
 from ragdx.engines.ragas_adapter import RagasAdapter
@@ -30,9 +31,9 @@ from ragdx.schemas.models import DatasetRecord, EvaluationResult
 class UnifiedEvaluator:
     def __init__(
         self,
-        ragas_adapter: Optional[RagasAdapter] = None,
-        ragchecker_adapter: Optional[RAGCheckerAdapter] = None,
-        embedding_evaluator: Optional[EmbeddingEvaluator] = None,
+        ragas_adapter: RagasAdapter | None = None,
+        ragchecker_adapter: RAGCheckerAdapter | None = None,
+        embedding_evaluator: EmbeddingEvaluator | None = None,
     ):
         self.ragas_adapter = ragas_adapter or RagasAdapter()
         self.ragchecker_adapter = ragchecker_adapter or RAGCheckerAdapter()
@@ -58,9 +59,9 @@ class UnifiedEvaluator:
         use_embedding: bool = False,
         *,
         run_ragas: bool = False,
-        ragas_kwargs: Optional[Mapping[str, Any]] = None,
+        ragas_kwargs: Mapping[str, Any] | None = None,
         run_ragchecker: bool = False,
-        ragchecker_kwargs: Optional[Mapping[str, Any]] = None,
+        ragchecker_kwargs: Mapping[str, Any] | None = None,
     ) -> EvaluationResult:
         """Run the configured evaluators and return a merged result.
 

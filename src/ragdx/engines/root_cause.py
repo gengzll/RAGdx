@@ -42,13 +42,19 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from statistics import mean
-from typing import Dict, List, Tuple
 
 import networkx as nx
 
 from ragdx.core.thresholds import DEFAULT_THRESHOLDS, LOWER_IS_BETTER
+from ragdx.schemas.models import (
+    CausalEdge,
+    CausalGraph,
+    CausalSignal,
+    DiagnosisHypothesis,
+    DiagnosisReport,
+    EvaluationResult,
+)
 from ragdx.storage.run_store import RunStore
-from ragdx.schemas.models import CausalEdge, CausalGraph, CausalSignal, DiagnosisHypothesis, DiagnosisReport, EvaluationResult
 
 
 def _sigmoid(x: float) -> float:
@@ -61,7 +67,7 @@ def _logit(p: float) -> float:
 
 
 class RuleBasedRootCauseAnalyzer:
-    def __init__(self, thresholds: Dict[str, float] | None = None, root: str = '.ragdx'):
+    def __init__(self, thresholds: dict[str, float] | None = None, root: str = '.ragdx'):
         self.thresholds = thresholds or DEFAULT_THRESHOLDS.copy()
         self.store = RunStore(root)
         self.base_priors = {
@@ -118,8 +124,8 @@ class RuleBasedRootCauseAnalyzer:
             return round(max(0.0, value - target), 4)
         return round(max(0.0, target - value), 4)
 
-    def _metric_gaps(self, result: EvaluationResult) -> Dict[str, float]:
-        gaps: Dict[str, float] = {}
+    def _metric_gaps(self, result: EvaluationResult) -> dict[str, float]:
+        gaps: dict[str, float] = {}
         for bucket in (result.retrieval, result.generation, result.e2e):
             for metric, value in bucket.items():
                 gap = self._gap(metric, value)
@@ -127,8 +133,8 @@ class RuleBasedRootCauseAnalyzer:
                     gaps[metric] = gap
         return dict(sorted(gaps.items(), key=lambda kv: kv[1], reverse=True))
 
-    def _agreement_map(self, result: EvaluationResult) -> Dict[str, float]:
-        grouped: Dict[str, List[float]] = defaultdict(list)
+    def _agreement_map(self, result: EvaluationResult) -> dict[str, float]:
+        grouped: dict[str, list[float]] = defaultdict(list)
         for item in result.evaluator_scores:
             grouped[item.metric].append(item.score)
         agreement = {c.metric: c.agreement_score for c in result.calibrations}
@@ -140,7 +146,7 @@ class RuleBasedRootCauseAnalyzer:
                 agreement.setdefault(metric, round(max(0.0, 1.0 - spread), 4))
         return agreement
 
-    def _trace_summary(self, result: EvaluationResult) -> Dict[str, float]:
+    def _trace_summary(self, result: EvaluationResult) -> dict[str, float]:
         if not result.traces:
             return {}
         chunk_counts = [len(t.retrieved_chunks) for t in result.traces if t.retrieved_chunks is not None]
@@ -159,7 +165,7 @@ class RuleBasedRootCauseAnalyzer:
             'verify_span_rate': round(sum(1 for t in result.traces if any(s.kind == 'verify' for s in t.spans)) / max(len(result.traces), 1), 4),
         }
 
-    def _feedback_summary(self, result: EvaluationResult) -> Dict[str, float]:
+    def _feedback_summary(self, result: EvaluationResult) -> dict[str, float]:
         if not result.feedback_events:
             return {}
         total = len(result.feedback_events)
@@ -172,11 +178,11 @@ class RuleBasedRootCauseAnalyzer:
             'policy_rate': round(sum(1 for e in result.feedback_events if e.kind == 'policy') / total, 4),
         }
 
-    def _historical_priors(self) -> Dict[str, float]:
+    def _historical_priors(self) -> dict[str, float]:
         priors = self.store.load_causal_priors(self.base_priors)
         return {k: round(min(0.95, max(0.01, float(v))), 4) for k, v in priors.items()}
 
-    def _adaptive_priors(self, result: EvaluationResult) -> Dict[str, float]:
+    def _adaptive_priors(self, result: EvaluationResult) -> dict[str, float]:
         priors = dict(self._historical_priors())
         feedback = self._feedback_summary(result)
         trace = self._trace_summary(result)
@@ -192,7 +198,7 @@ class RuleBasedRootCauseAnalyzer:
             priors['corpus_chunking_defect'] = round(min(0.95, priors['corpus_chunking_defect'] + 0.04), 4)
         return priors
 
-    def _trace_node_deltas(self, result: EvaluationResult) -> Dict[str, float]:
+    def _trace_node_deltas(self, result: EvaluationResult) -> dict[str, float]:
         deltas = {node: 0.0 for node in self.base_priors}
         if not result.traces:
             return deltas
@@ -217,7 +223,7 @@ class RuleBasedRootCauseAnalyzer:
         n = max(len(result.traces), 1)
         return {k: round(v / n, 4) for k, v in deltas.items()}
 
-    def _node_evidence(self, node: str, result: EvaluationResult, gaps: Dict[str, float], priors: Dict[str, float], trace_deltas: Dict[str, float]) -> Tuple[float, List[str]]:
+    def _node_evidence(self, node: str, result: EvaluationResult, gaps: dict[str, float], priors: dict[str, float], trace_deltas: dict[str, float]) -> tuple[float, list[str]]:
         cp = result.score('context_precision', 1.0) or 1.0
         cr = result.score('context_recall', 1.0) or 1.0
         faith = result.score('faithfulness', 1.0) or 1.0
@@ -231,7 +237,7 @@ class RuleBasedRootCauseAnalyzer:
         avg_agreement = mean(agreement.values()) if agreement else 1.0
         trace = self._trace_summary(result)
 
-        contributions: List[Tuple[float, str]] = []
+        contributions: list[tuple[float, str]] = []
         def add(delta: float, reason: str) -> None:
             if abs(delta) > 1e-9:
                 contributions.append((delta, reason))
@@ -293,11 +299,11 @@ class RuleBasedRootCauseAnalyzer:
         evidence = [reason for _, reason in sorted(contributions, key=lambda x: abs(x[0]), reverse=True)[:6]]
         return score, evidence
 
-    def _build_causal_graph(self, result: EvaluationResult, gaps: Dict[str, float]) -> CausalGraph:
+    def _build_causal_graph(self, result: EvaluationResult, gaps: dict[str, float]) -> CausalGraph:
         priors = self._adaptive_priors(result)
         trace_deltas = self._trace_node_deltas(result)
-        logit_scores: Dict[str, float] = {}
-        evidence_map: Dict[str, List[str]] = {}
+        logit_scores: dict[str, float] = {}
+        evidence_map: dict[str, list[str]] = {}
         for node in self.graph.nodes:
             logit_scores[node], evidence_map[node] = self._node_evidence(node, result, gaps, priors, trace_deltas)
 
@@ -345,10 +351,10 @@ class RuleBasedRootCauseAnalyzer:
         causal_graph = self._build_causal_graph(result, gaps)
         causal_signals = causal_graph.nodes
 
-        hypotheses: List[DiagnosisHypothesis] = []
-        candidates: List[str] = []
-        actions: List[str] = []
-        disambiguation: List[str] = []
+        hypotheses: list[DiagnosisHypothesis] = []
+        candidates: list[str] = []
+        actions: list[str] = []
+        disambiguation: list[str] = []
 
         if cr < self.thresholds['context_recall'] and cp >= self.thresholds['context_precision']:
             hypotheses.append(DiagnosisHypothesis(component='retrieval', root_cause='evidence miss despite acceptable retrieval precision', severity='high', confidence=0.86, evidence=[f"context_recall={cr:.2f} is below target {self.thresholds['context_recall']:.2f}", f"context_precision={cp:.2f} is not the primary bottleneck", f"entity recall proxy={cer:.2f} suggests missing supporting facts"], recommended_actions=['Increase recall with hybrid retrieval or larger candidate pool before reranking.', 'Tune chunk size, overlap, and document segmentation.', 'Inspect query rewriting and metadata filters.']))

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 
 def save_json(data: Any, path: str | Path) -> str:
@@ -52,7 +52,7 @@ def _fmt_value(v: Any) -> str:
     return str(v)
 
 
-def summarize_target_spec(metric: str, spec: Dict[str, Any]) -> str:
+def summarize_target_spec(metric: str, spec: dict[str, Any]) -> str:
     direction = spec.get("direction", "monitor")
     mode = spec.get("mode", "target")
     baseline = spec.get("baseline_value")
@@ -72,7 +72,7 @@ def summarize_target_spec(metric: str, spec: Dict[str, Any]) -> str:
     return "; ".join(bits)
 
 
-def summarize_experiment(experiment: Dict[str, Any]) -> str:
+def summarize_experiment(experiment: dict[str, Any]) -> str:
     params = experiment.get("parameters", {})
     target_specs = params.get("target_specs", {})
     objective_weights = params.get("objective_weights", experiment.get("objectives", {}))
@@ -105,7 +105,7 @@ def summarize_experiment(experiment: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def summarize_plan(plan: Dict[str, Any]) -> str:
+def summarize_plan(plan: dict[str, Any]) -> str:
     lines = [f"Objective metric: {plan.get('objective_metric', '')}"]
     rationale = plan.get("rationale", [])
     if rationale:

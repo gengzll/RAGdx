@@ -74,7 +74,7 @@ from ragdx.schemas.models import (
 )
 from ragdx.storage.run_store import RunStore
 
-__all__ = [
+__all__ = [  # noqa: RUF022 — grouped by category, not alphabetical
     "__version__",
     # config
     "Settings",

@@ -28,7 +28,7 @@ _ROOT_NAME = "ragdx"
 
 
 class _JsonFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:  # noqa: D401
+    def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
             "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S%z"),
             "level": record.levelname,

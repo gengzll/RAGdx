@@ -45,7 +45,7 @@ import shlex
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from uuid import uuid4
 
 import yaml
@@ -115,7 +115,7 @@ class OptimizationExecutor:
         root: str | Path = ".ragdx",
         *,
         strict_execute: bool | None = None,
-        in_process_runners: Dict[str, Any] | None = None,
+        in_process_runners: dict[str, Any] | None = None,
     ):
         self.root = Path(root)
         self.dspy = DSPyAdapter()
@@ -127,7 +127,7 @@ class OptimizationExecutor:
         if strict_execute is None:
             strict_execute = _env_bool("RAGDX_STRICT_EXECUTE", default=True)
         self.strict_execute = strict_execute
-        self.in_process_runners: Dict[str, Any] = dict(in_process_runners or {})
+        self.in_process_runners: dict[str, Any] = dict(in_process_runners or {})
 
     def _timestamp(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -135,25 +135,25 @@ class OptimizationExecutor:
     def _checkpoint(self, session: OptimizationSession) -> None:
         self.store.save_session(session)
 
-    def _enumerate_candidates(self, search_space: Dict[str, List[Any]], limit: int) -> List[Dict[str, Any]]:
+    def _enumerate_candidates(self, search_space: dict[str, list[Any]], limit: int) -> list[dict[str, Any]]:
         keys = list(search_space.keys())
         values = [search_space[k] for k in keys]
         products = list(itertools.product(*values))
-        candidates = [dict(zip(keys, combo)) for combo in products]
+        candidates = [dict(zip(keys, combo, strict=True)) for combo in products]
         if len(candidates) <= limit:
             return candidates
         rng = random.Random(7)
         rng.shuffle(candidates)
         return candidates[: max(limit * 6, limit)]
 
-    def _hash_score(self, payload: Dict[str, Any]) -> float:
+    def _hash_score(self, payload: dict[str, Any]) -> float:
         text = json.dumps(payload, sort_keys=True)
         digest = hashlib.md5(text.encode("utf-8")).hexdigest()
         return int(digest[:8], 16) / 0xFFFFFFFF
 
-    def _simulate_objectives(self, baseline: EvaluationResult, experiment: OptimizationExperiment, params: Dict[str, Any]) -> Dict[str, float]:
+    def _simulate_objectives(self, baseline: EvaluationResult, experiment: OptimizationExperiment, params: dict[str, Any]) -> dict[str, float]:
         metric_names = set(experiment.objectives) | {k[:-4] for k in experiment.constraints if k.endswith("_max")} | {k[:-4] for k in experiment.constraints if k.endswith("_min")}
-        metrics: Dict[str, float] = {}
+        metrics: dict[str, float] = {}
         noise = self._hash_score({"exp": experiment.name, "params": params})
         for metric in metric_names:
             default_base = 0.2 if metric in LOWER_IS_BETTER else 0.65
@@ -210,8 +210,8 @@ class OptimizationExecutor:
             metrics[metric] = round(candidate, 4)
         return metrics
 
-    def _evaluate_constraints(self, metrics: Dict[str, float], constraints: Dict[str, float]) -> tuple[bool, Dict[str, float], float]:
-        violations: Dict[str, float] = {}
+    def _evaluate_constraints(self, metrics: dict[str, float], constraints: dict[str, float]) -> tuple[bool, dict[str, float], float]:
+        violations: dict[str, float] = {}
         penalty = 0.0
         for name, threshold in constraints.items():
             if name.endswith("_max"):
@@ -234,7 +234,7 @@ class OptimizationExecutor:
                     penalty += deficit
         return len(violations) == 0, violations, round(penalty, 4)
 
-    def _utility(self, metrics: Dict[str, float], objectives: Dict[str, float], constraints: Dict[str, float] | None = None) -> tuple[float, bool, Dict[str, float], float]:
+    def _utility(self, metrics: dict[str, float], objectives: dict[str, float], constraints: dict[str, float] | None = None) -> tuple[float, bool, dict[str, float], float]:
         score = 0.0
         total = 0.0
         for metric, weight in objectives.items():
@@ -248,7 +248,7 @@ class OptimizationExecutor:
         adjusted = raw if feasible else round(max(0.0, raw - min(0.8, penalty)), 4)
         return adjusted, feasible, violations, penalty
 
-    def _dominates(self, a: Dict[str, float], b: Dict[str, float]) -> bool:
+    def _dominates(self, a: dict[str, float], b: dict[str, float]) -> bool:
         better_or_equal = True
         strictly_better = False
         for metric in set(a) | set(b):
@@ -266,8 +266,8 @@ class OptimizationExecutor:
                     strictly_better = True
         return better_or_equal and strictly_better
 
-    def _pareto_front(self, trials: List[OptimizationTrial], feasible_only: bool = True) -> List[str]:
-        front: List[str] = []
+    def _pareto_front(self, trials: list[OptimizationTrial], feasible_only: bool = True) -> list[str]:
+        front: list[str] = []
         done_trials = [t for t in trials if t.objective_scores and ((t.feasible is True) if feasible_only else True)]
         for trial in done_trials:
             dominated = False
@@ -281,20 +281,20 @@ class OptimizationExecutor:
                 front.append(trial.trial_id)
         return front
 
-    def _objective_reference_point(self, experiment: OptimizationExperiment) -> Dict[str, float]:
+    def _objective_reference_point(self, experiment: OptimizationExperiment) -> dict[str, float]:
         ref = {}
         for metric in experiment.objectives:
             ref[metric] = 1.05 if metric in LOWER_IS_BETTER else -0.05
         return ref
 
-    def _to_max_vector(self, metrics: Dict[str, float], objective_names: List[str]) -> List[float]:
+    def _to_max_vector(self, metrics: dict[str, float], objective_names: list[str]) -> list[float]:
         vec = []
         for metric in objective_names:
             v = float(metrics.get(metric, 0.0))
             vec.append(1.0 - v if metric in LOWER_IS_BETTER else v)
         return vec
 
-    def _hypervolume_2d(self, points: List[List[float]], ref: List[float]) -> float:
+    def _hypervolume_2d(self, points: list[list[float]], ref: list[float]) -> float:
         if not points:
             return 0.0
         pts = sorted(points, key=lambda p: p[0], reverse=True)
@@ -307,7 +307,7 @@ class OptimizationExecutor:
             best_y = y
         return round(hv, 6)
 
-    def _hypervolume(self, trials: List[OptimizationTrial], experiment: OptimizationExperiment, feasible_only: bool = True) -> float:
+    def _hypervolume(self, trials: list[OptimizationTrial], experiment: OptimizationExperiment, feasible_only: bool = True) -> float:
         objective_names = list(experiment.objectives.keys())[:2]
         if len(objective_names) < 2:
             return 0.0
@@ -315,7 +315,7 @@ class OptimizationExecutor:
         ref = [0.0, 0.0]
         return self._hypervolume_2d(points, ref)
 
-    def _build_surrogate_models(self, trials: List[OptimizationTrial], experiment: OptimizationExperiment):
+    def _build_surrogate_models(self, trials: list[OptimizationTrial], experiment: OptimizationExperiment):
         if len(trials) < 4:
             return None
         feature_rows = [t.parameters for t in trials if t.objective_scores]
@@ -337,7 +337,6 @@ class OptimizationExecutor:
             return Pipeline([("pre", pre), ("gp", model)])
 
         models = {}
-        X = feature_rows
         for metric in set(experiment.objectives) | {k[:-4] for k in experiment.constraints if k.endswith("_max")} | {k[:-4] for k in experiment.constraints if k.endswith("_min")}:
             y = [t.objective_scores.get(metric) for t in trials if t.objective_scores and metric in t.objective_scores]
             X_m = [t.parameters for t in trials if t.objective_scores and metric in t.objective_scores]
@@ -348,7 +347,7 @@ class OptimizationExecutor:
             models[metric] = pipe
         return models if models else None
 
-    def _feasibility_probability(self, candidate: Dict[str, Any], models: Dict[str, Any], constraints: Dict[str, float]) -> float:
+    def _feasibility_probability(self, candidate: dict[str, Any], models: dict[str, Any], constraints: dict[str, float]) -> float:
         if not constraints:
             return 1.0
         p = 1.0
@@ -366,9 +365,9 @@ class OptimizationExecutor:
                 p *= 1.0 - _normal_cdf((threshold - mu) / sigma)
         return max(0.0, min(1.0, p))
 
-    def _predicted_objectives(self, candidate: Dict[str, Any], models: Dict[str, Any], objective_names: List[str]) -> tuple[Dict[str, float], Dict[str, float]]:
-        means: Dict[str, float] = {}
-        stds: Dict[str, float] = {}
+    def _predicted_objectives(self, candidate: dict[str, Any], models: dict[str, Any], objective_names: list[str]) -> tuple[dict[str, float], dict[str, float]]:
+        means: dict[str, float] = {}
+        stds: dict[str, float] = {}
         for metric in objective_names:
             model = models.get(metric)
             if model is None:
@@ -380,7 +379,7 @@ class OptimizationExecutor:
             stds[metric] = max(float(std_pred[0]), 1e-6)
         return means, stds
 
-    def _expected_hv_improvement(self, candidate: Dict[str, Any], trials: List[OptimizationTrial], experiment: OptimizationExperiment, models: Dict[str, Any]) -> float:
+    def _expected_hv_improvement(self, candidate: dict[str, Any], trials: list[OptimizationTrial], experiment: OptimizationExperiment, models: dict[str, Any]) -> float:
         objective_names = list(experiment.objectives.keys())[:2]
         if len(objective_names) < 2:
             return 0.0
@@ -393,10 +392,10 @@ class OptimizationExecutor:
             else:
                 optimistic[metric] = min(1.0, means[metric] + 0.5 * stds[metric])
         pseudo = OptimizationTrial(trial_id="pseudo", experiment_name=experiment.name, tool=experiment.tool, strategy=experiment.search_strategy, objective_scores=optimistic, feasible=True)
-        new_hv = self._hypervolume(trials + [pseudo], experiment, feasible_only=True)
+        new_hv = self._hypervolume([*trials, pseudo], experiment, feasible_only=True)
         return max(0.0, new_hv - current_hv)
 
-    def _sample_bayesian(self, candidates: List[Dict[str, Any]], trials: List[OptimizationTrial], experiment: OptimizationExperiment) -> Dict[str, Any]:
+    def _sample_bayesian(self, candidates: list[dict[str, Any]], trials: list[OptimizationTrial], experiment: OptimizationExperiment) -> dict[str, Any]:
         observed = {json.dumps(t.parameters, sort_keys=True): t for t in trials}
         remaining = [c for c in candidates if json.dumps(c, sort_keys=True) not in observed]
         if not remaining:
@@ -434,7 +433,7 @@ class OptimizationExecutor:
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored[0][1]
 
-    def _sample_pareto(self, candidates: List[Dict[str, Any]], trials: List[OptimizationTrial], experiment: OptimizationExperiment) -> Dict[str, Any]:
+    def _sample_pareto(self, candidates: list[dict[str, Any]], trials: list[OptimizationTrial], experiment: OptimizationExperiment) -> dict[str, Any]:
         observed = {json.dumps(t.parameters, sort_keys=True): t for t in trials}
         remaining = [c for c in candidates if json.dumps(c, sort_keys=True) not in observed]
         if not remaining:
@@ -457,7 +456,7 @@ class OptimizationExecutor:
             return child
         return remaining[0]
 
-    def _write_config(self, session_id: str, experiment: OptimizationExperiment, parameters: Dict[str, Any], trial_id: str) -> str:
+    def _write_config(self, session_id: str, experiment: OptimizationExperiment, parameters: dict[str, Any], trial_id: str) -> str:
         out_dir = self.root / "optimization" / session_id / "configs"
         out_dir.mkdir(parents=True, exist_ok=True)
         path = out_dir / f"{trial_id}_{experiment.tool}.yaml"
@@ -486,14 +485,14 @@ class OptimizationExecutor:
         }
         return mapping.get(tool)
 
-    def _parse_output_metrics(self, output_path: Path, experiment: OptimizationExperiment) -> Dict[str, float]:
+    def _parse_output_metrics(self, output_path: Path, experiment: OptimizationExperiment) -> dict[str, float]:
         if not output_path.exists():
             raise FileNotFoundError(f"Expected output file not found: {output_path}")
         data = json.loads(output_path.read_text(encoding="utf-8"))
         if "objective_scores" in data and isinstance(data["objective_scores"], dict):
             metrics = {k: float(v) for k, v in data["objective_scores"].items()}
         else:
-            metrics: Dict[str, float] = {}
+            metrics: dict[str, float] = {}
             for bucket in ("retrieval", "generation", "e2e"):
                 if isinstance(data.get(bucket), dict):
                     metrics.update({k: float(v) for k, v in data[bucket].items()})
@@ -509,7 +508,7 @@ class OptimizationExecutor:
         self,
         trial: OptimizationTrial,
         experiment: OptimizationExperiment,
-        metrics: Dict[str, float],
+        metrics: dict[str, float],
         note: str,
         *,
         simulated: bool = False,
@@ -687,7 +686,7 @@ class OptimizationExecutor:
         )
         self._checkpoint(session)
 
-        all_trials: List[OptimizationTrial] = []
+        all_trials: list[OptimizationTrial] = []
         completed_experiment_names: set[str] = set()
         for exp in plan.experiments:
             unmet = [dep for dep in exp.depends_on if dep not in completed_experiment_names]
@@ -696,7 +695,7 @@ class OptimizationExecutor:
             session.current_experiment = exp.name
             self._checkpoint(session)
             candidates = self._enumerate_candidates(exp.search_space, exp.max_trials)
-            exp_trials: List[OptimizationTrial] = []
+            exp_trials: list[OptimizationTrial] = []
             for _ in range(exp.max_trials):
                 params = self._sample_bayesian(candidates, exp_trials, exp) if exp.search_strategy == "bayesian" else self._sample_pareto(candidates, exp_trials, exp)
                 trial_id = uuid4().hex[:10]

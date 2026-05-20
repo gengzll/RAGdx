@@ -33,7 +33,8 @@ All models use Pydantic for validation and provide JSON serialization methods.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field, NonNegativeFloat, NonNegativeInt, field_validator, model_validator
 
 # Metrics that are bounded to [0, 1] across ragdx; anything outside is a sign
@@ -47,8 +48,8 @@ _BOUNDED_METRICS = {
 }
 
 
-def _validate_metric_bucket(bucket: Dict[str, float]) -> Dict[str, float]:
-    cleaned: Dict[str, float] = {}
+def _validate_metric_bucket(bucket: dict[str, float]) -> dict[str, float]:
+    cleaned: dict[str, float] = {}
     for name, raw in bucket.items():
         try:
             value = float(raw)
@@ -75,55 +76,55 @@ FeedbackKind = Literal["thumbs_up", "thumbs_down", "user_correction", "escalatio
 
 class DatasetRecord(BaseModel):
     question: str
-    ground_truth: Optional[str] = None
-    answer: Optional[str] = None
-    contexts: List[str] = Field(default_factory=list)
-    reference_contexts: List[str] = Field(default_factory=list)
-    citations: List[int] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    ground_truth: str | None = None
+    answer: str | None = None
+    contexts: list[str] = Field(default_factory=list)
+    reference_contexts: list[str] = Field(default_factory=list)
+    citations: list[int] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class TraceSpan(BaseModel):
     span_id: str
-    parent_span_id: Optional[str] = None
+    parent_span_id: str | None = None
     kind: Literal["query", "retrieve", "rerank", "pack", "generate", "verify", "tool", "judge"] = "query"
     name: str
-    started_at: Optional[str] = None
-    ended_at: Optional[str] = None
-    attributes: Dict[str, Any] = Field(default_factory=dict)
-    events: List[Dict[str, Any]] = Field(default_factory=list)
+    started_at: str | None = None
+    ended_at: str | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class QueryTrace(BaseModel):
     trace_id: str
     question: str
-    answer: Optional[str] = None
-    retrieved_chunks: List[Dict[str, Any]] = Field(default_factory=list)
-    citations: List[Any] = Field(default_factory=list)
-    spans: List[TraceSpan] = Field(default_factory=list)
-    token_usage: Dict[str, float] = Field(default_factory=dict)
-    latency_ms: Optional[float] = None
-    cost_usd: Optional[float] = None
-    labels: Dict[str, Any] = Field(default_factory=dict)
+    answer: str | None = None
+    retrieved_chunks: list[dict[str, Any]] = Field(default_factory=list)
+    citations: list[Any] = Field(default_factory=list)
+    spans: list[TraceSpan] = Field(default_factory=list)
+    token_usage: dict[str, float] = Field(default_factory=dict)
+    latency_ms: float | None = None
+    cost_usd: float | None = None
+    labels: dict[str, Any] = Field(default_factory=dict)
 
 
 class EvaluatorScore(BaseModel):
     evaluator: str
     metric: str
     score: float
-    confidence: Optional[float] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    confidence: float | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class FeedbackEvent(BaseModel):
     feedback_id: str
-    query_id: Optional[str] = None
+    query_id: str | None = None
     kind: FeedbackKind
     severity: Severity = "medium"
-    rating: Optional[float] = None
+    rating: float | None = None
     note: str = ""
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str | None = None
 
 
 class EvaluatorCalibration(BaseModel):
@@ -138,7 +139,7 @@ class CausalSignal(BaseModel):
     component: LayerName
     posterior: float = 0.0
     prior: float = 0.0
-    evidence: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
     recommended_experiment: str = ""
 
     @field_validator("posterior", "prior")
@@ -159,23 +160,23 @@ class CausalEdge(BaseModel):
 
 
 class CausalGraph(BaseModel):
-    nodes: List[CausalSignal] = Field(default_factory=list)
-    edges: List[CausalEdge] = Field(default_factory=list)
+    nodes: list[CausalSignal] = Field(default_factory=list)
+    edges: list[CausalEdge] = Field(default_factory=list)
 
 class EvaluationResult(BaseModel):
-    retrieval: Dict[str, float] = Field(default_factory=dict)
-    generation: Dict[str, float] = Field(default_factory=dict)
-    e2e: Dict[str, float] = Field(default_factory=dict)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    raw_tool_outputs: Dict[str, Any] = Field(default_factory=dict)
-    traces: List[QueryTrace] = Field(default_factory=list)
-    evaluator_scores: List[EvaluatorScore] = Field(default_factory=list)
-    feedback_events: List[FeedbackEvent] = Field(default_factory=list)
-    calibrations: List[EvaluatorCalibration] = Field(default_factory=list)
+    retrieval: dict[str, float] = Field(default_factory=dict)
+    generation: dict[str, float] = Field(default_factory=dict)
+    e2e: dict[str, float] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    raw_tool_outputs: dict[str, Any] = Field(default_factory=dict)
+    traces: list[QueryTrace] = Field(default_factory=list)
+    evaluator_scores: list[EvaluatorScore] = Field(default_factory=list)
+    feedback_events: list[FeedbackEvent] = Field(default_factory=list)
+    calibrations: list[EvaluatorCalibration] = Field(default_factory=list)
 
     @field_validator("retrieval", "generation", "e2e", mode="before")
     @classmethod
-    def _check_metric_bucket(cls, value: Any) -> Dict[str, float]:
+    def _check_metric_bucket(cls, value: Any) -> dict[str, float]:
         if value is None:
             return {}
         if not isinstance(value, dict):
@@ -194,8 +195,8 @@ class DiagnosisHypothesis(BaseModel):
     root_cause: str
     severity: Severity = "medium"
     confidence: float = 0.5
-    evidence: List[str] = Field(default_factory=list)
-    recommended_actions: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+    recommended_actions: list[str] = Field(default_factory=list)
 
     @field_validator("confidence")
     @classmethod
@@ -207,16 +208,16 @@ class DiagnosisHypothesis(BaseModel):
 
 class DiagnosisReport(BaseModel):
     summary: str
-    expected_thresholds: Dict[str, float] = Field(default_factory=dict)
-    metric_gaps: Dict[str, float] = Field(default_factory=dict)
-    hypotheses: List[DiagnosisHypothesis] = Field(default_factory=list)
-    optimization_candidates: List[str] = Field(default_factory=list)
-    priority_actions: List[str] = Field(default_factory=list)
-    causal_signals: List[CausalSignal] = Field(default_factory=list)
+    expected_thresholds: dict[str, float] = Field(default_factory=dict)
+    metric_gaps: dict[str, float] = Field(default_factory=dict)
+    hypotheses: list[DiagnosisHypothesis] = Field(default_factory=list)
+    optimization_candidates: list[str] = Field(default_factory=list)
+    priority_actions: list[str] = Field(default_factory=list)
+    causal_signals: list[CausalSignal] = Field(default_factory=list)
     causal_graph: CausalGraph = Field(default_factory=CausalGraph)
-    evaluator_agreement: Dict[str, float] = Field(default_factory=dict)
+    evaluator_agreement: dict[str, float] = Field(default_factory=dict)
     diagnosis_confidence: float = 0.0
-    disambiguation_actions: List[str] = Field(default_factory=list)
+    disambiguation_actions: list[str] = Field(default_factory=list)
 
 
 class OptimizationExperiment(BaseModel):
@@ -224,19 +225,19 @@ class OptimizationExperiment(BaseModel):
     tool: ToolName
     target_component: LayerName
     description: str
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    objectives: Dict[str, float] = Field(default_factory=dict)
-    search_space: Dict[str, List[Any]] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    objectives: dict[str, float] = Field(default_factory=dict)
+    search_space: dict[str, list[Any]] = Field(default_factory=dict)
     search_strategy: SearchStrategy = "bayesian"
     max_trials: NonNegativeInt = 8
     status: Literal["planned", "running", "done", "failed"] = "planned"
-    baseline_score: Optional[float] = None
-    candidate_score: Optional[float] = None
+    baseline_score: float | None = None
+    candidate_score: float | None = None
     notes: str = ""
-    config_artifacts: List[str] = Field(default_factory=list)
+    config_artifacts: list[str] = Field(default_factory=list)
     stage: OptimizerStage = "joint"
-    constraints: Dict[str, float] = Field(default_factory=dict)
-    depends_on: List[str] = Field(default_factory=list)
+    constraints: dict[str, float] = Field(default_factory=dict)
+    depends_on: list[str] = Field(default_factory=list)
 
     @field_validator("name")
     @classmethod
@@ -247,14 +248,14 @@ class OptimizationExperiment(BaseModel):
 
     @field_validator("objectives")
     @classmethod
-    def _weights_non_negative(cls, value: Dict[str, float]) -> Dict[str, float]:
+    def _weights_non_negative(cls, value: dict[str, float]) -> dict[str, float]:
         for metric, weight in value.items():
             if weight < 0:
                 raise ValueError(f"objective weight for {metric!r} must be >= 0, got {weight}")
         return value
 
     @model_validator(mode="after")
-    def _self_dep(self) -> "OptimizationExperiment":
+    def _self_dep(self) -> OptimizationExperiment:
         if self.name in self.depends_on:
             raise ValueError(f"experiment {self.name!r} cannot depend on itself")
         return self
@@ -262,11 +263,11 @@ class OptimizationExperiment(BaseModel):
 
 class OptimizationPlan(BaseModel):
     objective_metric: str
-    experiments: List[OptimizationExperiment] = Field(default_factory=list)
-    rationale: List[str] = Field(default_factory=list)
+    experiments: list[OptimizationExperiment] = Field(default_factory=list)
+    rationale: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _check_dependency_graph(self) -> "OptimizationPlan":
+    def _check_dependency_graph(self) -> OptimizationPlan:
         names = {e.name for e in self.experiments}
         for e in self.experiments:
             missing = [d for d in e.depends_on if d not in names]
@@ -280,7 +281,7 @@ class OptimizationPlan(BaseModel):
 class ToolRunResult(BaseModel):
     tool: ToolName
     success: bool
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)
     note: str = ""
 
 
@@ -298,22 +299,22 @@ class OptimizationTrial(BaseModel):
     tool: ToolName
     strategy: SearchStrategy
     status: TrialStatus = "planned"
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    config_path: Optional[str] = None
-    output_path: Optional[str] = None
-    log_path: Optional[str] = None
-    runner_command: Optional[str] = None
-    return_code: Optional[int] = None
-    objective_scores: Dict[str, float] = Field(default_factory=dict)
-    utility: Optional[float] = None
-    feasible: Optional[bool] = None
-    constraint_violations: Dict[str, float] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    config_path: str | None = None
+    output_path: str | None = None
+    log_path: str | None = None
+    runner_command: str | None = None
+    return_code: int | None = None
+    objective_scores: dict[str, float] = Field(default_factory=dict)
+    utility: float | None = None
+    feasible: bool | None = None
+    constraint_violations: dict[str, float] = Field(default_factory=dict)
     feasibility_penalty: float = 0.0
     pareto_dominance_count: int = 0
     pareto_front: bool = False
-    logs: List[str] = Field(default_factory=list)
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    logs: list[str] = Field(default_factory=list)
+    started_at: str | None = None
+    completed_at: str | None = None
     notes: str = ""
     simulated: bool = False
 
@@ -322,24 +323,24 @@ class OptimizationSession(BaseModel):
     schema_version: int = 1
     session_id: str
     created_at: str
-    run_id: Optional[str] = None
+    run_id: str | None = None
     strategy: SearchStrategy
     mode: ExecutionMode = "simulate"
     status: SessionStatus = "planned"
     plan: OptimizationPlan
     total_trials: NonNegativeInt = 0
     completed_trials: NonNegativeInt = 0
-    current_experiment: Optional[str] = None
-    trials: List[OptimizationTrial] = Field(default_factory=list)
-    best_trial_id: Optional[str] = None
-    pareto_front_ids: List[str] = Field(default_factory=list)
-    feasible_pareto_front_ids: List[str] = Field(default_factory=list)
+    current_experiment: str | None = None
+    trials: list[OptimizationTrial] = Field(default_factory=list)
+    best_trial_id: str | None = None
+    pareto_front_ids: list[str] = Field(default_factory=list)
+    feasible_pareto_front_ids: list[str] = Field(default_factory=list)
     hypervolume: NonNegativeFloat = 0.0
     feasible_hypervolume: NonNegativeFloat = 0.0
     notes: str = ""
 
     @model_validator(mode="after")
-    def _completed_le_total(self) -> "OptimizationSession":
+    def _completed_le_total(self) -> OptimizationSession:
         if self.completed_trials > self.total_trials:
             raise ValueError(
                 f"completed_trials ({self.completed_trials}) > total_trials ({self.total_trials})"
@@ -352,10 +353,10 @@ class SavedRun(BaseModel):
     run_id: str
     created_at: str
     name: str
-    tags: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     notes: str = ""
-    baseline_run_id: Optional[str] = None
-    latest_session_id: Optional[str] = None
+    baseline_run_id: str | None = None
+    latest_session_id: str | None = None
     evaluation: EvaluationResult
     diagnosis: DiagnosisReport
     optimization_plan: OptimizationPlan

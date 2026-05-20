@@ -24,8 +24,9 @@ import json
 import re
 import statistics
 import time
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Sequence
+from typing import Any
 
 from ragdx.schemas.models import (
     DatasetRecord,
@@ -38,11 +39,11 @@ from ragdx.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-ScorerFn = Callable[[List[Dict[str, Any]]], Dict[str, float]]
+ScorerFn = Callable[[list[dict[str, Any]]], dict[str, float]]
 
 
 class LangChainAdapter:
-    def build_runner_spec(self, experiment: OptimizationExperiment, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def build_runner_spec(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> dict[str, Any]:
         llm_provider = parameters.get("llm_provider", "openai")
         return {
             "framework": "langchain",
@@ -68,7 +69,7 @@ class LangChainAdapter:
             "search_parameters": parameters,
         }
 
-    def run(self, experiment: OptimizationExperiment, parameters: Dict[str, Any]) -> ToolRunResult:
+    def run(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> ToolRunResult:
         return ToolRunResult(
             tool="langchain",
             success=True,
@@ -88,7 +89,7 @@ class LangChainAdapter:
         records: Sequence[DatasetRecord] | None = None,
         scorer: ScorerFn | None = None,
         timeout_per_query: float | None = None,
-    ) -> Callable[..., Dict[str, float]]:
+    ) -> Callable[..., dict[str, float]]:
         """Return an ``in_process_runners["langchain"]`` callable.
 
         Resolution order for the dataset:
@@ -110,7 +111,7 @@ class LangChainAdapter:
             experiment: OptimizationExperiment,
             trial: OptimizationTrial,
             baseline: EvaluationResult,
-        ) -> Dict[str, float]:
+        ) -> dict[str, float]:
             ds_path = (
                 default_dataset
                 or Path(experiment.parameters.get("dataset_path", "examples/demo_dataset.jsonl"))
@@ -130,8 +131,8 @@ class LangChainAdapter:
             )
             pipeline = factory(**trial.parameters)
 
-            outputs: List[Dict[str, Any]] = []
-            latencies: List[float] = []
+            outputs: list[dict[str, Any]] = []
+            latencies: list[float] = []
             for rec in recs:
                 start = time.perf_counter()
                 try:
@@ -186,10 +187,10 @@ def _import_attr(spec: str) -> Any:
         raise ImportError(f"{module_name} has no attribute {attr!r}") from exc
 
 
-def _load_jsonl_dataset(path: Path) -> List[DatasetRecord]:
+def _load_jsonl_dataset(path: Path) -> list[DatasetRecord]:
     if not path.exists():
         raise FileNotFoundError(f"Dataset file not found: {path}")
-    records: List[DatasetRecord] = []
+    records: list[DatasetRecord] = []
     with path.open("r", encoding="utf-8") as fh:
         for line_no, raw in enumerate(fh, start=1):
             raw = raw.strip()
@@ -230,18 +231,18 @@ def _call_with_optional_timeout(pipeline: Any, record: DatasetRecord, timeout: f
 _WORD_RE = re.compile(r"[A-Za-z0-9\u4e00-\u9fa5]+")
 
 
-def _tokens(text: str) -> List[str]:
+def _tokens(text: str) -> list[str]:
     return [t.lower() for t in _WORD_RE.findall(text or "")]
 
 
-def _default_token_scorer(outputs: Iterable[Dict[str, Any]]) -> Dict[str, float]:
+def _default_token_scorer(outputs: Iterable[dict[str, Any]]) -> dict[str, float]:
     """Token-overlap heuristic. Not a real evaluator — only a sane default."""
     outs = list(outputs)
     if not outs:
         return {}
-    answer_correctness: List[float] = []
-    citation_accuracy: List[float] = []
-    context_recall: List[float] = []
+    answer_correctness: list[float] = []
+    citation_accuracy: list[float] = []
+    context_recall: list[float] = []
     for row in outs:
         gt_tokens = set(_tokens(row.get("ground_truth", "")))
         ans_tokens = set(_tokens(row.get("answer", "")))

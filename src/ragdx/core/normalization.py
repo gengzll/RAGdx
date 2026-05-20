@@ -28,9 +28,7 @@ The normalized metrics are then stored in EvaluationResult objects with consiste
 
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
-RAGAS_MAP: Dict[str, Tuple[str, str]] = {
+RAGAS_MAP: dict[str, tuple[str, str]] = {
     "context_precision": ("retrieval", "context_precision"),
     "context_recall": ("retrieval", "context_recall"),
     "context_entity_recall": ("retrieval", "context_entities_recall"),
@@ -41,7 +39,7 @@ RAGAS_MAP: Dict[str, Tuple[str, str]] = {
     "answer_accuracy": ("e2e", "answer_accuracy"),
 }
 
-RAGCHECKER_MAP: Dict[str, Tuple[str, str]] = {
+RAGCHECKER_MAP: dict[str, tuple[str, str]] = {
     "precision": ("retrieval", "context_precision"),
     "recall": ("retrieval", "context_recall"),
     "claim_recall": ("e2e", "answer_correctness"),

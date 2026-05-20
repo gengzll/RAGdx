@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from ragdx.errors import DependencyError, LLMConfigError, LLMError
 from ragdx.llm.base import LLMProvider
 from ragdx.utils.logging import get_logger
@@ -20,11 +18,11 @@ class AnthropicProvider(LLMProvider):
     def __init__(
         self,
         *,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
         temperature: float = 0.0,
-        max_tokens: Optional[int] = 4096,
+        max_tokens: int | None = 4096,
         timeout: float = 60.0,
     ) -> None:
         super().__init__(model=model, temperature=temperature, max_tokens=max_tokens, timeout=timeout)
@@ -56,7 +54,7 @@ class AnthropicProvider(LLMProvider):
                 temperature=self.temperature,
                 messages=[{"role": "user", "content": prompt}],
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise LLMError(f"Anthropic messages.create call failed: {exc}") from exc
         try:
             blocks = response.content
@@ -73,7 +71,7 @@ class AnthropicProvider(LLMProvider):
             return "\n".join(texts)
         except LLMError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise LLMError(f"Unexpected Anthropic response shape: {response!r}") from exc
 
 

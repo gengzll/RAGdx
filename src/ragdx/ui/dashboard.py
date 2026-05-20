@@ -50,7 +50,6 @@ from ragdx.schemas.models import EvaluationResult, OptimizationSession
 from ragdx.storage.run_store import RunStore
 from ragdx.utils.reporting import summarize_target_spec
 
-
 DEMO_RESULT = EvaluationResult(
     retrieval={"context_precision": 0.63, "context_recall": 0.57, "context_entities_recall": 0.54, "hit_rate_at_k": 0.64},
     generation={"faithfulness": 0.79, "response_relevancy": 0.82, "noise_sensitivity": 0.31, "context_utilization": 0.61, "hallucination": 0.19},

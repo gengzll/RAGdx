@@ -19,10 +19,10 @@ import json
 import os
 import tempfile
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator, List, Optional
 from uuid import uuid4
 
 from ragdx.schemas.models import (
@@ -146,7 +146,7 @@ class RunStore:
         diagnosis: DiagnosisReport,
         plan: OptimizationPlan,
         name: str | None = None,
-        tags: Optional[list[str]] = None,
+        tags: list[str] | None = None,
         notes: str = "",
         baseline_run_id: str | None = None,
         latest_session_id: str | None = None,
@@ -197,8 +197,8 @@ class RunStore:
             raise RunNotFoundError(run_id)
         return SavedRun.model_validate_json(path.read_text(encoding="utf-8"))
 
-    def list_runs(self) -> List[SavedRun]:
-        runs: List[SavedRun] = []
+    def list_runs(self) -> list[SavedRun]:
+        runs: list[SavedRun] = []
         for path in sorted(self.runs_dir.glob("*.json"), reverse=True):
             try:
                 runs.append(SavedRun.model_validate_json(path.read_text(encoding="utf-8")))
@@ -227,8 +227,8 @@ class RunStore:
     def session_exists(self, session_id: str) -> bool:
         return self._session_path(session_id).exists()
 
-    def list_sessions(self) -> List[OptimizationSession]:
-        sessions: List[OptimizationSession] = []
+    def list_sessions(self) -> list[OptimizationSession]:
+        sessions: list[OptimizationSession] = []
         for path in sorted(self.sessions_dir.glob("*.json"), reverse=True):
             try:
                 sessions.append(OptimizationSession.model_validate_json(path.read_text(encoding="utf-8")))
@@ -241,8 +241,8 @@ class RunStore:
         return sessions[0] if sessions else None
 
     # ---- feedback ----------------------------------------------------------
-    def list_feedback(self) -> List[FeedbackEvent]:
-        items: List[FeedbackEvent] = []
+    def list_feedback(self) -> list[FeedbackEvent]:
+        items: list[FeedbackEvent] = []
         for path in sorted(self.feedback_dir.glob("*.json"), reverse=True):
             try:
                 items.append(FeedbackEvent.model_validate_json(path.read_text(encoding="utf-8")))

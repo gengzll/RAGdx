@@ -36,8 +36,8 @@ The diagnosis report includes identified issues, confidence levels, and recommen
 
 from __future__ import annotations
 
-from ragdx.engines.root_cause import RuleBasedRootCauseAnalyzer
 from ragdx.engines.llm_diagnosis import LLMDiagnosisExplainer
+from ragdx.engines.root_cause import RuleBasedRootCauseAnalyzer
 from ragdx.optim.planner import OptimizationPlanner
 from ragdx.schemas.models import DiagnosisReport, EvaluationResult
 

@@ -24,7 +24,11 @@ Or, fully programmatic::
 
 from __future__ import annotations
 
-from ragdx.llm.base import LLMProvider, LLMCallable
+from ragdx.llm.base import LLMCallable, LLMProvider
+from ragdx.llm.providers.anthropic_provider import AnthropicProvider
+from ragdx.llm.providers.azure_provider import AzureOpenAIProvider
+from ragdx.llm.providers.ollama_provider import OllamaProvider
+from ragdx.llm.providers.openai_provider import OpenAIProvider
 from ragdx.llm.registry import (
     DEFAULT_MODELS,
     build_provider,
@@ -32,19 +36,15 @@ from ragdx.llm.registry import (
     list_providers,
     register_provider,
 )
-from ragdx.llm.providers.openai_provider import OpenAIProvider
-from ragdx.llm.providers.anthropic_provider import AnthropicProvider
-from ragdx.llm.providers.azure_provider import AzureOpenAIProvider
-from ragdx.llm.providers.ollama_provider import OllamaProvider
 
 __all__ = [
-    "LLMProvider",
-    "LLMCallable",
-    "OpenAIProvider",
+    "DEFAULT_MODELS",
     "AnthropicProvider",
     "AzureOpenAIProvider",
+    "LLMCallable",
+    "LLMProvider",
     "OllamaProvider",
-    "DEFAULT_MODELS",
+    "OpenAIProvider",
     "build_provider",
     "get_llm_callable",
     "list_providers",

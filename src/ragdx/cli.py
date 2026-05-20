@@ -15,7 +15,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich import print
@@ -42,13 +41,13 @@ app = typer.Typer(add_completion=False, help="ragdx — RAG diagnosis & optimiza
 
 @app.callback()
 def _root_options(
-    log_level: Optional[str] = typer.Option(
+    log_level: str | None = typer.Option(
         None,
         "--log-level",
         help="Logger level for the ragdx package (DEBUG/INFO/WARNING/ERROR). "
         "Overrides RAGDX_LOG_LEVEL for this invocation.",
     ),
-    log_file: Optional[str] = typer.Option(
+    log_file: str | None = typer.Option(
         None,
         "--log-file",
         help="Optional log file path. Overrides RAGDX_LOG_FILE for this invocation.",
@@ -78,7 +77,7 @@ def _build_llm_callable() -> LLMCallable:
 
 
 def _load_eval(path: str | Path) -> EvaluationResult:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return EvaluationResult(**json.load(f))
 
 

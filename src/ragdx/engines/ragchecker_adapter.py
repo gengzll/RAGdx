@@ -7,7 +7,8 @@ and aggregates per-metric averages.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 from ragdx.core.normalization import RAGCHECKER_MAP
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
@@ -79,7 +80,7 @@ class RAGCheckerAdapter:
 
         # Extract per-record metrics and average them
         acc: dict[str, list[float]] = {}
-        rows: List[Any] = getattr(results, "results", []) or []
+        rows: list[Any] = getattr(results, "results", []) or []
         for row in rows:
             metrics_dict = getattr(row, "metrics", None) or (row.get("metrics") if isinstance(row, dict) else None)
             if not metrics_dict:

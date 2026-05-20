@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from ragdx.config import (
     ExecutionSettings,
     LLMSettings,
-    Settings,
     StorageSettings,
     get_settings,
 )

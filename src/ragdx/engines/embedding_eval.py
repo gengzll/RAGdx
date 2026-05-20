@@ -21,7 +21,7 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
-from typing import Iterable, List, Sequence
+from collections.abc import Iterable, Sequence
 
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
 
@@ -33,7 +33,7 @@ from ragdx.schemas.models import DatasetRecord, EvaluationResult
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 
 
-def _tokenize(text: str) -> List[str]:
+def _tokenize(text: str) -> list[str]:
     if not text:
         return []
     return [t.lower() for t in _TOKEN_RE.findall(text)]
@@ -111,7 +111,7 @@ class EmbeddingEvaluator:
             )
 
         # Build a shared IDF table over every text the evaluator sees.
-        corpus: List[List[str]] = []
+        corpus: list[list[str]] = []
         for r in records:
             corpus.append(_tokenize(r.question))
             if r.answer:
@@ -124,11 +124,11 @@ class EmbeddingEvaluator:
                 corpus.append(_tokenize(c))
         idf = _build_idf(corpus)
 
-        retrieval_ctx_precision: List[float] = []
-        retrieval_ctx_recall: List[float] = []
-        generation_faithfulness: List[float] = []
-        generation_relevancy: List[float] = []
-        e2e_correctness: List[float] = []
+        retrieval_ctx_precision: list[float] = []
+        retrieval_ctx_recall: list[float] = []
+        generation_faithfulness: list[float] = []
+        generation_relevancy: list[float] = []
+        e2e_correctness: list[float] = []
 
         for r in records:
             q_tokens = _tokenize(r.question)

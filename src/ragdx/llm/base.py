@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
-
+from collections.abc import Callable
 
 LLMCallable = Callable[[str], str]
 """Minimal LLM call signature accepted across ragdx (prompt → text)."""
@@ -25,9 +24,9 @@ class LLMProvider(ABC):
     def __init__(
         self,
         *,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 0.0,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
         timeout: float = 60.0,
     ) -> None:
         self.model = model or self.default_model
@@ -46,4 +45,4 @@ class LLMProvider(ABC):
         return f"{type(self).__name__}(model={self.model!r})"
 
 
-__all__ = ["LLMProvider", "LLMCallable"]
+__all__ = ["LLMCallable", "LLMProvider"]

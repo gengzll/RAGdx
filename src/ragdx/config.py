@@ -40,8 +40,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
 
 _TRUTHY = {"1", "true", "yes", "on", "y", "t"}
 
@@ -63,7 +61,7 @@ def env_float(name: str, default: float) -> float:
         return default
 
 
-def env_int(name: str, default: Optional[int] = None) -> Optional[int]:
+def env_int(name: str, default: int | None = None) -> int | None:
     raw = os.environ.get(name)
     if raw is None or not raw.strip():
         return default
@@ -83,17 +81,17 @@ class LLMSettings:
     """Runtime configuration for the default LLM provider."""
 
     provider: str = "openai"
-    model: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    api_version: Optional[str] = None
+    model: str | None = None
+    api_key: str | None = None
+    base_url: str | None = None
+    api_version: str | None = None
     temperature: float = 0.0
-    max_tokens: Optional[int] = None
+    max_tokens: int | None = None
     timeout: float = 60.0
     extra: dict = field(default_factory=dict)
 
     @classmethod
-    def from_env(cls) -> "LLMSettings":
+    def from_env(cls) -> LLMSettings:
         provider = (os.environ.get("RAGDX_LLM_PROVIDER") or "openai").lower().strip()
         model = os.environ.get("RAGDX_LLM_MODEL")
         if provider == "openai":
@@ -135,14 +133,14 @@ class ExecutionSettings:
     """Runtime configuration for the optimization executor."""
 
     strict_execute: bool = True
-    runner_timeout_sec: Optional[float] = None
+    runner_timeout_sec: float | None = None
     bo_backend: str = "internal"
     fallback_simulate_on_missing_runner: bool = False
 
     @classmethod
-    def from_env(cls) -> "ExecutionSettings":
+    def from_env(cls) -> ExecutionSettings:
         timeout_raw = os.environ.get("RAGDX_RUNNER_TIMEOUT_SEC", "").strip()
-        timeout: Optional[float] = None
+        timeout: float | None = None
         if timeout_raw:
             try:
                 timeout = float(timeout_raw) or None
@@ -165,7 +163,7 @@ class StorageSettings:
     root: Path = Path(".ragdx")
 
     @classmethod
-    def from_env(cls) -> "StorageSettings":
+    def from_env(cls) -> StorageSettings:
         return cls(root=env_path("RAGDX_ROOT", ".ragdx"))
 
 
@@ -178,7 +176,7 @@ class Settings:
     execution: ExecutionSettings = field(default_factory=ExecutionSettings.from_env)
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         return cls(
             storage=StorageSettings.from_env(),
             llm=LLMSettings.from_env(),
@@ -197,13 +195,13 @@ def get_settings() -> Settings:
 
 
 __all__ = [
+    "ExecutionSettings",
+    "LLMSettings",
     "Settings",
     "StorageSettings",
-    "LLMSettings",
-    "ExecutionSettings",
-    "get_settings",
     "env_bool",
     "env_float",
     "env_int",
     "env_path",
+    "get_settings",
 ]

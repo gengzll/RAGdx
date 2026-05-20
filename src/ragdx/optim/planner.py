@@ -35,10 +35,16 @@ The planner generates OptimizationPlan objects with experiments, parameter space
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Any
 
-from ragdx.schemas.models import DiagnosisReport, EvaluationResult, OptimizationExperiment, OptimizationPlan, SearchStrategy
-
+from ragdx.schemas.models import (
+    DiagnosisReport,
+    EvaluationResult,
+    OptimizationExperiment,
+    OptimizationPlan,
+    SearchStrategy,
+)
 
 MAXIMIZE_METRICS = {
     "context_recall",
@@ -61,10 +67,10 @@ COMPONENT_METRICS = {
 
 
 class OptimizationPlanner:
-    def __init__(self, llm_callable: Callable[[str], str | Dict[str, Any]] | None = None):
+    def __init__(self, llm_callable: Callable[[str], str | dict[str, Any]] | None = None):
         self.llm_callable = llm_callable
 
-    def _coerce_json(self, payload: str | Dict[str, Any]) -> Dict[str, Any]:
+    def _coerce_json(self, payload: str | dict[str, Any]) -> dict[str, Any]:
         if isinstance(payload, dict):
             return payload
         text = (payload or "").strip()
@@ -76,7 +82,7 @@ class OptimizationPlanner:
             text = text[start : end + 1]
         return json.loads(text)
 
-    def _component_metrics(self, component: str, objective_metric: str) -> List[str]:
+    def _component_metrics(self, component: str, objective_metric: str) -> list[str]:
         metrics = list(COMPONENT_METRICS.get(component, COMPONENT_METRICS["pipeline"]))
         if objective_metric not in metrics:
             metrics.insert(0, objective_metric)
@@ -109,11 +115,11 @@ class OptimizationPlanner:
         objective_metric: str,
         result: EvaluationResult | None = None,
         report: DiagnosisReport | None = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         metrics = self._component_metrics(component, objective_metric)
         expected = report.expected_thresholds if report else {}
         metric_gaps = report.metric_gaps if report else {}
-        scores: Dict[str, float] = {}
+        scores: dict[str, float] = {}
         for metric in metrics:
             current = result.score(metric) if result else None
             target = self._target_for_metric(metric, current, expected.get(metric))
@@ -136,7 +142,7 @@ class OptimizationPlanner:
         total = sum(scores.values()) or 1.0
         return {metric: round(value / total, 4) for metric, value in scores.items()}
 
-    def _constraints(self, result: EvaluationResult | None = None, report: DiagnosisReport | None = None) -> Dict[str, float]:
+    def _constraints(self, result: EvaluationResult | None = None, report: DiagnosisReport | None = None) -> dict[str, float]:
         baseline = {
             "hallucination": result.score("hallucination") if result else None,
             "noise_sensitivity": result.score("noise_sensitivity") if result else None,
@@ -144,7 +150,7 @@ class OptimizationPlanner:
             "cost_usd": result.score("cost_usd") if result else None,
         }
         expected = report.expected_thresholds if report else {}
-        constraints: Dict[str, float] = {}
+        constraints: dict[str, float] = {}
         for metric in ["hallucination", "noise_sensitivity", "latency_ms", "cost_usd"]:
             current = baseline.get(metric)
             expected_target = expected.get(metric)
@@ -172,10 +178,10 @@ class OptimizationPlanner:
             return "minimize"
         return "monitor"
 
-    def _baseline_metrics_for_component(self, component: str, objective_metric: str, result: EvaluationResult | None) -> Dict[str, float | None]:
+    def _baseline_metrics_for_component(self, component: str, objective_metric: str, result: EvaluationResult | None) -> dict[str, float | None]:
         return {metric: (result.score(metric) if result else None) for metric in self._component_metrics(component, objective_metric)}
 
-    def _target_semantics(self, metric: str, current: float | None, target: float) -> Dict[str, Any]:
+    def _target_semantics(self, metric: str, current: float | None, target: float) -> dict[str, Any]:
         direction = self._metric_direction(metric)
         if direction == "maximize":
             if current is None:
@@ -212,11 +218,11 @@ class OptimizationPlanner:
             out["max_acceptable"] = cap
         return out
 
-    def _build_metric_plan(self, component: str, objective_metric: str, result: EvaluationResult | None, report: DiagnosisReport | None) -> Tuple[Dict[str, Any], Dict[str, float | None], Dict[str, str], Dict[str, float], Dict[str, float]]:
+    def _build_metric_plan(self, component: str, objective_metric: str, result: EvaluationResult | None, report: DiagnosisReport | None) -> tuple[dict[str, Any], dict[str, float | None], dict[str, str], dict[str, float], dict[str, float]]:
         baseline_metrics = self._baseline_metrics_for_component(component, objective_metric, result)
         directions = {metric: self._metric_direction(metric) for metric in baseline_metrics}
-        target_thresholds: Dict[str, float] = {}
-        target_specs: Dict[str, Any] = {}
+        target_thresholds: dict[str, float] = {}
+        target_specs: dict[str, Any] = {}
         expected = report.expected_thresholds if report else {}
         for metric, current in baseline_metrics.items():
             target = self._target_for_metric(metric, current, expected.get(metric))
@@ -229,7 +235,7 @@ class OptimizationPlanner:
         objective_weights = self._weights_for_component(component, objective_metric, result=result, report=report)
         return target_specs, baseline_metrics, directions, target_thresholds, objective_weights
 
-    def _corpus_space(self) -> Dict[str, List[object]]:
+    def _corpus_space(self) -> dict[str, list[object]]:
         return {
             "parser": ["pymupdf_layout", "unstructured", "html_semantic"],
             "document_structure": ["preserve_sections", "flat_chunks"],
@@ -238,7 +244,7 @@ class OptimizationPlanner:
             "table_strategy": ["repeat_headers", "table_to_text"],
         }
 
-    def _retrieval_space(self) -> Dict[str, List[object]]:
+    def _retrieval_space(self) -> dict[str, list[object]]:
         return {
             "retriever": ["bm25", "vector", "hybrid"],
             "embedding_model": ["bge-m3", "e5-large-v2", "gte-large"],
@@ -248,7 +254,7 @@ class OptimizationPlanner:
             "context_ordering": ["retrieval_score", "section_then_score", "diverse_then_score"],
         }
 
-    def _generation_space(self) -> Dict[str, List[object]]:
+    def _generation_space(self) -> dict[str, list[object]]:
         return {
             "optimizer": ["MIPROv2", "BootstrapFewShot", "GEPA"],
             "fewshot_count": [0, 2, 4, 6],
@@ -258,7 +264,7 @@ class OptimizationPlanner:
             "verifier": ["none", "claim_checker"],
         }
 
-    def _orchestration_space(self) -> Dict[str, List[object]]:
+    def _orchestration_space(self) -> dict[str, list[object]]:
         return {
             "retry_retrieval": [False, True],
             "followup_question": [False, True],
@@ -267,7 +273,7 @@ class OptimizationPlanner:
             "planner": ["single_step", "two_pass"],
         }
 
-    def _stack_runtime_space(self, framework: str) -> Dict[str, List[object]]:
+    def _stack_runtime_space(self, framework: str) -> dict[str, list[object]]:
         if framework == "langchain":
             return {
                 "vectorstore": ["faiss", "chroma"],
@@ -286,7 +292,7 @@ class OptimizationPlanner:
             "temperature": [0.0, 0.2],
         }
 
-    def _joint_space(self) -> Dict[str, List[object]]:
+    def _joint_space(self) -> dict[str, list[object]]:
         return {
             "retrieval_profile": ["recall_heavy", "balanced", "precision_heavy"],
             "generator_profile": ["grounded_qa", "citation_first"],
@@ -349,7 +355,7 @@ class OptimizationPlanner:
         strategy: SearchStrategy,
         budget: int,
         heuristic_plan: OptimizationPlan,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if self.llm_callable is None:
             return {}
         try:
@@ -368,7 +374,7 @@ class OptimizationPlanner:
         except Exception:
             return {}
 
-    def _apply_focus(self, search_space: Dict[str, List[Any]], focus: Dict[str, Any]) -> Dict[str, List[Any]]:
+    def _apply_focus(self, search_space: dict[str, list[Any]], focus: dict[str, Any]) -> dict[str, list[Any]]:
         if not focus:
             return search_space
         updated = dict(search_space)
@@ -379,7 +385,7 @@ class OptimizationPlanner:
                     updated[key] = allowed
         return updated
 
-    def _apply_llm_guidance(self, experiments: List[OptimizationExperiment], llm_guidance: Dict[str, Any]) -> tuple[List[OptimizationExperiment], List[str]]:
+    def _apply_llm_guidance(self, experiments: list[OptimizationExperiment], llm_guidance: dict[str, Any]) -> tuple[list[OptimizationExperiment], list[str]]:
         rationale = list(llm_guidance.get("global_rationale", [])) if isinstance(llm_guidance, dict) else []
         component_guidance = llm_guidance.get("component_guidance", {}) if isinstance(llm_guidance, dict) else {}
         stage_to_component = {
@@ -389,7 +395,7 @@ class OptimizationPlanner:
             "orchestration": "pipeline",
             "joint": "pipeline",
         }
-        updated: List[OptimizationExperiment] = []
+        updated: list[OptimizationExperiment] = []
         for exp in experiments:
             guidance = component_guidance.get(stage_to_component.get(exp.stage, exp.target_component), {})
             if guidance.get("enable") is False:
@@ -403,7 +409,6 @@ class OptimizationPlanner:
             if isinstance(guidance.get("target_thresholds"), dict):
                 exp.parameters["target_thresholds"] = guidance["target_thresholds"]
                 baseline_metrics = exp.parameters.get("baseline_metrics", {})
-                metric_directions = exp.parameters.get("metric_directions", {})
                 exp.parameters["target_specs"] = {
                     k: self._target_semantics(k, baseline_metrics.get(k), float(v))
                     for k, v in guidance["target_thresholds"].items() if isinstance(v, (int, float))
@@ -425,8 +430,8 @@ class OptimizationPlanner:
         strategy: SearchStrategy = "bayesian",
         budget: int = 12,
     ) -> OptimizationPlan:
-        experiments: List[OptimizationExperiment] = []
-        rationale: List[str] = []
+        experiments: list[OptimizationExperiment] = []
+        rationale: list[str] = []
         candidates = set(report.optimization_candidates)
         lead_nodes = [s.node for s in report.causal_signals[:3]]
         constraints = self._constraints(result=result, report=report)

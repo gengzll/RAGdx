@@ -35,15 +35,15 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 from ragdx.schemas.models import DatasetRecord
 
 
-def load_jsonl(path: str | Path) -> List[DatasetRecord]:
+def load_jsonl(path: str | Path) -> list[DatasetRecord]:
     records = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -51,16 +51,16 @@ def load_jsonl(path: str | Path) -> List[DatasetRecord]:
     return records
 
 
-def load_json(path: str | Path) -> List[DatasetRecord]:
+def load_json(path: str | Path) -> list[DatasetRecord]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(payload, dict):
         payload = payload.get("records", [])
     return [DatasetRecord(**row) for row in payload]
 
 
-def load_csv(path: str | Path) -> List[DatasetRecord]:
+def load_csv(path: str | Path) -> list[DatasetRecord]:
     rows = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             contexts = row.get("contexts", "")
@@ -78,7 +78,7 @@ def load_csv(path: str | Path) -> List[DatasetRecord]:
     return rows
 
 
-def load_records(path: str | Path) -> List[DatasetRecord]:
+def load_records(path: str | Path) -> list[DatasetRecord]:
     path = Path(path)
     suffix = path.suffix.lower()
     if suffix == ".jsonl":
