@@ -11,6 +11,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from ragdx.core.normalization import RAGCHECKER_MAP
+from ragdx.optim._gt_helpers import (
+    filter_metrics_by_data,
+    has_answers,
+    has_contexts,
+    has_ground_truth,
+)
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
 from ragdx.utils.logging import get_logger
 
@@ -69,13 +75,39 @@ class RAGCheckerAdapter:
                 "Install with `pip install ragdx[ragchecker]`."
             ) from exc
 
+        # Pre-flight data check: RAGChecker's metrics all rely on ``response``
+        # (the system answer); claim_recall additionally needs gt_answer; every
+        # metric needs retrieved_context. Without these we'd be averaging
+        # silently-wrong 0s, so we filter or fail loudly instead.
+        if not has_answers(records):
+            raise RuntimeError(
+                "RAGChecker requires `answer` on every record (it decomposes the "
+                "answer into atomic claims). The supplied records have no answers; "
+                "run your RAG pipeline first to populate them."
+            )
+        if not has_contexts(records):
+            raise RuntimeError(
+                "RAGChecker requires `contexts` (retrieved chunks) to verify claims. "
+                "The supplied records have no contexts."
+            )
+        requested = list(metric_names) if metric_names else list(RAGCHECKER_MAP.keys())
+        kept, skipped = filter_metrics_by_data(requested, records)
+        if not kept:
+            raise RuntimeError(
+                f"No RAGChecker metrics survived the data pre-flight: {skipped}. "
+                "Pick metrics that match the data you have, or enrich your records."
+            )
+        if skipped:
+            logger.warning(
+                "Skipping %d ragchecker metric(s) due to missing data: %s",
+                len(skipped), skipped,
+            )
+
         prepared = self._to_ragchecker_records(records)
         results = RAGResults.from_dict({"results": prepared})
         checker = evaluator or RAGChecker(**kwargs)
-        metric_args: dict[str, Any] = {}
-        if metric_names:
-            metric_args["metrics"] = list(metric_names)
-        logger.info("Running ragchecker on %d records", len(prepared))
+        metric_args: dict[str, Any] = {"metrics": kept}
+        logger.info("Running ragchecker on %d records with metrics=%s", len(prepared), kept)
         checker.evaluate(results, **metric_args)
 
         # Extract per-record metrics and average them
@@ -94,7 +126,19 @@ class RAGCheckerAdapter:
             )
         averages = {k: sum(vs) / len(vs) for k, vs in acc.items()}
         out = self.normalize_scores(averages)
-        out.metadata.update({"record_count": len(records), "mode": "evaluated"})
+        out.metadata.update(
+            {
+                "record_count": len(records),
+                "mode": "evaluated",
+                "requested_metrics": requested,
+                "skipped_metrics": skipped,
+                "data_diagnostics": {
+                    "has_ground_truth": has_ground_truth(records),
+                    "has_answers": has_answers(records),
+                    "has_contexts": has_contexts(records),
+                },
+            }
+        )
         return out
 
     def evaluate(

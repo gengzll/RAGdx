@@ -20,6 +20,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from ragdx.core.normalization import RAGAS_MAP
+from ragdx.optim._gt_helpers import (
+    filter_metrics_by_data,
+    has_answers,
+    has_contexts,
+    has_ground_truth,
+)
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
 from ragdx.utils.logging import get_logger
 
@@ -109,6 +115,22 @@ class RagasAdapter:
                 "No ragas metrics could be imported. Install a compatible ragas release or "
                 "pass `metrics=[...]` explicitly."
             )
+
+        # Pre-flight data check: drop metrics whose data dependencies are not met
+        # so we don't waste tokens computing them and don't emit fake 0.0 scores.
+        used_metrics, skipped = self._filter_metrics_by_data(used_metrics, records)
+        if not used_metrics:
+            raise RuntimeError(
+                "All requested ragas metrics were filtered out by data pre-flight: "
+                f"{skipped}. Provide records with the missing fields, or pick metrics "
+                "that match the data you have (e.g. faithfulness when no GT exists)."
+            )
+        if skipped:
+            logger.warning(
+                "Skipping %d ragas metric(s) due to missing data: %s",
+                len(skipped), skipped,
+            )
+
         dataset = Dataset.from_list(self._to_ragas_records(records))
         logger.info(
             "Running ragas.evaluate on %d records with %d metrics",
@@ -148,9 +170,41 @@ class RagasAdapter:
 
         out = self.normalize_scores(raw_scores)
         out.metadata.update(
-            {"record_count": len(records), "mode": "evaluated", "ragas_metrics": [m.__class__.__name__ if hasattr(m, "__class__") else str(m) for m in used_metrics]}
+            {
+                "record_count": len(records),
+                "mode": "evaluated",
+                "ragas_metrics": [self._metric_name(m) for m in used_metrics],
+                "skipped_metrics": skipped,
+                "data_diagnostics": {
+                    "has_ground_truth": has_ground_truth(records),
+                    "has_answers": has_answers(records),
+                    "has_contexts": has_contexts(records),
+                },
+            }
         )
         return out
+
+    # ---------------------------------------------------------------- helpers
+    @staticmethod
+    def _metric_name(metric: Any) -> str:
+        """Best-effort extraction of a ragas metric's canonical name."""
+        return (
+            getattr(metric, "name", None)
+            or getattr(getattr(metric, "__class__", type(metric)), "__name__", "").lower()
+            or str(metric)
+        )
+
+    def _filter_metrics_by_data(
+        self,
+        metrics: Sequence[Any],
+        records: Sequence[DatasetRecord],
+    ) -> tuple[list[Any], dict[str, str]]:
+        """Drop metrics whose data dependencies (GT/answer/contexts) aren't met."""
+        names = [self._metric_name(m) for m in metrics]
+        kept_names, skipped = filter_metrics_by_data(names, records)
+        kept_set = set(kept_names)
+        kept = [m for m, n in zip(metrics, names, strict=True) if n in kept_set]
+        return kept, skipped
 
     # ------------------------------------------------------------------ #
     # Public API                                                          #
