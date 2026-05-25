@@ -1,69 +1,24 @@
 {
   "model": "openai/glm-4-flash",
   "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
-  "corpus": [
-    {
-      "question": "What is RAG?",
-      "answer": "Retrieval-augmented generation combines retrieval with generation.",
-      "ground_truth": "RAG (Retrieval-Augmented Generation) augments a language model by retrieving relevant documents and conditioning the generation on them.",
-      "contexts": [
-        "RAG augments LLMs by retrieving documents before generation.",
-        "Generation is conditioned on the retrieved passages."
-      ]
-    },
-    {
-      "question": "Why use chunking in RAG?",
-      "answer": "Chunking splits documents so retrieval can return precise passages.",
-      "ground_truth": "Documents are split into smaller chunks so the retriever can return tightly-scoped passages instead of whole documents.",
-      "contexts": [
-        "Chunking trades off chunk size against recall.",
-        "Smaller chunks improve precision but may fragment context."
-      ]
-    },
-    {
-      "question": "What does an embedding model do?",
-      "answer": "It encodes text into a vector space for similarity search.",
-      "ground_truth": "An embedding model maps text into a dense vector representation so that semantically similar text has nearby vectors.",
-      "contexts": [
-        "Sentence embeddings enable nearest-neighbour search.",
-        "Cosine similarity in embedding space approximates semantic similarity."
-      ]
-    },
-    {
-      "question": "How is a reranker different from a retriever?",
-      "answer": "A reranker re-scores the retriever's top-k results.",
-      "ground_truth": "Retrievers do a fast first-pass over the corpus; rerankers do a slower but more accurate re-scoring of the retriever's top-k.",
-      "contexts": [
-        "Cross-encoder rerankers are expensive but accurate.",
-        "Bi-encoder retrievers are cheap and approximate."
-      ]
-    },
-    {
-      "question": "Name one cause of hallucination in RAG.",
-      "answer": "Retrieved context not actually supporting the answer.",
-      "ground_truth": "Common causes include irrelevant retrieved chunks, missing key information, and the model preferring its parametric knowledge.",
-      "contexts": [
-        "Hallucination rises when retrieval recall is low.",
-        "Models may ignore context and rely on their pretraining."
-      ]
-    }
-  ],
+  "dataset": "explodinggradients/amnesty_qa[:5]",
   "corpus_size": 5,
+  "corpus_chunks": 15,
   "data_diagnostics": {
     "with_gt": {
       "has_ground_truth": true,
-      "has_answers": true,
-      "has_contexts": true,
+      "has_answers": false,
+      "has_contexts": false,
       "gt_mode": "with_gt"
     },
     "no_gt": {
       "has_ground_truth": false,
-      "has_answers": true,
-      "has_contexts": true,
+      "has_answers": false,
+      "has_contexts": false,
       "gt_mode": "no_gt"
     }
   },
-  "autorag": {
+  "autorag_spec": {
     "with_gt": {
       "label": "with-GT",
       "gt_mode": "with_gt",
@@ -90,7 +45,7 @@
         "version": 1,
         "optimization": {
           "strategy": "bayesian",
-          "trials": 10
+          "trials": 3
         },
         "node_lines": [
           {
@@ -105,9 +60,9 @@
               },
               {
                 "kind": "reranker",
-                "name": "bge",
+                "name": "none",
                 "params": {
-                  "enabled": true
+                  "enabled": false
                 }
               },
               {
@@ -165,7 +120,7 @@
         "version": 1,
         "optimization": {
           "strategy": "bayesian",
-          "trials": 10
+          "trials": 3
         },
         "node_lines": [
           {
@@ -180,9 +135,9 @@
               },
               {
                 "kind": "reranker",
-                "name": "bge",
+                "name": "none",
                 "params": {
-                  "enabled": true
+                  "enabled": false
                 }
               },
               {
@@ -225,14 +180,14 @@
         "answer_correctness",
         "answer_relevancy"
       ],
-      "kept": [
-        "faithfulness",
-        "context_precision",
-        "context_recall",
-        "answer_correctness",
-        "answer_relevancy"
-      ],
-      "skipped": {}
+      "kept": [],
+      "skipped": {
+        "faithfulness": "no answer in dataset",
+        "context_precision": "no contexts in dataset",
+        "context_recall": "no contexts in dataset",
+        "answer_correctness": "no answer in dataset",
+        "answer_relevancy": "no answer in dataset"
+      }
     },
     "no_gt": {
       "label": "no-GT",
@@ -243,188 +198,261 @@
         "answer_correctness",
         "answer_relevancy"
       ],
-      "kept": [
-        "faithfulness",
-        "context_precision",
-        "answer_relevancy"
-      ],
+      "kept": [],
       "skipped": {
+        "faithfulness": "no answer in dataset",
+        "context_precision": "no contexts in dataset",
         "context_recall": "no ground_truth in dataset",
-        "answer_correctness": "no ground_truth in dataset"
+        "answer_correctness": "no ground_truth in dataset",
+        "answer_relevancy": "no answer in dataset"
       }
     }
   },
-  "evaluation": {
-    "with_gt": {
-      "label": "with-GT",
-      "embedding_proxy": {
-        "retrieval": {
-          "context_precision": 0.0717920786660313,
-          "context_recall": 0.19198995005990693
+  "autorag_grid": {
+    "objective": "faithfulness",
+    "runs": [
+      {
+        "top_k": 1,
+        "scores": {
+          "context_precision": 0.79999999992,
+          "faithfulness": 1.0
         },
-        "generation": {
-          "faithfulness": 0.13683285767013081,
-          "response_relevancy": 0.0889804119230641
-        },
-        "e2e": {
-          "answer_correctness": 0.33129358466396386
-        },
-        "metadata": {
-          "tool": "embedding-proxy",
-          "mode": "embedding-proxy",
-          "record_count": 5,
-          "note": "Metrics computed via TF-IDF cosine similarity. They are proxies for the conventional ragas/RAGChecker metrics — treat as relative-quality signal, not absolute ground truth."
-        }
-      },
-      "ragas": {
-        "retrieval": {
-          "context_precision": 0.89999999992,
-          "context_recall": 1.0
-        },
-        "generation": {
-          "faithfulness": 0.9
-        },
-        "e2e": {
-          "answer_correctness": NaN
-        },
-        "metadata": {
-          "mode": "evaluated",
-          "ragas_metrics": [
-            "faithfulness",
-            "answer_relevancy",
-            "context_precision",
-            "context_recall",
-            "answer_correctness"
+        "skipped": {},
+        "answers": [
+          "The global implications include fear of anti-abortion legislative attacks in other countries, chilling effects on progressive law reform, stalling of abortion guidelines in African countries, and emboldening of anti-abortion actors to undermine human rights protections.",
+          "Major oil and gas producers and coal mining companies are the main contributors to GHG emissions and their role in global warming according to the Carbon Majors database.",
+          "The context does not provide specific names of private companies in the Americas identified as the largest GHG emitters according to the Carbon Majors database.",
+          "Amnesty International urged its supporters to sign petitions, write letters to government officials, participate in protests and demonstrations, and raise awareness about the Ogoni people's plight and the need for justice and accountability.",
+          "Amnesty International's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their work."
+        ],
+        "contexts": [
+          [
+            "- In 2022, the USA Supreme Court handed down a decision ruling that overturned 50 years of jurisprudence recognizing a constitutional right to abortion.\n- This decision has had a massive impact: one in three women and girls of reproductive age now live in states where abortion access is either totally or near-totally inaccessible.\n- The states with the most restrictive abortion laws have the weakest maternal health support, higher maternal death rates, and higher child poverty rates.\n- The USA Supreme Court ruling has also had impacts beyond national borders due to the geopolitical and cultural influence wielded by the USA globally and the aid it funds.\n- SRR organizations and activists across the world have expressed fear about the ruling laying the groundwork for anti-abortion legislative and policy attacks in other countries.\n- Advocates have also observed the ruling's impact on progressive law reform and the stalling of the adoption and enforcement of abortion guidelines in certain African countries.\n- The ruling has created a chilling effect in international policy spaces, emboldening anti-abortion state and non-state actors to undermine human rights protections."
           ],
-          "skipped_metrics": {},
-          "data_diagnostics": {
-            "has_ground_truth": true,
-            "has_answers": true,
-            "has_contexts": true
-          }
-        }
-      }
-    },
-    "no_gt": {
-      "label": "no-GT",
-      "embedding_proxy": {
-        "retrieval": {
-          "context_precision": 0.0695913091946837
-        },
-        "generation": {
-          "faithfulness": 0.12918817460622115,
-          "response_relevancy": 0.09174452709814167
-        },
-        "e2e": {},
-        "metadata": {
-          "tool": "embedding-proxy",
-          "mode": "embedding-proxy",
-          "record_count": 5,
-          "note": "Metrics computed via TF-IDF cosine similarity. They are proxies for the conventional ragas/RAGChecker metrics — treat as relative-quality signal, not absolute ground truth."
-        }
-      },
-      "ragas": {
-        "retrieval": {
-          "context_precision": 0.39999999996
-        },
-        "generation": {
-          "faithfulness": 0.9
-        },
-        "e2e": {},
-        "metadata": {
-          "mode": "evaluated",
-          "ragas_metrics": [
-            "faithfulness",
-            "answer_relevancy",
-            "context_precision"
+          [
+            "The Carbon Majors database identifies a small group of companies responsible for the majority of global greenhouse gas emissions. These companies include major oil and gas producers, as well as coal mining companies, whose activities have significantly contributed to climate change. The data from the Carbon Majors database highlights the disproportionate impact of these companies on the environment and the urgent need for action to address their emissions."
           ],
-          "skipped_metrics": {
-            "context_recall": "no ground_truth in dataset",
-            "answer_correctness": "no ground_truth in dataset"
-          },
-          "data_diagnostics": {
-            "has_ground_truth": false,
-            "has_answers": true,
-            "has_contexts": true
-          }
-        }
+          [
+            "The issue of greenhouse gas emissions has become a major concern for environmentalists and policymakers alike, as the impact of climate change becomes more apparent. Private companies in the Americas play a significant role in contributing to these emissions, with some being identified as the largest emitters in the region according to the Carbon Majors database."
+          ],
+          [
+            "In the case of the Ogoni 9, Amnesty International called on its supporters to take action by signing petitions, writing letters to government officials, and participating in protests and demonstrations. The organization also urged its members to raise awareness about the plight of the Ogoni people and the need for justice and accountability in their case. By mobilizing public pressure and solidarity, Amnesty International hoped to bring attention to the human rights abuses committed against the Ogoni 9 and to push for meaningful change and accountability."
+          ],
+          [
+            "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work."
+          ]
+        ]
+      },
+      {
+        "top_k": 3,
+        "scores": {
+          "context_precision": 0.9166666666341665,
+          "faithfulness": 1.0
+        },
+        "skipped": {},
+        "answers": [
+          "The global implications include fear of anti-abortion legislative attacks in other countries, chilling effects on progressive law reform, stalling of abortion guidelines in African countries, emboldening of anti-abortion actors, and potential shifts in international reproductive rights and women's health funding and collaborations.",
+          "Major oil and gas producers and coal mining companies are the main contributors to GHG emissions and their role in global warming according to the Carbon Majors database.",
+          "ExxonMobil, Chevron, and Peabody.",
+          "Amnesty International urged its supporters to sign petitions, write letters to government officials, participate in protests and demonstrations, and raise awareness about the Ogoni people's plight and the need for justice and accountability.",
+          "Amnesty International recommends greater accountability for violence and harassment against defenders, measures to ensure their safety and freedom, embedding a focus on child and young HRDs, raising awareness about their unique challenges, incorporating age-disaggregated data, and creating safe spaces for engagement with HRDs and their organizations."
+        ],
+        "contexts": [
+          [
+            "- In 2022, the USA Supreme Court handed down a decision ruling that overturned 50 years of jurisprudence recognizing a constitutional right to abortion.\n- This decision has had a massive impact: one in three women and girls of reproductive age now live in states where abortion access is either totally or near-totally inaccessible.\n- The states with the most restrictive abortion laws have the weakest maternal health support, higher maternal death rates, and higher child poverty rates.\n- The USA Supreme Court ruling has also had impacts beyond national borders due to the geopolitical and cultural influence wielded by the USA globally and the aid it funds.\n- SRR organizations and activists across the world have expressed fear about the ruling laying the groundwork for anti-abortion legislative and policy attacks in other countries.\n- Advocates have also observed the ruling's impact on progressive law reform and the stalling of the adoption and enforcement of abortion guidelines in certain African countries.\n- The ruling has created a chilling effect in international policy spaces, emboldening anti-abortion state and non-state actors to undermine human rights protections.",
+            "The USA Supreme Court ruling on abortion has sparked intense debates and discussions not only within the country but also around the world. Many countries look to the United States as a leader in legal and social issues, so the decision could potentially influence the policies and attitudes towards abortion in other nations.",
+            "The ruling may also impact international organizations and non-governmental groups that work on reproductive rights and women's health issues. Depending on the outcome, there could be shifts in funding, advocacy efforts, and collaborations with American counterparts, leading to ripple effects in the global fight for reproductive justice."
+          ],
+          [
+            "The Carbon Majors database identifies a small group of companies responsible for the majority of global greenhouse gas emissions. These companies include major oil and gas producers, as well as coal mining companies, whose activities have significantly contributed to climate change. The data from the Carbon Majors database highlights the disproportionate impact of these companies on the environment and the urgent need for action to address their emissions.",
+            "The issue of greenhouse gas emissions has become a major concern for environmentalists and policymakers alike, as the impact of climate change becomes more apparent. Private companies in the Americas play a significant role in contributing to these emissions, with some being identified as the largest emitters in the region according to the Carbon Majors database.",
+            "In recent years, there has been increasing pressure on these major contributors to reduce their greenhouse gas emissions and transition to more sustainable practices. Many of these companies have made commitments to reduce their carbon footprint and invest in renewable energy sources. However, the role of these companies in global warming remains a contentious issue, with ongoing debates about their responsibility and accountability for the environmental damage caused by their operations."
+          ],
+          [
+            "The issue of greenhouse gas emissions has become a major concern for environmentalists and policymakers alike, as the impact of climate change becomes more apparent. Private companies in the Americas play a significant role in contributing to these emissions, with some being identified as the largest emitters in the region according to the Carbon Majors database.",
+            "The private companies responsible for the most emissions during this period, according to the database, are from the United States: ExxonMobil, Chevron and Peabody.\nThe largest emitter amongst state-owned companies in the Americas is Mexican company Pemex, followed by Venezuelan company Petróleos de Venezuela, S.A.",
+            "The Carbon Majors database identifies a small group of companies responsible for the majority of global greenhouse gas emissions. These companies include major oil and gas producers, as well as coal mining companies, whose activities have significantly contributed to climate change. The data from the Carbon Majors database highlights the disproportionate impact of these companies on the environment and the urgent need for action to address their emissions."
+          ],
+          [
+            "In the case of the Ogoni 9, Amnesty International called on its supporters to take action by signing petitions, writing letters to government officials, and participating in protests and demonstrations. The organization also urged its members to raise awareness about the plight of the Ogoni people and the need for justice and accountability in their case. By mobilizing public pressure and solidarity, Amnesty International hoped to bring attention to the human rights abuses committed against the Ogoni 9 and to push for meaningful change and accountability.",
+            "Amnesty International is a global human rights organization known for its advocacy work on behalf of individuals facing injustice and persecution. The organization has a long history of campaigning for the rights of prisoners of conscience, political dissidents, and marginalized communities around the world. Through its research, lobbying efforts, and grassroots activism, Amnesty International seeks to hold governments and other powerful entities accountable for human rights violations and abuses.",
+            "Amnesty International called on its vast network of supporters to deluge Nigerian authorities first with appeals for the defenders’ freedom, and later with letters of outrage."
+          ],
+          [
+            "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work.",
+            "Amnesty International is known for its advocacy work on behalf of human rights defenders around the world. The organization often provides detailed reports and recommendations to the Special Rapporteur on Human Rights Defenders, highlighting specific cases of abuse and calling for action to protect those at risk.",
+            "Amnesty International recommends that the Special Rapporteur on the Situation of Human Rights Defenders embeds a focus on child and young HRDs in the future work of the mandate. \nAmnesty International recommends raising awareness about the differences between \"child\" and \"youth\" HRDs and the different context, needs, barriers, and challenges they face as defenders. \nAmnesty International recommends incorporating age disaggregated data on the lived experiences of child and young HRDs in all future reports or interventions by the Special Rapporteur. \nAmnesty International recommends creating online and face-to-face safe spaces for child and young HRDs and their child and youth-led organizations to actively engage with the Special and other human rights mechanisms."
+          ]
+        ]
+      },
+      {
+        "top_k": 6,
+        "scores": {
+          "context_precision": 0.8944444444151852,
+          "faithfulness": 1.0
+        },
+        "skipped": {},
+        "answers": [
+          "The global implications of the USA Supreme Court ruling on abortion include fear of anti-abortion legislative attacks in other countries, chilling effects on progressive law reform and abortion guidelines in Africa, emboldening of anti-abortion actors to undermine human rights, and potential influence on international organizations and non-governmental groups working on reproductive rights.",
+          "The main contributors to GHG emissions and their role in global warming, according to the Carbon Majors database, include fossil fuel companies like ExxonMobil, Chevron, and Peabody from the United States, as well as state-owned companies such as Pemex from Mexico and Petróleos de Venezuela, S.A. from Venezuela.",
+          "ExxonMobil, Chevron, and Peabody.",
+          "Amnesty International urged its supporters to sign petitions, write letters to government officials, participate in protests and demonstrations, and raise awareness about the plight of the Ogoni people and the need for justice and accountability.",
+          "Amnesty International recommends greater accountability for violence and harassment against defenders, measures to ensure their safety, embedding a focus on child and young HRDs, incorporating age-disaggregated data on their experiences, and creating safe spaces for them to engage with human rights mechanisms."
+        ],
+        "contexts": [
+          [
+            "- In 2022, the USA Supreme Court handed down a decision ruling that overturned 50 years of jurisprudence recognizing a constitutional right to abortion.\n- This decision has had a massive impact: one in three women and girls of reproductive age now live in states where abortion access is either totally or near-totally inaccessible.\n- The states with the most restrictive abortion laws have the weakest maternal health support, higher maternal death rates, and higher child poverty rates.\n- The USA Supreme Court ruling has also had impacts beyond national borders due to the geopolitical and cultural influence wielded by the USA globally and the aid it funds.\n- SRR organizations and activists across the world have expressed fear about the ruling laying the groundwork for anti-abortion legislative and policy attacks in other countries.\n- Advocates have also observed the ruling's impact on progressive law reform and the stalling of the adoption and enforcement of abortion guidelines in certain African countries.\n- The ruling has created a chilling effect in international policy spaces, emboldening anti-abortion state and non-state actors to undermine human rights protections.",
+            "The USA Supreme Court ruling on abortion has sparked intense debates and discussions not only within the country but also around the world. Many countries look to the United States as a leader in legal and social issues, so the decision could potentially influence the policies and attitudes towards abortion in other nations.",
+            "The ruling may also impact international organizations and non-governmental groups that work on reproductive rights and women's health issues. Depending on the outcome, there could be shifts in funding, advocacy efforts, and collaborations with American counterparts, leading to ripple effects in the global fight for reproductive justice.",
+            "The issue of greenhouse gas emissions has become a major concern for environmentalists and policymakers alike, as the impact of climate change becomes more apparent. Private companies in the Americas play a significant role in contributing to these emissions, with some being identified as the largest emitters in the region according to the Carbon Majors database.",
+            "In recent years, there has been increasing pressure on these major contributors to reduce their greenhouse gas emissions and transition to more sustainable practices. Many of these companies have made commitments to reduce their carbon footprint and invest in renewable energy sources. However, the role of these companies in global warming remains a contentious issue, with ongoing debates about their responsibility and accountability for the environmental damage caused by their operations.",
+            "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work."
+          ],
+          [
+            "The Carbon Majors database identifies a small group of companies responsible for the majority of global greenhouse gas emissions. These companies include major oil and gas producers, as well as coal mining companies, whose activities have significantly contributed to climate change. The data from the Carbon Majors database highlights the disproportionate impact of these companies on the environment and the urgent need for action to address their emissions.",
+            "The issue of greenhouse gas emissions has become a major concern for environmentalists and policymakers alike, as the impact of climate change becomes more apparent. Private companies in the Americas play a significant role in contributing to these emissions, with some being identified as the largest emitters in the region according to the Carbon Majors database.",
+            "In recent years, there has been increasing pressure on these major contributors to reduce their greenhouse gas emissions and transition to more sustainable practices. Many of these companies have made commitments to reduce their carbon footprint and invest in renewable energy sources. However, the role of these companies in global warming remains a contentious issue, with ongoing debates about their responsibility and accountability for the environmental damage caused by their operations.",
+            "Reducing greenhouse gas emissions from private companies is a complex challenge that requires cooperation between governments, businesses, and consumers. Many companies are now taking steps to reduce their carbon footprint through initiatives such as investing in renewable energy, improving energy efficiency, and offsetting emissions through carbon credits.",
+            "- Fossil fuel companies, whether state or private, play a key role in the emissions that drive global warming.\n- According to the Carbon Majors database, 100 existing fossil fuel companies (and eight that no longer exist) have produced almost a trillion tons of GHG emissions in 150 years.\n- These 100 companies are responsible for 71% of all GHG emissions since 1988.\n- In the Americas, the private companies responsible for the most emissions during this period, according to the database, are from the United States: ExxonMobil, Chevron, and Peabody.\n- The largest emitter amongst state-owned companies in the Americas is Mexican company Pemex, followed by Venezuelan company Petróleos de Venezuela, S.A.\n- Despite the fact that people with fewer resources, in particular from countries in the global South, do not make significant contributions to climate change, it is these people who are most affected by it.\n- Approximately half of the global population lives in areas that are \"very vulnerable\" to climate change, and it is people with considerable development constraints who are most exposed.\n- This disproportionately affects the human rights of people with fewer resources and greater risk in the context of climate change in the global South.\n- Between 2010 and 2020, human mortality due to climate disasters was 15 times higher in vulnerable regions and populations.",
+            "The private companies responsible for the most emissions during this period, according to the database, are from the United States: ExxonMobil, Chevron and Peabody.\nThe largest emitter amongst state-owned companies in the Americas is Mexican company Pemex, followed by Venezuelan company Petróleos de Venezuela, S.A."
+          ],
+          [
+            "The issue of greenhouse gas emissions has become a major concern for environmentalists and policymakers alike, as the impact of climate change becomes more apparent. Private companies in the Americas play a significant role in contributing to these emissions, with some being identified as the largest emitters in the region according to the Carbon Majors database.",
+            "The private companies responsible for the most emissions during this period, according to the database, are from the United States: ExxonMobil, Chevron and Peabody.\nThe largest emitter amongst state-owned companies in the Americas is Mexican company Pemex, followed by Venezuelan company Petróleos de Venezuela, S.A.",
+            "The Carbon Majors database identifies a small group of companies responsible for the majority of global greenhouse gas emissions. These companies include major oil and gas producers, as well as coal mining companies, whose activities have significantly contributed to climate change. The data from the Carbon Majors database highlights the disproportionate impact of these companies on the environment and the urgent need for action to address their emissions.",
+            "- Fossil fuel companies, whether state or private, play a key role in the emissions that drive global warming.\n- According to the Carbon Majors database, 100 existing fossil fuel companies (and eight that no longer exist) have produced almost a trillion tons of GHG emissions in 150 years.\n- These 100 companies are responsible for 71% of all GHG emissions since 1988.\n- In the Americas, the private companies responsible for the most emissions during this period, according to the database, are from the United States: ExxonMobil, Chevron, and Peabody.\n- The largest emitter amongst state-owned companies in the Americas is Mexican company Pemex, followed by Venezuelan company Petróleos de Venezuela, S.A.\n- Despite the fact that people with fewer resources, in particular from countries in the global South, do not make significant contributions to climate change, it is these people who are most affected by it.\n- Approximately half of the global population lives in areas that are \"very vulnerable\" to climate change, and it is people with considerable development constraints who are most exposed.\n- This disproportionately affects the human rights of people with fewer resources and greater risk in the context of climate change in the global South.\n- Between 2010 and 2020, human mortality due to climate disasters was 15 times higher in vulnerable regions and populations.",
+            "Reducing greenhouse gas emissions from private companies is a complex challenge that requires cooperation between governments, businesses, and consumers. Many companies are now taking steps to reduce their carbon footprint through initiatives such as investing in renewable energy, improving energy efficiency, and offsetting emissions through carbon credits.",
+            "In recent years, there has been increasing pressure on these major contributors to reduce their greenhouse gas emissions and transition to more sustainable practices. Many of these companies have made commitments to reduce their carbon footprint and invest in renewable energy sources. However, the role of these companies in global warming remains a contentious issue, with ongoing debates about their responsibility and accountability for the environmental damage caused by their operations."
+          ],
+          [
+            "In the case of the Ogoni 9, Amnesty International called on its supporters to take action by signing petitions, writing letters to government officials, and participating in protests and demonstrations. The organization also urged its members to raise awareness about the plight of the Ogoni people and the need for justice and accountability in their case. By mobilizing public pressure and solidarity, Amnesty International hoped to bring attention to the human rights abuses committed against the Ogoni 9 and to push for meaningful change and accountability.",
+            "Amnesty International is a global human rights organization known for its advocacy work on behalf of individuals facing injustice and persecution. The organization has a long history of campaigning for the rights of prisoners of conscience, political dissidents, and marginalized communities around the world. Through its research, lobbying efforts, and grassroots activism, Amnesty International seeks to hold governments and other powerful entities accountable for human rights violations and abuses.",
+            "Amnesty International called on its vast network of supporters to deluge Nigerian authorities first with appeals for the defenders’ freedom, and later with letters of outrage.",
+            "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work.",
+            "Amnesty International is known for its advocacy work on behalf of human rights defenders around the world. The organization often provides detailed reports and recommendations to the Special Rapporteur on Human Rights Defenders, highlighting specific cases of abuse and calling for action to protect those at risk.",
+            "Amnesty International recommends that the Special Rapporteur on the Situation of Human Rights Defenders embeds a focus on child and young HRDs in the future work of the mandate. \nAmnesty International recommends raising awareness about the differences between \"child\" and \"youth\" HRDs and the different context, needs, barriers, and challenges they face as defenders. \nAmnesty International recommends incorporating age disaggregated data on the lived experiences of child and young HRDs in all future reports or interventions by the Special Rapporteur. \nAmnesty International recommends creating online and face-to-face safe spaces for child and young HRDs and their child and youth-led organizations to actively engage with the Special and other human rights mechanisms."
+          ],
+          [
+            "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work.",
+            "Amnesty International is known for its advocacy work on behalf of human rights defenders around the world. The organization often provides detailed reports and recommendations to the Special Rapporteur on Human Rights Defenders, highlighting specific cases of abuse and calling for action to protect those at risk.",
+            "Amnesty International recommends that the Special Rapporteur on the Situation of Human Rights Defenders embeds a focus on child and young HRDs in the future work of the mandate. \nAmnesty International recommends raising awareness about the differences between \"child\" and \"youth\" HRDs and the different context, needs, barriers, and challenges they face as defenders. \nAmnesty International recommends incorporating age disaggregated data on the lived experiences of child and young HRDs in all future reports or interventions by the Special Rapporteur. \nAmnesty International recommends creating online and face-to-face safe spaces for child and young HRDs and their child and youth-led organizations to actively engage with the Special and other human rights mechanisms.",
+            "Amnesty International is a global human rights organization known for its advocacy work on behalf of individuals facing injustice and persecution. The organization has a long history of campaigning for the rights of prisoners of conscience, political dissidents, and marginalized communities around the world. Through its research, lobbying efforts, and grassroots activism, Amnesty International seeks to hold governments and other powerful entities accountable for human rights violations and abuses.",
+            "Amnesty International called on its vast network of supporters to deluge Nigerian authorities first with appeals for the defenders’ freedom, and later with letters of outrage.",
+            "In the case of the Ogoni 9, Amnesty International called on its supporters to take action by signing petitions, writing letters to government officials, and participating in protests and demonstrations. The organization also urged its members to raise awareness about the plight of the Ogoni people and the need for justice and accountability in their case. By mobilizing public pressure and solidarity, Amnesty International hoped to bring attention to the human rights abuses committed against the Ogoni 9 and to push for meaningful change and accountability."
+          ]
+        ]
       }
+    ],
+    "best_top_k": 1,
+    "best_scores": {
+      "context_precision": 0.79999999992,
+      "faithfulness": 1.0
     }
   },
-  "dspy": {
+  "dspy_before_after": {
+    "baseline_scores": {
+      "context_precision": 0.79999999992,
+      "faithfulness": 1.0
+    },
+    "optimized_scores": {
+      "context_precision": 0.79999999992,
+      "faithfulness": 0.96
+    },
+    "delta": {
+      "context_precision": 0.0,
+      "faithfulness": -0.040000000000000036
+    },
+    "baseline_sample_answers": [
+      "The global implications of the USA Supreme Court ruling on abortion include the potential for anti-abortion legislative and policy attacks in other countries, a chilling effect on international policy spaces regarding reproductive rights, and the stalling of progressive law reform and the adoption of abortion guidelines in certain African countries.",
+      "The main contributors to GHG emissions according to the Carbon Majors database are major oil and gas producers, as well as coal mining companies. Their activities have significantly contributed to climate change.",
+      "The context does not provide the names of the private companies in the Americas that are the largest GHG emitters according to the Carbon Majors database.",
+      "Amnesty International urged its supporters to sign petitions, write letters to government officials, participate in protests and demonstrations, and raise awareness about the plight of the Ogoni people to push for justice and accountability.",
+      "Amnesty International's recommendations to the Special Rapporteur include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work."
+    ],
+    "optimized_sample_answers": [
+      "The global implications of the USA Supreme Court ruling on abortion include the potential for anti-abortion legislative and policy attacks in other countries, a chilling effect on international reproductive rights policies, and the stalling of progressive law reform and the adoption of abortion guidelines in certain African countries.",
+      "The main contributors to GHG emissions according to the Carbon Majors database are major oil and gas producers and coal mining companies. Their role in global warming is significant, as their activities are identified as the primary sources of the majority of global greenhouse gas emissions.",
+      "The context does not provide the specific names of the private companies in the Americas that are the largest GHG emitters according to the Carbon Majors database. Therefore, the answer cannot be determined from the provided context alone.",
+      "Amnesty International urged its supporters to take action by signing petitions, writing letters to government officials, participating in protests and demonstrations, raising awareness about the plight of the Ogoni people, and mobilizing public pressure and solidarity to push for justice and accountability in the case of the Ogoni 9.",
+      "Amnesty International's recommendations to the Special Rapporteur on Human Rights Defenders include calls for greater accountability for perpetrators of violence and harassment against human rights defenders, as well as measures to ensure their safety and freedom to carry out their work."
+    ],
+    "instructions": {
+      "predict": "Create an instruction for a Language Model to generate a reasoning statement and an answer to a question about the global implications of significant legal decisions, using a provided context. The answer must be concise and based solely on the facts present in the context, without adding any assumptions or invented facts. The reasoning statement should explain the logical basis for the conclusion drawn from the context."
+    },
+    "demos": {
+      "predict": [
+        {
+          "augmented": true,
+          "question": "What are the global implications of the USA Supreme Court ruling on abortion?",
+          "context": "- In 2022, the USA Supreme Court handed down a decision ruling that overturned 50 years of jurisprudence recognizing a constitutional right to abortion.\n- This decision has had a massive impact: one in three women and girls of reproductive age now live in states where abortion access is either totally or near-totally inaccessible.\n- The states with the most restrictive abortion laws have the weakest maternal health support, higher maternal death rates, and higher child poverty rates.\n- The USA Supreme Court ruling has also had impacts beyond national borders due to the geopolitical and cultural influence wielded by the USA globally and the aid it funds.\n- SRR organizations and activists across the world have expressed fear about the ruling laying the groundwork for anti-abortion legislative and policy attacks in other countries.\n- Advocates have also observed the ruling's impact on progressive law reform and the stalling of the adoption and enforcement of abortion guidelines in certain African countries.\n- The ruling has created a chilling effect in international policy spaces, emboldening anti-abortion state and non-state actors to undermine human rights protections.",
+          "reasoning": "The question asks for the global implications of the USA Supreme Court ruling on abortion. The context provided discusses the impact of the ruling within the USA and its effects on the global stage. It mentions the ruling's influence on reproductive rights in other countries, the chilling effect on international policy spaces, and the potential for anti-abortion legislative and policy attacks worldwide.",
+          "answer": "The global implications of the USA Supreme Court ruling on abortion include the potential for anti-abortion legislative and policy attacks in other countries, a chilling effect on international policy spaces regarding reproductive rights, and the stalling of progressive law reform and the adoption of abortion guidelines in certain African countries."
+        }
+      ]
+    },
+    "trial_scores": [
+      45.32,
+      47.31,
+      44.46,
+      47.31,
+      45.27,
+      46.79,
+      46.5,
+      45.27,
+      47.31,
+      44.8,
+      47.31
+    ],
+    "best_score_progression": [
+      47.31,
+      47.31,
+      47.31,
+      47.31,
+      47.31,
+      47.31,
+      47.31,
+      47.31,
+      47.31,
+      47.31
+    ],
+    "gt_mode": "with_gt",
+    "optimizer": "MIPROv2",
+    "trainset_size": 5
+  },
+  "dspy_descriptive": {
     "with_gt": {
       "label": "with-GT",
-      "gt_mode": "with_gt",
-      "optimizer": "MIPROv2",
-      "trainset_size": 5,
-      "instructions": {
-        "predict": "Prompt a Language Model to answer a question based on a provided context, ensuring the response is derived solely from the context and not from external knowledge. The task requires the LM to provide a concise answer and a reasoning explanation for the answer, highlighting the importance of accuracy and the avoidance of invented facts. To enhance the LM's performance, frame the task within a high-stakes scenario where the correctness of the answer could have significant real-world implications."
-      },
-      "demos": {
-        "predict": []
-      },
-      "trial_scores": [
-        21.6,
-        18.07,
-        29.13,
-        18.07,
-        23.42,
-        25.19,
-        29.13,
-        23.42,
-        18.07,
-        23.42,
-        23.42
-      ],
-      "best_score_progression": [
-        21.6,
-        29.13,
-        29.13,
-        29.13,
-        29.13,
-        29.13,
-        29.13,
-        29.13,
-        29.13,
-        29.13
-      ]
+      "error": "InternalServerError: litellm.InternalServerError: InternalServerError: OpenAIException - Connection error.",
+      "trial_scores": [],
+      "best_score_progression": []
     },
     "no_gt": {
       "label": "no-GT",
-      "gt_mode": "no_gt",
-      "optimizer": "MIPROv2",
-      "trainset_size": 5,
-      "instructions": {
-        "predict": "Answer the question using only the retrieved context.\n\nBe concise. Do not invent facts that are not in the context."
-      },
-      "demos": {
-        "predict": []
-      },
-      "trial_scores": [
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        95.0,
-        100.0,
-        100.0,
-        100.0
-      ],
-      "best_score_progression": [
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0
-      ]
+      "error": "InternalServerError: litellm.InternalServerError: InternalServerError: OpenAIException - Connection error.",
+      "trial_scores": [],
+      "best_score_progression": []
     }
-  }
+  },
+  "questions": [
+    {
+      "question": "What are the global implications of the USA Supreme Court ruling on abortion?",
+      "ground_truth": "The global implications of the USA Supreme Court ruling on abortion are significant. The ruling has led to limited or no access to abortion for one in three women and girls of reproductive age in states where abortion access is restricted. These states also have weaker maternal health support, higher maternal death rates, and higher child poverty rates. Additionally, the ruling has had an impact beyond national borders due to the USA's geopolitical and cultural influence globally. Organizations and activists worldwide are concerned that the ruling may inspire anti-abortion legislative and policy attacks in other countries. The ruling has also hindered progressive law reform and the implementation of abortion guidelines in certain African countries. Furthermore, the ruling has created a chilling effect in international policy spaces, empowering anti-abortion actors to undermine human rights protections."
+    },
+    {
+      "question": "Which companies are the main contributors to GHG emissions and their role in global warming according to the Carbon Majors database?",
+      "ground_truth": "According to the Carbon Majors database, the main contributors to GHG emissions and their role in global warming are fossil fuel companies. These companies, both state-owned and private, have produced almost a trillion tons of GHG emissions in 150 years. The database shows that 100 existing fossil fuel companies, along with eight that no longer exist, are responsible for 71% of all GHG emissions since 1988. In the Americas, the private companies that have contributed the most emissions are ExxonMobil, Chevron, and Peabody, all from the United States. Among state-owned companies in the Americas, the largest emitter is Mexican company Pemex, followed by Venezuelan company Petróleos de Venezuela, S.A. It is important to note that while people with fewer resources, particularly from countries in the global South, do not significantly contribute to climate change, they are the ones most affected by its impacts. Approximately half of the global population lives in areas that are \"very vulnerable\" to climate change, and it is people with limited development opportunities who face the greatest risks. This unequal impact disproportionately affects the human rights of those with fewer resources and greater vulnerability in the context of climate change in the global South. Additionally, between 2010 and 2020, human mortality due to climate disasters was 15 times higher in vulnerable regions and populations."
+    },
+    {
+      "question": "Which private companies in the Americas are the largest GHG emitters according to the Carbon Majors database?",
+      "ground_truth": "The largest private companies in the Americas that are the largest GHG emitters according to the Carbon Majors database are ExxonMobil, Chevron, and Peabody."
+    },
+    {
+      "question": "What action did Amnesty International urge its supporters to take in response to the killing of the Ogoni 9?",
+      "ground_truth": "Amnesty International urged its supporters to send appeals for the defenders' freedom to Nigerian authorities and later to send letters of outrage."
+    },
+    {
+      "question": "What are the recommendations made by Amnesty International to the Special Rapporteur on Human Rights Defenders?",
+      "ground_truth": "The recommendations made by Amnesty International to the Special Rapporteur on Human Rights Defenders include embedding a focus on child and young HRDs in future work, raising awareness about the differences and challenges they face, incorporating age disaggregated data in reports, and creating safe spaces for engagement."
+    }
+  ]
 }
