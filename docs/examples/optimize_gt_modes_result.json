@@ -1,0 +1,283 @@
+{
+  "model": "openai/glm-4-flash",
+  "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+  "corpus": [
+    {
+      "question": "What is RAG?",
+      "answer": "Retrieval-augmented generation combines retrieval with generation.",
+      "ground_truth": "RAG (Retrieval-Augmented Generation) augments a language model by retrieving relevant documents and conditioning the generation on them.",
+      "contexts": [
+        "RAG augments LLMs by retrieving documents before generation.",
+        "Generation is conditioned on the retrieved passages."
+      ]
+    },
+    {
+      "question": "Why use chunking in RAG?",
+      "answer": "Chunking splits documents so retrieval can return precise passages.",
+      "ground_truth": "Documents are split into smaller chunks so the retriever can return tightly-scoped passages instead of whole documents.",
+      "contexts": [
+        "Chunking trades off chunk size against recall.",
+        "Smaller chunks improve precision but may fragment context."
+      ]
+    },
+    {
+      "question": "What does an embedding model do?",
+      "answer": "It encodes text into a vector space for similarity search.",
+      "ground_truth": "An embedding model maps text into a dense vector representation so that semantically similar text has nearby vectors.",
+      "contexts": [
+        "Sentence embeddings enable nearest-neighbour search.",
+        "Cosine similarity in embedding space approximates semantic similarity."
+      ]
+    },
+    {
+      "question": "How is a reranker different from a retriever?",
+      "answer": "A reranker re-scores the retriever's top-k results.",
+      "ground_truth": "Retrievers do a fast first-pass over the corpus; rerankers do a slower but more accurate re-scoring of the retriever's top-k.",
+      "contexts": [
+        "Cross-encoder rerankers are expensive but accurate.",
+        "Bi-encoder retrievers are cheap and approximate."
+      ]
+    },
+    {
+      "question": "Name one cause of hallucination in RAG.",
+      "answer": "Retrieved context not actually supporting the answer.",
+      "ground_truth": "Common causes include irrelevant retrieved chunks, missing key information, and the model preferring its parametric knowledge.",
+      "contexts": [
+        "Hallucination rises when retrieval recall is low.",
+        "Models may ignore context and rely on their pretraining."
+      ]
+    }
+  ],
+  "corpus_size": 5,
+  "data_diagnostics": {
+    "with_gt": {
+      "has_ground_truth": true,
+      "has_answers": true,
+      "has_contexts": true,
+      "gt_mode": "with_gt"
+    },
+    "no_gt": {
+      "has_ground_truth": false,
+      "has_answers": true,
+      "has_contexts": true,
+      "gt_mode": "no_gt"
+    }
+  },
+  "autorag": {
+    "with_gt": {
+      "label": "with-GT",
+      "gt_mode": "with_gt",
+      "objective_metric": "answer_correctness",
+      "metrics": [
+        "answer_accuracy",
+        "answer_correctness",
+        "answer_relevancy",
+        "claim_recall",
+        "context_entity_recall",
+        "context_precision",
+        "context_recall",
+        "context_utilization",
+        "faithfulness",
+        "hallucination",
+        "noise_sensitivity",
+        "recall",
+        "response_relevancy",
+        "self_knowledge"
+      ],
+      "requires_gt": true,
+      "note": "Config rendered for AutoRAG (with-GT mode). Reference-based metrics like answer_correctness / context_recall are included. Save the YAML payload and adjust node names to match your installed AutoRAG release.",
+      "yaml_template": {
+        "version": 1,
+        "optimization": {
+          "strategy": "bayesian",
+          "trials": 10
+        },
+        "node_lines": [
+          {
+            "name": "retrieval_line",
+            "nodes": [
+              {
+                "kind": "retrieval",
+                "name": "hybrid",
+                "params": {
+                  "top_k": 3
+                }
+              },
+              {
+                "kind": "reranker",
+                "name": "bge",
+                "params": {
+                  "enabled": true
+                }
+              },
+              {
+                "kind": "chunking",
+                "name": "semantic_chunker",
+                "params": {
+                  "chunk_size": 512,
+                  "chunk_overlap": 64
+                }
+              }
+            ]
+          }
+        ],
+        "postprocess": {
+          "context_ordering": "retrieval_score"
+        },
+        "evaluation": {
+          "metrics": [
+            "answer_accuracy",
+            "answer_correctness",
+            "answer_relevancy",
+            "claim_recall",
+            "context_entity_recall",
+            "context_precision",
+            "context_recall",
+            "context_utilization",
+            "faithfulness",
+            "hallucination",
+            "noise_sensitivity",
+            "recall",
+            "response_relevancy",
+            "self_knowledge"
+          ],
+          "primary": "answer_correctness",
+          "requires_ground_truth": true
+        }
+      }
+    },
+    "no_gt": {
+      "label": "no-GT",
+      "gt_mode": "no_gt",
+      "objective_metric": "faithfulness",
+      "metrics": [
+        "answer_relevancy",
+        "context_precision",
+        "faithfulness",
+        "hallucination",
+        "noise_sensitivity",
+        "response_relevancy",
+        "self_knowledge"
+      ],
+      "requires_gt": false,
+      "note": "Config rendered for AutoRAG (no-GT mode). Only reference-free metrics (faithfulness, answer_relevancy, context_precision, hallucination) are included. Provide an LLM-as-judge in your AutoRAG runtime so these metrics can be computed.",
+      "yaml_template": {
+        "version": 1,
+        "optimization": {
+          "strategy": "bayesian",
+          "trials": 10
+        },
+        "node_lines": [
+          {
+            "name": "retrieval_line",
+            "nodes": [
+              {
+                "kind": "retrieval",
+                "name": "hybrid",
+                "params": {
+                  "top_k": 3
+                }
+              },
+              {
+                "kind": "reranker",
+                "name": "bge",
+                "params": {
+                  "enabled": true
+                }
+              },
+              {
+                "kind": "chunking",
+                "name": "semantic_chunker",
+                "params": {
+                  "chunk_size": 512,
+                  "chunk_overlap": 64
+                }
+              }
+            ]
+          }
+        ],
+        "postprocess": {
+          "context_ordering": "retrieval_score"
+        },
+        "evaluation": {
+          "metrics": [
+            "answer_relevancy",
+            "context_precision",
+            "faithfulness",
+            "hallucination",
+            "noise_sensitivity",
+            "response_relevancy",
+            "self_knowledge"
+          ],
+          "primary": "faithfulness",
+          "requires_ground_truth": false
+        }
+      }
+    }
+  },
+  "metric_filter": {
+    "with_gt": {
+      "label": "with-GT",
+      "requested": [
+        "faithfulness",
+        "context_precision",
+        "context_recall",
+        "answer_correctness",
+        "answer_relevancy"
+      ],
+      "kept": [
+        "faithfulness",
+        "context_precision",
+        "context_recall",
+        "answer_correctness",
+        "answer_relevancy"
+      ],
+      "skipped": {}
+    },
+    "no_gt": {
+      "label": "no-GT",
+      "requested": [
+        "faithfulness",
+        "context_precision",
+        "context_recall",
+        "answer_correctness",
+        "answer_relevancy"
+      ],
+      "kept": [
+        "faithfulness",
+        "context_precision",
+        "answer_relevancy"
+      ],
+      "skipped": {
+        "context_recall": "no ground_truth in dataset",
+        "answer_correctness": "no ground_truth in dataset"
+      }
+    }
+  },
+  "dspy": {
+    "with_gt": {
+      "label": "with-GT",
+      "gt_mode": "with_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 5,
+      "instructions": {
+        "predict": "In a high-stakes scenario where the accuracy of a legal document is critical, answer the question \"What is the significance of the statute of limitations in personal injury cases?\" using only the provided context. Ensure your response is concise and includes a clear reasoning process that directly references the context. Remember, the stakes are high, and any extraneous information or inaccuracies could have serious consequences. Be concise. Do not invent facts that are not in the context."
+      },
+      "demos": {
+        "predict": []
+      }
+    },
+    "no_gt": {
+      "label": "no-GT",
+      "gt_mode": "no_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 5,
+      "instructions": {
+        "predict": "Answer the question using only the retrieved context.\n\nBe concise. Do not invent facts that are not in the context."
+      },
+      "demos": {
+        "predict": []
+      }
+    }
+  }
+}

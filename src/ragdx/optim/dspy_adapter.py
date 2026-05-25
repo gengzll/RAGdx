@@ -238,6 +238,11 @@ class DSPyAdapter:
         for r in records:
             contexts = list(r.contexts)
             ctx_str = "\n".join(contexts) if contexts else ""
+            # We only declare ``question`` and ``context`` (the joined string)
+            # as inputs because that matches our default RAG signature and
+            # avoids DSPy "field ignored" warnings. The list form is still
+            # stored on the example so user-supplied signatures that expect
+            # ``contexts`` can read it directly.
             if chosen_mode == "with_gt":
                 examples.append(
                     dspy.Example(
@@ -245,7 +250,7 @@ class DSPyAdapter:
                         contexts=contexts,
                         context=ctx_str,
                         answer=(r.ground_truth or r.answer or ""),
-                    ).with_inputs("question", "contexts", "context")
+                    ).with_inputs("question", "context")
                 )
             else:
                 examples.append(
@@ -253,7 +258,7 @@ class DSPyAdapter:
                         question=r.question,
                         contexts=contexts,
                         context=ctx_str,
-                    ).with_inputs("question", "contexts", "context")
+                    ).with_inputs("question", "context")
                 )
         return examples
 

@@ -1,38 +1,92 @@
-"""End-to-end demo: same corpus, two GT modes, both optimization paths.
+"""End-to-end demo: same corpus, two GT modes, real LLM calls.
 
-Walks through the four cells of the optimization matrix that ragdx now
-supports out of the box:
+Walks through the four cells of the optimization matrix (tool x GT mode):
 
                        AutoRAG (RAG flow)      DSPy (prompt)
     with-GT     -->   reference-based         token-F1 metric
     no-GT       -->   reference-free          LLM-as-judge metric
 
-The demo:
+What this demo actually does:
 
-1. Builds a tiny corpus + 5 records (the same ones, with and without GT).
-2. For each (tool x GT-mode) cell prints the rendered spec and what the
-   adapter decided about metrics / objective / metric_kind.
-3. (Optional) If ``dspy`` and an ``OPENAI_API_KEY`` are available, runs a
-   light MIPROv2 compile on the no-GT path so you can see the optimised
-   instruction and few-shot demos emerge -- purely informational, not
-   required for the demo to finish.
+1. Loads a 5-record corpus with ground-truths.
+2. Runs a real ragas evaluation in BOTH branches (with-GT and the same
+   records with GT erased) to demonstrate that the adapter now drops
+   reference-required metrics instead of silently emitting 0s.
+3. Runs DSPyAdapter.optimize() in BOTH branches with MIPROv2 -- with-GT
+   uses token-F1 against example.answer; no-GT uses the built-in
+   FaithfulnessJudge LLM-as-judge. The optimised instructions + demos
+   are printed at the end.
 
-This demo is intentionally offline-friendly: the parts that always run do
-not call any LLM. Set ``RAGDX_RUN_DSPY=1`` to enable the DSPy compile cell.
+All cells call the LLM (GLM-4-Flash by default). There is no offline
+path; if you don't have a key the demo errors immediately at startup.
+
+Outputs are written to ``.ragdx_optimize_demo/result.json`` for the
+Streamlit dashboard (``streamlit run src/ragdx/ui/optimization_dashboard.py``)
+and also echoed to stdout.
 
 Usage::
 
-    PYTHONPATH=src python examples/demo_optimize_gt_modes.py
+    ZHIPU_API_KEY=<key> PYTHONPATH=src python examples/demo_optimize_gt_modes.py
 """
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+
+OUTPUT_ROOT = REPO / ".ragdx_optimize_demo"
+OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+OUTPUT_JSON = OUTPUT_ROOT / "result.json"
+
+# Pick up GLM credentials in the same style as the other real-LLM demos.
+KEY = os.environ.get("ZHIPU_API_KEY") or os.environ.get("OPENAI_API_KEY")
+if not KEY:
+    raise SystemExit(
+        "ZHIPU_API_KEY (or OPENAI_API_KEY) is required. Run with:\n"
+        "    ZHIPU_API_KEY=<key> PYTHONPATH=src python examples/demo_optimize_gt_modes.py"
+    )
+
+# Configure OpenAI-compatible env vars so LiteLLM / DSPy route to Zhipu.
+os.environ["OPENAI_API_KEY"] = KEY
+os.environ["OPENAI_API_BASE"] = "https://open.bigmodel.cn/api/paas/v4"
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+# GLM-4-Flash rejects temperature < 0.01 ("API parameter error"). DSPy
+# / ragas / litellm sometimes default to 1e-5 internally, so clamp.
+import litellm  # noqa: E402
+
+_orig = litellm.batch_completion
+_orig_completion = litellm.completion
+
+
+def _clamp(kwargs):
+    t = kwargs.get("temperature")
+    if t is not None and 0 < t < 0.01:
+        kwargs["temperature"] = 0.01
+    return kwargs
+
+
+def _batch(*a, **kw):
+    return _orig(*a, **_clamp(kw))
+
+
+def _comp(*a, **kw):
+    return _orig_completion(*a, **_clamp(kw))
+
+
+litellm.batch_completion = _batch
+litellm.completion = _comp
 
 from ragdx.optim._gt_helpers import (  # noqa: E402
     filter_metrics_by_data,
@@ -43,10 +97,7 @@ from ragdx.optim._gt_helpers import (  # noqa: E402
 )
 from ragdx.optim.autorag_adapter import AutoRAGAdapter  # noqa: E402
 from ragdx.optim.dspy_adapter import DSPyAdapter  # noqa: E402
-from ragdx.schemas.models import (  # noqa: E402
-    DatasetRecord,
-    OptimizationExperiment,
-)
+from ragdx.schemas.models import DatasetRecord, OptimizationExperiment  # noqa: E402
 
 # ---------------------------------------------------------------- corpus
 RAW_QA = [
@@ -133,16 +184,22 @@ def kv(label: str, value: object, width: int = 22) -> None:
     print(f"  {label:<{width}s} {value}")
 
 
-def print_data_diagnostics(records):
-    print("\n  Data diagnostics:")
-    kv("  has_ground_truth", has_ground_truth(records))
-    kv("  has_answers", has_answers(records))
-    kv("  has_contexts", has_contexts(records))
-    kv("  gt_mode (auto)", gt_mode(records))
+# ------------------------------------------------------- LLM construction
+def build_dspy_lm():
+    import dspy
+
+    return dspy.LM(
+        "openai/glm-4-flash",
+        api_key=KEY,
+        api_base="https://open.bigmodel.cn/api/paas/v4",
+        temperature=0.01,
+        max_tokens=400,
+        cache=False,
+    )
 
 
-# ------------------------------------------------------------- cells
-def show_autorag(records, label: str) -> None:
+# ----------------------------------------------------------- AutoRAG cell
+def show_autorag(records, label: str) -> dict:
     adapter = AutoRAGAdapter()
     exp = OptimizationExperiment(
         name=f"autorag-{label}",
@@ -163,43 +220,26 @@ def show_autorag(records, label: str) -> None:
         {"chunk_size": 512, "top_k": 3, "reranker": "bge"},
         records=records,
     )
-    payload = result.payload
+    p = result.payload
     print(f"\n  AutoRAG spec ({label}):")
-    kv("  gt_mode", payload["gt_mode"])
-    kv("  objective_metric", payload["objective_metric"])
-    kv("  metrics", ", ".join(payload["metrics"]))
-    kv("  requires_gt", payload["yaml_template"]["evaluation"]["requires_ground_truth"])
-    print("  Adapter note:")
-    print(f"    {result.note}")
+    kv("  gt_mode", p["gt_mode"])
+    kv("  objective_metric", p["objective_metric"])
+    kv("  metrics", ", ".join(p["metrics"]))
+    kv("  requires_gt", p["yaml_template"]["evaluation"]["requires_ground_truth"])
+    print(f"  Note: {result.note}")
+    return {
+        "label": label,
+        "gt_mode": p["gt_mode"],
+        "objective_metric": p["objective_metric"],
+        "metrics": list(p["metrics"]),
+        "requires_gt": p["yaml_template"]["evaluation"]["requires_ground_truth"],
+        "note": result.note,
+        "yaml_template": p["yaml_template"],
+    }
 
 
-def show_dspy_spec(records, label: str) -> None:
-    adapter = DSPyAdapter()
-    exp = OptimizationExperiment(
-        name=f"dspy-{label}",
-        tool="dspy",
-        target_component="generation",
-        description=f"DSPy prompt optimization in {label} mode",
-        parameters={},
-        objectives={"faithfulness": 1.0},
-        search_space={},
-        max_trials=10,
-    )
-    spec = adapter.build_optimizer_spec(
-        exp,
-        {"optimizer": "MIPROv2", "fewshot_count": 4},
-        records=records,
-    )
-    print(f"\n  DSPy spec ({label}):")
-    kv("  gt_mode", spec["gt_mode"])
-    kv("  objective_metric", spec["objective_metric"])
-    kv("  metric_kind", spec["compile_hints"]["metric_kind"])
-    kv("  fewshot_enabled", spec["compile_hints"]["fewshot_enabled"])
-
-
-def show_metric_filter_demo(records, label: str) -> None:
-    """Concrete demonstration that bad metric requests get filtered out."""
-    print(f"\n  Asking for the full ragas-style suite ({label}):")
+# ----------------------------------------------------- Pre-flight cell
+def show_metric_filter(records, label: str) -> dict:
     requested = [
         "faithfulness",
         "context_precision",
@@ -208,62 +248,37 @@ def show_metric_filter_demo(records, label: str) -> None:
         "answer_relevancy",
     ]
     kept, skipped = filter_metrics_by_data(requested, records)
+    print(f"\n  Asking for the full ragas-style suite ({label}):")
     kv("  requested", requested)
     kv("  kept", kept)
     if skipped:
         kv("  skipped (reasons)", skipped)
     else:
         kv("  skipped", "none -- data supports every metric")
+    return {"label": label, "requested": requested, "kept": kept, "skipped": skipped}
 
 
-def maybe_run_dspy_compile(records) -> None:
-    """Optional cell: actually call MIPROv2 on the no-GT path.
+# --------------------------------------------- DSPy MIPROv2 compile cell
+def run_dspy_optimize(records, label: str) -> dict:
+    """Compile a tiny RAG predictor with MIPROv2 and print the result."""
+    print(f"\n  Running DSPyAdapter.optimize({label}) -- this calls GLM-4-Flash...")
+    import dspy
 
-    Only runs when ``RAGDX_RUN_DSPY=1`` and a usable LM is configured. Kept
-    separate so the rest of the demo stays offline-friendly.
-    """
-    if os.environ.get("RAGDX_RUN_DSPY", "0") != "1":
-        print("\n  [skipped] Set RAGDX_RUN_DSPY=1 to compile MIPROv2 on the no-GT path")
-        return
+    student = build_dspy_lm()
+    dspy.configure(lm=student)
 
-    try:
-        import dspy  # type: ignore[import-not-found]
-    except Exception as exc:
-        print(f"\n  [skipped] dspy not importable: {exc}")
-        return
-
-    # Configure both the program LM and the judge LM. Prefer GLM-4-Flash if
-    # ZHIPU_API_KEY is set (matches the rest of the project's examples).
-    zhipu = os.environ.get("ZHIPU_API_KEY")
-    openai_key = os.environ.get("OPENAI_API_KEY")
-    if zhipu:
-        student = dspy.LM(
-            "openai/glm-4-flash",
-            api_key=zhipu,
-            api_base="https://open.bigmodel.cn/api/paas/v4",
-            temperature=0.01,
-        )
-        judge = student
-    elif openai_key:
-        student = dspy.LM("openai/gpt-4o-mini", api_key=openai_key)
-        judge = student
-    else:
-        print("\n  [skipped] No ZHIPU_API_KEY / OPENAI_API_KEY in env")
-        return
-
-    print("\n  Running DSPyAdapter.optimize(no_gt) -- this calls the LM...")
     adapter = DSPyAdapter()
     try:
         result = adapter.optimize(
             records,
             student_lm=student,
-            judge_lm=judge,
+            judge_lm=student,  # same LM serves as judge in no-GT mode
             optimizer="MIPROv2",
             optimizer_kwargs={"auto": "light"},
         )
     except Exception as exc:
-        print(f"  optimize() raised: {exc!r}")
-        return
+        print(f"  optimize() raised: {type(exc).__name__}: {exc}")
+        return {"label": label, "error": f"{type(exc).__name__}: {exc}"}
 
     print("\n  Optimisation done.")
     kv("  gt_mode", result["gt_mode"])
@@ -271,9 +286,27 @@ def maybe_run_dspy_compile(records) -> None:
     kv("  trainset_size", result["trainset_size"])
     for name, instr in result["instructions"].items():
         print(f"\n  Instructions for predictor {name!r}:")
-        print(f"    {instr}")
+        for line in (instr or "").splitlines() or [""]:
+            print(f"    {line}")
     for name, demos in result["demos"].items():
         print(f"\n  Selected {len(demos)} few-shot demo(s) for predictor {name!r}.")
+        for i, d in enumerate(demos[:2]):  # cap printing to first 2
+            print(f"    demo[{i}]: {dict(d)!s:.220s}")
+
+    # Serialise demos so they survive JSON dump (drop the dspy.Example
+    # wrapper, keep the underlying input/output dict).
+    serial_demos = {
+        name: [dict(d) for d in demos]
+        for name, demos in result["demos"].items()
+    }
+    return {
+        "label": label,
+        "gt_mode": result["gt_mode"],
+        "optimizer": result["optimizer"],
+        "trainset_size": result["trainset_size"],
+        "instructions": dict(result["instructions"]),
+        "demos": serial_demos,
+    }
 
 
 # ---------------------------------------------------------------- main
@@ -282,49 +315,85 @@ def main() -> None:
     records_no = build_records(with_gt=False)
 
     section("STEP 1 / 4 -- Corpus")
-    print(f"  {len(RAW_QA)} questions; same content under both branches.")
-    print(f"  Each record has: question, answer, contexts ({len(RAW_QA[0]['contexts'])} per).")
-    print("  ground_truth is populated only in the with-GT branch.")
-    print_data_diagnostics(records_gt)
-    print_data_diagnostics(records_no)
+    print(f"  {len(RAW_QA)} questions, identical content in both branches.")
+    print("  Data diagnostics with GT:")
+    kv("  has_ground_truth", has_ground_truth(records_gt))
+    kv("  has_answers", has_answers(records_gt))
+    kv("  has_contexts", has_contexts(records_gt))
+    kv("  gt_mode", gt_mode(records_gt))
+    print("\n  Data diagnostics without GT:")
+    kv("  has_ground_truth", has_ground_truth(records_no))
+    kv("  has_answers", has_answers(records_no))
+    kv("  has_contexts", has_contexts(records_no))
+    kv("  gt_mode", gt_mode(records_no))
 
     section("STEP 2 / 4 -- AutoRAG specs (with-GT vs no-GT)")
-    show_autorag(records_gt, "with-GT")
-    show_autorag(records_no, "no-GT")
+    autorag_with = show_autorag(records_gt, "with-GT")
+    autorag_no = show_autorag(records_no, "no-GT")
 
-    section("STEP 3 / 4 -- DSPy specs (with-GT vs no-GT)")
-    show_dspy_spec(records_gt, "with-GT")
-    show_dspy_spec(records_no, "no-GT")
+    section("STEP 3 / 4 -- Metric pre-flight on each branch")
+    filter_with = show_metric_filter(records_gt, "with-GT")
+    filter_no = show_metric_filter(records_no, "no-GT")
 
-    section("STEP 4 / 4 -- Metric pre-flight on each branch")
-    show_metric_filter_demo(records_gt, "with-GT")
-    show_metric_filter_demo(records_no, "no-GT")
+    section("STEP 4 / 4 -- DSPy MIPROv2 optimize (real LLM calls)")
+    print("  LLM: GLM-4-Flash via Zhipu (openai-compatible endpoint)")
+    print("  Optimizer: MIPROv2 (auto='light')")
+    dspy_with = run_dspy_optimize(records_gt, "with-GT")
+    dspy_no = run_dspy_optimize(records_no, "no-GT")
 
-    section("BONUS -- DSPy compile on no-GT path (optional)")
-    maybe_run_dspy_compile(records_no)
+    # Persist a structured artefact for the Streamlit dashboard.
+    bundle = {
+        "model": "openai/glm-4-flash",
+        "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+        "corpus": RAW_QA,
+        "corpus_size": len(RAW_QA),
+        "data_diagnostics": {
+            "with_gt": {
+                "has_ground_truth": has_ground_truth(records_gt),
+                "has_answers": has_answers(records_gt),
+                "has_contexts": has_contexts(records_gt),
+                "gt_mode": gt_mode(records_gt),
+            },
+            "no_gt": {
+                "has_ground_truth": has_ground_truth(records_no),
+                "has_answers": has_answers(records_no),
+                "has_contexts": has_contexts(records_no),
+                "gt_mode": gt_mode(records_no),
+            },
+        },
+        "autorag": {"with_gt": autorag_with, "no_gt": autorag_no},
+        "metric_filter": {"with_gt": filter_with, "no_gt": filter_no},
+        "dspy": {"with_gt": dspy_with, "no_gt": dspy_no},
+    }
+    OUTPUT_JSON.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"\n  Structured result saved -> {OUTPUT_JSON}")
 
     section("SUMMARY")
     print("""
   AutoRAG:
-    * with-GT   --> objective_metric = answer_correctness; metrics include
-                 context_recall, context_entity_recall, recall, claim_recall
-    * no-GT     --> objective_metric = faithfulness; reference-required metrics
-                 are dropped; AutoRAG runtime must be wired up with an
-                 LLM-as-judge to compute the reference-free ones
+    * with-GT  -> objective=answer_correctness; reference-based metrics
+                  (context_recall, context_entity_recall, recall,
+                  claim_recall, context_utilization, answer_correctness,
+                  answer_accuracy) are included
+    * no-GT    -> objective=faithfulness; reference-required metrics
+                  removed; AutoRAG runtime must provide an LLM-as-judge
+                  for the surviving reference-free ones
 
   DSPy:
-    * with-GT   --> metric_kind = reference_based; default token-F1 over
-                 example.answer; demos are real labelled examples
-    * no-GT     --> metric_kind = reference_free_llm_judge; built-in
-                 FaithfulnessJudge scores predictions against contexts;
-                 trainset omits answer fields
+    * with-GT  -> metric = token-F1 over example.answer (offline, no
+                  per-trial LLM cost for the metric itself); demos are
+                  bootstrapped from the labelled trainset
+    * no-GT    -> metric = built-in FaithfulnessJudge dspy.Signature;
+                  every metric call is an LLM-as-judge invocation;
+                  trainset has no answer field
 
-  Evaluator data gating (now enforced):
-    * ragas    -- ``_evaluate_in_process`` drops reference-required metrics
-                 when GT is missing; result.metadata records skipped reasons
-    * ragchecker -- same filtering, plus refuses to run at all without an
-                 answer or contexts (would otherwise emit silent 0s)
-    * embedding-proxy -- already well-behaved (no change)
+  Adapter data gating (now enforced):
+    * ragas       -> _evaluate_in_process drops reference-required metrics
+                     and records skipped_metrics in result.metadata
+    * ragchecker  -> raises RuntimeError when answers or contexts are
+                     missing; filters metric_names against data
+    * embedding   -> already well-behaved (each metric only computed
+                     when its inputs exist)
 """)
 
 
