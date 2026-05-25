@@ -206,7 +206,10 @@
             [
               "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work."
             ]
-          ]
+          ],
+          "composite_score": 2.022222222182222,
+          "feasible": true,
+          "violations": []
         },
         {
           "top_k": 3,
@@ -249,7 +252,10 @@
               "Amnesty International is known for its advocacy work on behalf of human rights defenders around the world. The organization often provides detailed reports and recommendations to the Special Rapporteur on Human Rights Defenders, highlighting specific cases of abuse and calling for action to protect those at risk.",
               "Amnesty International recommends that the Special Rapporteur on the Situation of Human Rights Defenders embeds a focus on child and young HRDs in the future work of the mandate. \nAmnesty International recommends raising awareness about the differences between \"child\" and \"youth\" HRDs and the different context, needs, barriers, and challenges they face as defenders. \nAmnesty International recommends incorporating age disaggregated data on the lived experiences of child and young HRDs in all future reports or interventions by the Special Rapporteur. \nAmnesty International recommends creating online and face-to-face safe spaces for child and young HRDs and their child and youth-led organizations to actively engage with the Special and other human rights mechanisms."
             ]
-          ]
+          ],
+          "composite_score": 2.30833333331625,
+          "feasible": true,
+          "violations": []
         },
         {
           "top_k": 6,
@@ -307,7 +313,10 @@
               "Amnesty International called on its vast network of supporters to deluge Nigerian authorities first with appeals for the defenders’ freedom, and later with letters of outrage.",
               "In the case of the Ogoni 9, Amnesty International called on its supporters to take action by signing petitions, writing letters to government officials, and participating in protests and demonstrations. The organization also urged its members to raise awareness about the plight of the Ogoni people and the need for justice and accountability in their case. By mobilizing public pressure and solidarity, Amnesty International hoped to bring attention to the human rights abuses committed against the Ogoni 9 and to push for meaningful change and accountability."
             ]
-          ]
+          ],
+          "composite_score": 2.4638888888750925,
+          "feasible": true,
+          "violations": []
         }
       ],
       "best_top_k": 6,
@@ -315,7 +324,19 @@
         "context_precision": 0.9277777777501852,
         "context_recall": 1.0,
         "faithfulness": 1.0
-      }
+      },
+      "objective_spec": {
+        "metrics": {
+          "faithfulness": 1.0,
+          "context_recall": 1.0,
+          "context_precision": 0.5,
+          "answer_relevancy": 0.5
+        },
+        "constraints": {},
+        "mode": "weighted_sum"
+      },
+      "best_composite": 2.4638888888750925,
+      "best_feasible": true
     },
     "no_gt": {
       "objective": "faithfulness",
@@ -351,7 +372,10 @@
             [
               "In recent years, Amnesty International has focused on issues such as the increasing threats faced by human rights defenders, particularly in authoritarian regimes, and the need for stronger international mechanisms to support and protect their work. The organization's recommendations to the Special Rapporteur often include calls for greater accountability for perpetrators of violence and harassment against defenders, as well as measures to ensure their safety and freedom to carry out their important work."
             ]
-          ]
+          ],
+          "composite_score": 1.39999999996,
+          "feasible": true,
+          "violations": []
         },
         {
           "top_k": 3,
@@ -393,7 +417,10 @@
               "Amnesty International is known for its advocacy work on behalf of human rights defenders around the world. The organization often provides detailed reports and recommendations to the Special Rapporteur on Human Rights Defenders, highlighting specific cases of abuse and calling for action to protect those at risk.",
               "Amnesty International recommends that the Special Rapporteur on the Situation of Human Rights Defenders embeds a focus on child and young HRDs in the future work of the mandate. \nAmnesty International recommends raising awareness about the differences between \"child\" and \"youth\" HRDs and the different context, needs, barriers, and challenges they face as defenders. \nAmnesty International recommends incorporating age disaggregated data on the lived experiences of child and young HRDs in all future reports or interventions by the Special Rapporteur. \nAmnesty International recommends creating online and face-to-face safe spaces for child and young HRDs and their child and youth-led organizations to actively engage with the Special and other human rights mechanisms."
             ]
-          ]
+          ],
+          "composite_score": 1.41666666664,
+          "feasible": true,
+          "violations": []
         },
         {
           "top_k": 6,
@@ -450,14 +477,28 @@
               "Amnesty International called on its vast network of supporters to deluge Nigerian authorities first with appeals for the defenders’ freedom, and later with letters of outrage.",
               "In the case of the Ogoni 9, Amnesty International called on its supporters to take action by signing petitions, writing letters to government officials, and participating in protests and demonstrations. The organization also urged its members to raise awareness about the plight of the Ogoni people and the need for justice and accountability in their case. By mobilizing public pressure and solidarity, Amnesty International hoped to bring attention to the human rights abuses committed against the Ogoni 9 and to push for meaningful change and accountability."
             ]
-          ]
+          ],
+          "composite_score": 1.3799999999837222,
+          "feasible": true,
+          "violations": []
         }
       ],
-      "best_top_k": 1,
+      "best_top_k": 3,
       "best_scores": {
-        "context_precision": 0.79999999992,
+        "context_precision": 0.83333333328,
         "faithfulness": 1.0
-      }
+      },
+      "objective_spec": {
+        "metrics": {
+          "faithfulness": 1.0,
+          "answer_relevancy": 1.0,
+          "context_precision": 0.5
+        },
+        "constraints": {},
+        "mode": "weighted_sum"
+      },
+      "best_composite": 1.41666666664,
+      "best_feasible": true
     }
   },
   "dspy_before_after": {
@@ -532,7 +573,30 @@
       ],
       "gt_mode": "with_gt",
       "optimizer": "MIPROv2",
-      "trainset_size": 5
+      "trainset_size": 5,
+      "composite": {
+        "objective_spec": {
+          "metrics": {
+            "faithfulness": 1.0,
+            "context_recall": 1.0,
+            "context_precision": 0.5,
+            "answer_relevancy": 0.5
+          },
+          "constraints": {},
+          "mode": "weighted_sum"
+        },
+        "baseline": {
+          "score": 2.4072222222075927,
+          "feasible": true,
+          "violations": []
+        },
+        "optimized": {
+          "score": 2.4305555555417593,
+          "feasible": true,
+          "violations": []
+        },
+        "delta": 0.02333333333416654
+      }
     },
     "no_gt": {
       "baseline_scores": {
@@ -594,7 +658,29 @@
       ],
       "gt_mode": "no_gt",
       "optimizer": "MIPROv2",
-      "trainset_size": 5
+      "trainset_size": 5,
+      "composite": {
+        "objective_spec": {
+          "metrics": {
+            "faithfulness": 1.0,
+            "answer_relevancy": 1.0,
+            "context_precision": 0.5
+          },
+          "constraints": {},
+          "mode": "weighted_sum"
+        },
+        "baseline": {
+          "score": 1.39999999996,
+          "feasible": true,
+          "violations": []
+        },
+        "optimized": {
+          "score": 1.39999999996,
+          "feasible": true,
+          "violations": []
+        },
+        "delta": 0.0
+      }
     }
   },
   "questions": [

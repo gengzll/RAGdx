@@ -119,18 +119,18 @@ def show_autorag_grid(grid: dict) -> None:
         st.warning("Grid ran but produced no scores -- ragas eval may have errored.")
         return
     df = pd.DataFrame(rows)
-    objective = grid.get("objective", "faithfulness")
     best_k = grid.get("best_top_k")
+    obj_spec = grid.get("objective_spec")  # new shape
+    legacy_obj = grid.get("objective")  # old shape (single metric name)
 
-    # Highlight best config with a column-marker (text annotation), since
-    # plotly's add_vline can't snap to a categorical position reliably.
+    # Highlight best config with a label suffix.
     df["display_top_k"] = df["top_k"].apply(
         lambda k: f"{k} (best)" if k == best_k else str(k)
     )
     fig = px.bar(
         df, x="display_top_k", y="score", color="metric", barmode="group",
         text=df["score"].apply(lambda v: f"{v:.3f}" if pd.notna(v) else "N/A"),
-        title=f"AutoRAG grid -- per-config ragas scores (objective={objective})",
+        title="AutoRAG grid -- per-config ragas scores",
     )
     fig.update_traces(textposition="outside")
     fig.update_layout(
@@ -140,17 +140,44 @@ def show_autorag_grid(grid: dict) -> None:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.success(
-        f"Best config -> **top_k = {best_k}** with "
-        f"`{objective} = {grid['best_scores'].get(objective, float('nan')):.3f}`"
-    )
+    # Best-config callout
+    if obj_spec:
+        weights = obj_spec.get("metrics") or {}
+        weights_str = ", ".join(f"{k}*{v}" for k, v in weights.items())
+        cs = grid.get("best_composite")
+        feas = grid.get("best_feasible")
+        feas_tag = "feasible" if feas else "infeasible (constraint violation)"
+        st.success(
+            f"Best config → **top_k = {best_k}** "
+            f"(composite score = **{cs:.3f}**, {feas_tag})"
+        )
+        st.caption(f"Composite = {weights_str}")
+    elif legacy_obj:
+        # Older snapshot — single-metric objective
+        score = grid.get("best_scores", {}).get(legacy_obj, float("nan"))
+        st.success(
+            f"Best config → **top_k = {best_k}** with `{legacy_obj} = {score:.3f}`"
+        )
+    else:
+        st.success(f"Best config → top_k = {best_k}")
 
-    with st.expander("Per-config detail (scores + sample answers)", expanded=False):
+    # Per-config table: ragas metrics + composite score side-by-side
+    st.write("**Per-config results**")
+    table_rows = []
+    for r in runs:
+        row = {"top_k": r["top_k"]}
+        row.update({k: round(float(v), 3) if isinstance(v, (int, float)) else v
+                    for k, v in (r.get("scores") or {}).items()})
+        if "composite_score" in r:
+            row["composite"] = round(r["composite_score"], 3)
+            row["feasible"] = r.get("feasible", True)
+        table_rows.append(row)
+    st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
+
+    with st.expander("Per-config detail (sample answers)", expanded=False):
         for r in runs:
             st.markdown(f"### top_k = {r['top_k']}")
-            st.json(r.get("scores", {}))
             if r.get("answers"):
-                st.markdown("**Sample generated answers**")
                 for i, ans in enumerate(r["answers"][:3]):
                     st.markdown(f"- Q{i + 1}: `{(ans or '')[:200]}`")
 
@@ -186,6 +213,18 @@ def show_dspy_before_after(panel: dict) -> None:
         legend_title=None,
     )
     st.plotly_chart(fig, use_container_width=True)
+
+    # Composite-score headline (one number summarising the multi-metric Δ)
+    comp = panel.get("composite")
+    if comp:
+        b = comp["baseline"]["score"]
+        o = comp["optimized"]["score"]
+        d = comp["delta"]
+        cols = st.columns(3)
+        cols[0].metric("Composite baseline", f"{b:.3f}")
+        cols[1].metric("Composite optimized", f"{o:.3f}", delta=f"{d:+.3f}")
+        weights = (comp.get("objective_spec") or {}).get("metrics", {})
+        cols[2].metric("Weights", ", ".join(f"{k}={v}" for k, v in weights.items()))
 
     # Delta table
     rows_d = []

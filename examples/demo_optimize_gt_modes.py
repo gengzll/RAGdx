@@ -100,6 +100,7 @@ from ragdx.optim._gt_helpers import (  # noqa: E402
 )
 from ragdx.optim.autorag_adapter import AutoRAGAdapter  # noqa: E402
 from ragdx.optim.dspy_adapter import DSPyAdapter  # noqa: E402
+from ragdx.optim.objectives import CompositeObjective, default_objective  # noqa: E402
 from ragdx.schemas.models import DatasetRecord, OptimizationExperiment  # noqa: E402
 
 
@@ -396,13 +397,12 @@ def run_autorag_grid_search(
     ragas_embeddings,
     metrics,
     *,
-    objective: str = "faithfulness",
+    objective: CompositeObjective,
     label: str = "",
 ) -> dict:
-    """For each top_k: build RAG, generate answers, eval with ragas. The
-    ``objective`` controls which metric we pick the winner by — defaults to
-    ``faithfulness`` (works in both modes); with-GT runs use
-    ``context_recall`` to actually exercise the GT signal."""
+    """For each top_k: build RAG, generate answers, eval with ragas, then
+    pick the winner using ``objective`` (a :class:`CompositeObjective`
+    that combines metric weights + optional constraints)."""
     tag = f" [{label}]" if label else ""
     print(f"\n  Building shared embeddings + vector store{tag} ...")
     embeddings = build_embeddings()
@@ -441,25 +441,26 @@ def run_autorag_grid_search(
             }
         )
 
-    # Pick best by the declared objective (NaN-safe).
-    def _obj_value(r):
-        v = r["scores"].get(objective)
-        try:
-            v = float(v)
-            if v != v:  # NaN guard
-                return -1.0
-            return v
-        except (TypeError, ValueError):
-            return -1.0
+    # Annotate every run with composite score + feasibility, then pick.
+    for r in runs:
+        ev = objective.evaluate(r["scores"])
+        r["composite_score"] = ev["score"]
+        r["feasible"] = ev["feasible"]
+        r["violations"] = ev["violations"]
 
-    best = max(runs, key=_obj_value)
-    print(f"\n  -> Best config{tag}: top_k={best['top_k']} ({objective}={_obj_value(best):.3f})")
+    best = objective.best_among(runs) or runs[0]
+    print(
+        f"\n  -> Best config{tag}: top_k={best['top_k']} "
+        f"(composite={best['composite_score']:.3f}, feasible={best['feasible']})"
+    )
     return {
-        "objective": objective,
+        "objective_spec": objective.to_dict(),
         "label": label,
         "runs": runs,
         "best_top_k": best["top_k"],
         "best_scores": best["scores"],
+        "best_composite": best["composite_score"],
+        "best_feasible": best["feasible"],
     }
 
 
@@ -470,6 +471,7 @@ def run_dspy_before_after(
     ragas_embeddings,
     metrics,
     *,
+    objective: CompositeObjective | None = None,
     label: str = "",
 ) -> dict:
     """Compare baseline RAG Signature vs MIPROv2-optimized variant on the
@@ -555,6 +557,24 @@ def run_dspy_before_after(
     }
     print(f"\n  Delta (optimised - baseline): {delta}")
 
+    # Composite-score evaluation: the same CompositeObjective also gives us
+    # a single headline number per phase, easy to compare on the dashboard.
+    composite_eval = None
+    if objective is not None:
+        baseline_ev = objective.evaluate(baseline_scores)
+        optimised_ev = objective.evaluate(optimised_scores)
+        composite_eval = {
+            "objective_spec": objective.to_dict(),
+            "baseline": baseline_ev,
+            "optimized": optimised_ev,
+            "delta": optimised_ev["score"] - baseline_ev["score"],
+        }
+        print(
+            f"  Composite -- baseline={baseline_ev['score']:.3f} "
+            f"-> optimized={optimised_ev['score']:.3f} "
+            f"(Δ={composite_eval['delta']:+.3f})"
+        )
+
     serial_demos = {
         name: [dict(d) for d in demos]
         for name, demos in opt_result["demos"].items()
@@ -563,6 +583,7 @@ def run_dspy_before_after(
         "baseline_scores": baseline_scores,
         "optimized_scores": optimised_scores,
         "delta": delta,
+        "composite": composite_eval,
         "baseline_sample_answers": [a.answer for a in baseline_answered],
         "optimized_sample_answers": [a.answer for a in optimised_answered],
         "instructions": dict(opt_result["instructions"]),
@@ -618,19 +639,29 @@ def main() -> None:
     print(f"    no-GT path:   {[m.name for m in metrics_no_gt]}")
 
     # ------------------------------------------------ STEP 3: AutoRAG grid
+    # Composite objectives: user-defined metric weights + optional constraints.
+    # Defaults from ragdx.optim.objectives.default_objective() are sensible
+    # starting points -- override here for project-specific priorities.
+    objective_with = default_objective("with_gt")
+    objective_no = default_objective("no_gt")
+    print("\n  Composite objectives in play:")
+    print(f"    with-GT  : metrics={objective_with.metrics}")
+    print(f"               constraints={objective_with.constraints or '(none)'}")
+    print(f"    no-GT    : metrics={objective_no.metrics}")
+    print(f"               constraints={objective_no.constraints or '(none)'}")
+
     section("STEP 3 / 4 -- AutoRAG REAL grid search in BOTH GT modes")
-    print("  with-GT: objective = context_recall (the GT-aware retrieval signal)")
-    print("  no-GT:   objective = faithfulness  (ref-free, universally applicable)")
+    print("  Winner is picked by composite_score = weighted sum of metric weights.")
 
     autorag_grid_with = run_autorag_grid_search(
         corpus_chunks, records_gt, top_ks=[1, 3, 6],
         judge=judge, ragas_embeddings=ragas_embeddings, metrics=metrics_with_gt,
-        objective="context_recall", label="with-GT",
+        objective=objective_with, label="with-GT",
     )
     autorag_grid_no = run_autorag_grid_search(
         corpus_chunks, records_no, top_ks=[1, 3, 6],
         judge=judge, ragas_embeddings=ragas_embeddings, metrics=metrics_no_gt,
-        objective="faithfulness", label="no-GT",
+        objective=objective_no, label="no-GT",
     )
 
     # ------------------------------------------------ STEP 4: DSPy A/B
@@ -656,13 +687,15 @@ def main() -> None:
     print(f"\n  Preparing records with top_k={best_with} for with-GT DSPy ...")
     records_dspy_with = _records_with_ctxs(records_gt, best_with, vstore)
     dspy_before_after_with = run_dspy_before_after(
-        records_dspy_with, judge, ragas_embeddings, metrics_with_gt, label="with-GT",
+        records_dspy_with, judge, ragas_embeddings, metrics_with_gt,
+        objective=objective_with, label="with-GT",
     )
 
     print(f"\n  Preparing records with top_k={best_no} for no-GT DSPy ...")
     records_dspy_no = _records_with_ctxs(records_no, best_no, vstore)
     dspy_before_after_no = run_dspy_before_after(
-        records_dspy_no, judge, ragas_embeddings, metrics_no_gt, label="no-GT",
+        records_dspy_no, judge, ragas_embeddings, metrics_no_gt,
+        objective=objective_no, label="no-GT",
     )
 
     # Persist the structured artefact.
@@ -706,12 +739,19 @@ def main() -> None:
         ("with-GT", autorag_grid_with, dspy_before_after_with),
         ("no-GT", autorag_grid_no, dspy_before_after_no),
     ]:
-        obj = grid["objective"]
-        best = grid["best_scores"].get(obj, float("nan"))
-        print(f"  [{mode}] AutoRAG winner : top_k={grid['best_top_k']} ({obj}={best:.3f})")
+        print(
+            f"  [{mode}] AutoRAG winner : top_k={grid['best_top_k']} "
+            f"composite={grid['best_composite']:.3f} feasible={grid['best_feasible']}"
+        )
         print(f"  [{mode}] DSPy baseline  : {ab['baseline_scores']}")
         print(f"  [{mode}] DSPy optimized : {ab['optimized_scores']}")
-        print(f"  [{mode}] Delta          : {ab['delta']}")
+        print(f"  [{mode}] Per-metric Δ   : {ab['delta']}")
+        comp = ab.get("composite")
+        if comp:
+            print(
+                f"  [{mode}] Composite Δ    : {comp['baseline']['score']:.3f} -> "
+                f"{comp['optimized']['score']:.3f}  (Δ={comp['delta']:+.3f})"
+            )
         print()
 
 
