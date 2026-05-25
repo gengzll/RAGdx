@@ -422,15 +422,85 @@
   "dspy_descriptive": {
     "with_gt": {
       "label": "with-GT",
-      "error": "InternalServerError: litellm.InternalServerError: InternalServerError: OpenAIException - Connection error.",
-      "trial_scores": [],
-      "best_score_progression": []
+      "gt_mode": "with_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 5,
+      "instructions": {
+        "predict": "To generate a reasoning and an answer to the question \"What are the global implications of the USA Supreme Court ruling on abortion?\" based on the provided context, ensuring that the reasoning is well-founded and that no new facts are introduced beyond the context.\n\nConsider the potential impact on reproductive rights in other countries, the international community's reaction, and how it may influence international aid and diplomatic relations. Provide a concise and logical explanation (reasoning) that leads to the answer, adhering strictly to the information contained within the context."
+      },
+      "demos": {
+        "predict": [
+          {
+            "augmented": true,
+            "question": "What are the global implications of the USA Supreme Court ruling on abortion?",
+            "context": "",
+            "reasoning": "The global implications of the USA Supreme Court ruling on abortion can be inferred from the context provided, which discusses the potential impact on other countries and the international community.",
+            "answer": "The global implications of the USA Supreme Court ruling on abortion include the possibility of increased pressure on other countries to reconsider their own abortion laws, as well as a potential shift in international discourse and policy regarding reproductive rights. This ruling may also influence international aid and diplomatic relations, as countries may align or realign their positions based on the new legal landscape in the United States."
+          }
+        ]
+      },
+      "trial_scores": [
+        36.44,
+        46.42,
+        15.32,
+        47.93,
+        52.69,
+        40.94,
+        16.74,
+        48.36,
+        48.06,
+        52.69,
+        52.69
+      ],
+      "best_score_progression": [
+        46.42,
+        46.42,
+        47.93,
+        52.69,
+        52.69,
+        52.69,
+        52.69,
+        52.69,
+        52.69,
+        52.69
+      ]
     },
     "no_gt": {
       "label": "no-GT",
-      "error": "InternalServerError: litellm.InternalServerError: InternalServerError: OpenAIException - Connection error.",
-      "trial_scores": [],
-      "best_score_progression": []
+      "gt_mode": "no_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 5,
+      "instructions": {
+        "predict": "Generate a well-reasoned answer to the question using only the provided context, ensuring that the response is concise and does not introduce any new information. In a high-stakes scenario, such as a policy debate at the United Nations, demonstrate how your reasoning and answer would influence international policy and diplomatic relations, considering the potential global implications of the issue at hand."
+      },
+      "demos": {
+        "predict": []
+      },
+      "trial_scores": [
+        0.0,
+        25.0,
+        50.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0
+      ],
+      "best_score_progression": [
+        25.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0
+      ]
     }
   },
   "questions": [
