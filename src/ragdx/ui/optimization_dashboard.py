@@ -270,52 +270,6 @@ def show_dspy_before_after(panel: dict) -> None:
                 st.code(oa[i] if i < len(oa) else "(missing)", language="text")
 
 
-# ---------------------- DSPy descriptive trial-chart (per GT mode)
-def show_dspy_trial_only(panel: dict) -> None:
-    if panel.get("error") and not panel.get("trial_scores"):
-        st.error(f"MIPROv2 run failed: {panel['error']}")
-        st.caption(
-            "This often happens when the upstream LLM rate-limits or "
-            "drops the connection mid-run. Re-running the demo usually "
-            "fixes it."
-        )
-        return
-    cols = st.columns(4)
-    cols[0].metric("Optimizer", panel.get("optimizer", "MIPROv2"))
-    cols[1].metric("Trainset", panel.get("trainset_size", 0))
-    cols[2].metric("GT mode", panel.get("gt_mode", "?"))
-    best = max(panel.get("best_score_progression", [0.0]) or [0.0])
-    cols[3].metric("Best score", f"{best:.2f}")
-
-    trial_scores = panel.get("trial_scores") or []
-    if trial_scores:
-        running_best, rb = [], -float("inf")
-        for s in trial_scores:
-            rb = max(rb, s)
-            running_best.append(rb)
-        df = pd.DataFrame({
-            "trial": list(range(1, len(trial_scores) + 1)),
-            "score": trial_scores,
-            "running best": running_best,
-        })
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=df["trial"], y=df["score"], name="trial",
-                             marker_color="#1f77b4",
-                             text=[f"{s:.1f}" for s in df["score"]],
-                             textposition="outside"))
-        fig.add_trace(go.Scatter(x=df["trial"], y=df["running best"],
-                                 mode="lines+markers", name="running best",
-                                 line=dict(color="#d62728")))
-        fig.update_layout(height=300, margin=dict(t=30, b=30),
-                          xaxis_title="trial", yaxis_title="score",
-                          legend=dict(orientation="h", y=1.05))
-        st.plotly_chart(fig, use_container_width=True)
-
-    for name, instr in panel.get("instructions", {}).items():
-        with st.expander(f"Optimized instructions for `{name}`", expanded=False):
-            st.code(instr or "(empty)", language="text")
-
-
 # -------------------------------------------------------------- main page
 def main() -> None:
     st.set_page_config(
@@ -360,38 +314,34 @@ def main() -> None:
     st.caption("Same records used twice; only `ground_truth` is erased in the no-GT branch.")
     st.table(diagnostics_table(bundle["data_diagnostics"]))
 
-    # -- Step 2: AutoRAG specs (descriptive)
+    # -- Step 2: AutoRAG specs + canonical metric set (merged)
     if "autorag_spec" in bundle:
         st.divider()
-        st.subheader("Step 2 — AutoRAG specs (descriptive)")
+        st.subheader("Step 2 — AutoRAG specs + canonical metric set")
+        st.caption(
+            "Static contract: `gt_mode → select_metrics(gt_mode) → metric set`. "
+            "Adapters validate explicit metric requests against this set and "
+            "**raise** on mismatch — no silent skip."
+        )
         c1, c2 = st.columns(2)
+        metric_map = bundle.get("metric_map") or bundle.get("metric_filter") or {}
         with c1:
             st.markdown("#### with-GT")
             show_spec_panel(bundle["autorag_spec"]["with_gt"])
+            if "with_gt" in metric_map:
+                st.markdown("**Static metric set (`select_metrics('with_gt')`)**")
+                show_filter_panel(metric_map["with_gt"])
         with c2:
             st.markdown("#### no-GT")
             show_spec_panel(bundle["autorag_spec"]["no_gt"])
+            if "no_gt" in metric_map:
+                st.markdown("**Static metric set (`select_metrics('no_gt')`)**")
+                show_filter_panel(metric_map["no_gt"])
 
-    # -- Step 3: pre-flight
-    if "metric_filter" in bundle:
-        st.divider()
-        st.subheader("Step 3 — Metric pre-flight")
-        st.caption(
-            "Same full ragas-style metric request goes to both branches. "
-            "The pre-flight drops what the data can't support."
-        )
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("#### with-GT")
-            show_filter_panel(bundle["metric_filter"]["with_gt"])
-        with c2:
-            st.markdown("#### no-GT")
-            show_filter_panel(bundle["metric_filter"]["no_gt"])
-
-    # -- Step 4: AutoRAG REAL grid search (BOTH gt_modes)
+    # -- Step 3: AutoRAG REAL grid search (BOTH gt_modes)
     if "autorag_grid" in bundle:
         st.divider()
-        st.subheader("Step 4 — AutoRAG REAL grid search")
+        st.subheader("Step 3 — AutoRAG REAL grid search")
         st.caption(
             "For each `top_k`, the demo actually built a RAG pipeline "
             "(HuggingFace embeddings + FAISS + GLM-4-Flash), generated "
@@ -411,10 +361,10 @@ def main() -> None:
             with tabs[1]:
                 show_autorag_grid(grid["no_gt"])
 
-    # -- Step 5: DSPy before/after (BOTH gt_modes)
+    # -- Step 4: DSPy before/after (BOTH gt_modes, includes trial chart)
     if "dspy_before_after" in bundle:
         st.divider()
-        st.subheader("Step 5 — DSPy before/after at the AutoRAG winner config")
+        st.subheader("Step 4 — DSPy before/after at the AutoRAG winner config")
         st.caption(
             "Baseline = default `RAGSignature` running on records "
             "pre-retrieved with that mode's best `top_k`. Optimized = the "
@@ -432,24 +382,6 @@ def main() -> None:
                 show_dspy_before_after(ba["with_gt"])
             with tabs[1]:
                 show_dspy_before_after(ba["no_gt"])
-
-    # -- Step 6: DSPy descriptive trial charts (GT-mode contrast)
-    if "dspy_descriptive" in bundle:
-        st.divider()
-        st.subheader("Step 6 — DSPy MIPROv2 trial chart (GT-mode contrast)")
-        st.caption(
-            "MIPROv2 ran in both GT modes purely to demonstrate the "
-            "metric_kind difference: with-GT uses token-F1 against "
-            "`example.answer` (cheap, deterministic), no-GT uses the "
-            "built-in `FaithfulnessJudge` LLM-as-judge."
-        )
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("#### with-GT (token-F1 metric)")
-            show_dspy_trial_only(bundle["dspy_descriptive"]["with_gt"])
-        with c2:
-            st.markdown("#### no-GT (LLM-as-judge)")
-            show_dspy_trial_only(bundle["dspy_descriptive"]["no_gt"])
 
     # -- questions appendix
     if bundle.get("questions"):

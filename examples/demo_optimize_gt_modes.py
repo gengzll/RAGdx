@@ -1,19 +1,20 @@
 """End-to-end RAG optimization demo with real LLM, AutoRAG grid + DSPy A/B.
 
-Drives the full ragdx optimization story on the amnesty_qa[:5] dataset:
+Drives the full ragdx optimization story on the amnesty_qa[:5] dataset
+in 4 steps, side-by-side for both GT modes:
 
   1. Load corpus + records (real questions, real GT, ~15 corpus chunks).
-  2. Show AutoRAG / DSPy specs in both GT modes (descriptive).
-  3. Metric pre-flight (descriptive — filtered metric set per GT mode).
-  4. AutoRAG grid search (REAL runs): for each top_k in {1, 3, 6}, build a
-     RAG pipeline, generate answers, evaluate with ragas. Pick the best
-     ``top_k`` by ``faithfulness``.
-  5. DSPy before/after (REAL runs): using the best top_k from step 4,
-     - baseline:  default RAG Signature -> generate -> ragas eval
-     - optimized: MIPROv2 (with-GT path) -> rebuilt program -> generate -> ragas eval
-     - compute per-metric delta
-  6. DSPy MIPROv2 trial chart for both GT modes (descriptive — uses the
-     existing trainset + adapter to show metric_kind contrast).
+  2. Show AutoRAG / DSPy specs + canonical metric set per GT mode
+     (descriptive: gt_mode -> select_metrics(gt_mode) -> metric set).
+  3. AutoRAG grid search (REAL runs): for each top_k in {1, 3, 6}, build
+     a RAG pipeline, generate answers, evaluate with ragas. Pick the
+     winning ``top_k`` per mode (with-GT objective=context_recall,
+     no-GT objective=faithfulness).
+  4. DSPy before/after (REAL runs) + MIPROv2 trial chart: at each mode's
+     winning top_k, run baseline -> ragas eval, MIPROv2 optimize ->
+     rebuilt program -> ragas eval, compute per-metric delta. The trial
+     chart shows the GT-mode metric_kind contrast (token-F1 vs LLM-judge)
+     captured during the same MIPROv2 run.
 
 All cells call the LLM (GLM-4-Flash by default). There is no offline
 path; if you don't have a key the demo errors immediately at startup.
@@ -574,63 +575,6 @@ def run_dspy_before_after(
     }
 
 
-# ----------- STEP 6 — DSPy MIPROv2 only (descriptive, for GT-mode contrast)
-def run_dspy_optimize_descriptive(records, label: str) -> dict:
-    """Like the original demo cell -- runs MIPROv2 and captures trial
-    scores but does NOT re-run the optimised program for ragas eval.
-    Used so the dashboard can show the GT-mode metric_kind contrast
-    (token-F1 vs LLM-judge) on the same trial chart layout as before."""
-    print(f"\n  Running MIPROv2 ({label}) for trial-score contrast ...")
-    import dspy
-
-    student = build_dspy_lm()
-    dspy.configure(lm=student)
-
-    capture = _MIPROTrialScoreCapture()
-    capture.setLevel(logging.INFO)
-    mipro_logger = logging.getLogger("dspy.teleprompt.mipro_optimizer_v2")
-    mipro_logger.addHandler(capture)
-    prior_level = mipro_logger.level
-    mipro_logger.setLevel(logging.INFO)
-
-    adapter = DSPyAdapter()
-    try:
-        result = adapter.optimize(
-            records,
-            student_lm=student,
-            judge_lm=student,
-            optimizer="MIPROv2",
-            optimizer_kwargs={"auto": "light"},
-        )
-    except Exception as exc:
-        mipro_logger.removeHandler(capture)
-        mipro_logger.setLevel(prior_level)
-        return {
-            "label": label,
-            "error": f"{type(exc).__name__}: {exc}",
-            "trial_scores": list(capture.scores_so_far),
-            "best_score_progression": list(capture.best_scores),
-        }
-    finally:
-        mipro_logger.removeHandler(capture)
-        mipro_logger.setLevel(prior_level)
-
-    serial_demos = {
-        name: [dict(d) for d in demos]
-        for name, demos in result["demos"].items()
-    }
-    return {
-        "label": label,
-        "gt_mode": result["gt_mode"],
-        "optimizer": result["optimizer"],
-        "trainset_size": result["trainset_size"],
-        "instructions": dict(result["instructions"]),
-        "demos": serial_demos,
-        "trial_scores": list(capture.scores_so_far),
-        "best_score_progression": list(capture.best_scores),
-    }
-
-
 # ---------------------------------------------------------------- main
 def main() -> None:
     print("Loading amnesty_qa[:5] corpus + records (may download on first run) ...")
@@ -640,7 +584,7 @@ def main() -> None:
     records_gt = build_records(base_records, with_gt=True)
     records_no = build_records(base_records, with_gt=False)
 
-    section("STEP 1 / 6 -- Corpus + data diagnostics")
+    section("STEP 1 / 4 -- Corpus + data diagnostics")
     print("  Corpus: explodinggradients/amnesty_qa (english_v3, eval[:5])")
     print(f"  {len(base_records)} questions, {len(corpus_chunks)} corpus chunks total.")
     print("  Data diagnostics (with-GT):")
@@ -654,28 +598,27 @@ def main() -> None:
     kv("  has_contexts", has_contexts(records_no))
     kv("  gt_mode", gt_mode(records_no))
 
-    section("STEP 2 / 6 -- AutoRAG specs (descriptive, GT-mode contrast)")
+    section("STEP 2 / 4 -- AutoRAG specs + canonical metric set (descriptive)")
+    print(
+        "  Static contract: gt_mode -> select_metrics(gt_mode) -> metric set.\n"
+        "  Adapters call validate_metrics_for_mode() on every explicit metric\n"
+        "  request and RAISE on mismatch -- no silent skip."
+    )
     autorag_with = show_autorag(records_gt, "with-GT")
     autorag_no = show_autorag(records_no, "no-GT")
-
-    section("STEP 3 / 6 -- Canonical metric set by GT mode (static)")
-    print(
-        "  Step 3 is purely declarative: gt_mode determines which metrics\n"
-        "  ragdx will let through. Adapters call validate_metrics_for_mode()\n"
-        "  on every explicit request and RAISE on mismatch."
-    )
-    filter_with = show_metric_map("with-GT", "with_gt")
-    filter_no = show_metric_map("no-GT", "no_gt")
+    metric_map_with = show_metric_map("with-GT", "with_gt")
+    metric_map_no = show_metric_map("no-GT", "no_gt")
 
     judge = build_ragas_judge()
     ragas_embeddings = build_ragas_embeddings()
     metrics_with_gt = build_ragas_metrics_for_mode("with_gt")
     metrics_no_gt = build_ragas_metrics_for_mode("no_gt")
-    print(f"\n  ragas metrics (with-GT path): {[m.name for m in metrics_with_gt]}")
-    print(f"  ragas metrics (no-GT path):   {[m.name for m in metrics_no_gt]}")
+    print("\n  ragas metrics chosen for the demo runs:")
+    print(f"    with-GT path: {[m.name for m in metrics_with_gt]}")
+    print(f"    no-GT path:   {[m.name for m in metrics_no_gt]}")
 
-    # ------------------------------------------------ STEP 4: AutoRAG grid
-    section("STEP 4 / 6 -- AutoRAG REAL grid search in BOTH GT modes")
+    # ------------------------------------------------ STEP 3: AutoRAG grid
+    section("STEP 3 / 4 -- AutoRAG REAL grid search in BOTH GT modes")
     print("  with-GT: objective = context_recall (the GT-aware retrieval signal)")
     print("  no-GT:   objective = faithfulness  (ref-free, universally applicable)")
 
@@ -690,8 +633,8 @@ def main() -> None:
         objective="faithfulness", label="no-GT",
     )
 
-    # ------------------------------------------------ STEP 5: DSPy A/B
-    section("STEP 5 / 6 -- DSPy before/after in BOTH GT modes")
+    # ------------------------------------------------ STEP 4: DSPy A/B
+    section("STEP 4 / 4 -- DSPy before/after in BOTH GT modes (with trial chart)")
 
     def _records_with_ctxs(records, top_k, vstore):
         return [
@@ -722,12 +665,6 @@ def main() -> None:
         records_dspy_no, judge, ragas_embeddings, metrics_no_gt, label="no-GT",
     )
 
-    section("STEP 6 / 6 -- DSPy MIPROv2 trial chart (with-GT vs no-GT)")
-    print("  Re-running MIPROv2 in both GT modes just to expose the")
-    print("  metric_kind contrast (token-F1 vs LLM-as-judge).")
-    dspy_with = run_dspy_optimize_descriptive(records_gt, "with-GT")
-    dspy_no = run_dspy_optimize_descriptive(records_no, "no-GT")
-
     # Persist the structured artefact.
     bundle = {
         "model": "openai/glm-4-flash",
@@ -750,13 +687,12 @@ def main() -> None:
             },
         },
         "autorag_spec": {"with_gt": autorag_with, "no_gt": autorag_no},
-        "metric_filter": {"with_gt": filter_with, "no_gt": filter_no},
+        "metric_map": {"with_gt": metric_map_with, "no_gt": metric_map_no},
         "autorag_grid": {"with_gt": autorag_grid_with, "no_gt": autorag_grid_no},
         "dspy_before_after": {
             "with_gt": dspy_before_after_with,
             "no_gt": dspy_before_after_no,
         },
-        "dspy_descriptive": {"with_gt": dspy_with, "no_gt": dspy_no},
         "questions": [
             {"question": r.question, "ground_truth": r.ground_truth}
             for r in base_records

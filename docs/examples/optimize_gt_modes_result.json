@@ -170,41 +170,6 @@
       }
     }
   },
-  "metric_filter": {
-    "with_gt": {
-      "label": "with-GT",
-      "gt_mode": "with_gt",
-      "metrics": [
-        "answer_accuracy",
-        "answer_correctness",
-        "answer_relevancy",
-        "claim_recall",
-        "context_entity_recall",
-        "context_precision",
-        "context_recall",
-        "context_utilization",
-        "faithfulness",
-        "hallucination",
-        "noise_sensitivity",
-        "recall",
-        "response_relevancy",
-        "self_knowledge"
-      ]
-    },
-    "no_gt": {
-      "label": "no-GT",
-      "gt_mode": "no_gt",
-      "metrics": [
-        "answer_relevancy",
-        "context_precision",
-        "faithfulness",
-        "hallucination",
-        "noise_sensitivity",
-        "response_relevancy",
-        "self_knowledge"
-      ]
-    }
-  },
   "autorag_grid": {
     "with_gt": {
       "objective": "context_recall",
@@ -632,98 +597,6 @@
       "trainset_size": 5
     }
   },
-  "dspy_descriptive": {
-    "with_gt": {
-      "label": "with-GT",
-      "gt_mode": "with_gt",
-      "optimizer": "MIPROv2",
-      "trainset_size": 5,
-      "instructions": {
-        "predict": "Prompt a Language Model to generate a reasoning and an answer to complex questions about the global political and social implications of significant legal decisions. Ensure that the response is derived exclusively from the provided context, is concise, and reflects a high stakes scenario where the consequences of incorrect reasoning or facts could have far-reaching international effects on human rights, policy, and diplomatic relations."
-      },
-      "demos": {
-        "predict": [
-          {
-            "augmented": true,
-            "question": "What are the global implications of the USA Supreme Court ruling on abortion?",
-            "context": "",
-            "reasoning": "The global implications of the USA Supreme Court ruling on abortion can be inferred from the context provided, which discusses the potential impact on other countries and the international community.",
-            "answer": "The global implications of the USA Supreme Court ruling on abortion include the possibility of increased pressure on other countries to reconsider their own abortion laws, as well as a potential shift in international discourse and policy regarding reproductive rights. This ruling may also influence international aid and diplomatic relations, as countries may align or realign their positions based on the new legal landscape in the United States."
-          }
-        ]
-      },
-      "trial_scores": [
-        36.32,
-        38.77,
-        36.58,
-        38.77,
-        48.78,
-        40.94,
-        36.75,
-        46.68,
-        38.77,
-        46.51,
-        47.15
-      ],
-      "best_score_progression": [
-        38.77,
-        38.77,
-        38.77,
-        48.78,
-        48.78,
-        48.78,
-        48.78,
-        48.78,
-        48.78,
-        48.78
-      ]
-    },
-    "no_gt": {
-      "label": "no-GT",
-      "gt_mode": "no_gt",
-      "optimizer": "MIPROv2",
-      "trainset_size": 5,
-      "instructions": {
-        "predict": "Use the provided context to answer the following question with precision, ensuring that your reasoning is solely based on the information given. Remember, the answer must be concise and should not include any extraneous facts. This task is critical for an emergency response team that needs to understand the global implications of a legal ruling for international diplomatic relations. Please generate a reasoning and answer that would be suitable for an urgent briefing."
-      },
-      "demos": {
-        "predict": [
-          {
-            "augmented": true,
-            "question": "What are the global implications of the USA Supreme Court ruling on abortion?",
-            "context": "",
-            "reasoning": "The global implications of the USA Supreme Court ruling on abortion can be inferred from the context provided, which discusses the potential impact on other countries and the international community.",
-            "answer": "The global implications of the USA Supreme Court ruling on abortion include the possibility of increased pressure on other countries to reconsider their own abortion laws, as well as a potential shift in international discourse and policy regarding reproductive rights. This ruling may also influence international aid and diplomatic relations, as countries may align or realign their positions based on the new legal landscape in the United States."
-          }
-        ]
-      },
-      "trial_scores": [
-        0.0,
-        25.0,
-        25.0,
-        25.0,
-        50.0,
-        25.0,
-        25.0,
-        50.0,
-        25.0,
-        50.0,
-        50.0
-      ],
-      "best_score_progression": [
-        25.0,
-        25.0,
-        25.0,
-        50.0,
-        50.0,
-        50.0,
-        50.0,
-        50.0,
-        50.0,
-        50.0
-      ]
-    }
-  },
   "questions": [
     {
       "question": "What are the global implications of the USA Supreme Court ruling on abortion?",
@@ -745,5 +618,40 @@
       "question": "What are the recommendations made by Amnesty International to the Special Rapporteur on Human Rights Defenders?",
       "ground_truth": "The recommendations made by Amnesty International to the Special Rapporteur on Human Rights Defenders include embedding a focus on child and young HRDs in future work, raising awareness about the differences and challenges they face, incorporating age disaggregated data in reports, and creating safe spaces for engagement."
     }
-  ]
+  ],
+  "metric_map": {
+    "with_gt": {
+      "label": "with-GT",
+      "gt_mode": "with_gt",
+      "metrics": [
+        "answer_accuracy",
+        "answer_correctness",
+        "answer_relevancy",
+        "claim_recall",
+        "context_entity_recall",
+        "context_precision",
+        "context_recall",
+        "context_utilization",
+        "faithfulness",
+        "hallucination",
+        "noise_sensitivity",
+        "recall",
+        "response_relevancy",
+        "self_knowledge"
+      ]
+    },
+    "no_gt": {
+      "label": "no-GT",
+      "gt_mode": "no_gt",
+      "metrics": [
+        "answer_relevancy",
+        "context_precision",
+        "faithfulness",
+        "hallucination",
+        "noise_sensitivity",
+        "response_relevancy",
+        "self_knowledge"
+      ]
+    }
+  }
 }
