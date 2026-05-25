@@ -88,6 +88,9 @@ def _comp(*a, **kw):
 litellm.batch_completion = _batch
 litellm.completion = _comp
 
+import logging  # noqa: E402
+
+from ragdx import UnifiedEvaluator  # noqa: E402
 from ragdx.optim._gt_helpers import (  # noqa: E402
     filter_metrics_by_data,
     gt_mode,
@@ -98,6 +101,41 @@ from ragdx.optim._gt_helpers import (  # noqa: E402
 from ragdx.optim.autorag_adapter import AutoRAGAdapter  # noqa: E402
 from ragdx.optim.dspy_adapter import DSPyAdapter  # noqa: E402
 from ragdx.schemas.models import DatasetRecord, OptimizationExperiment  # noqa: E402
+
+
+# ----------------------------------------- DSPy trial-score capture helper
+class _MIPROTrialScoreCapture(logging.Handler):
+    """Attach to ``dspy.teleprompt.mipro_optimizer_v2`` to record the per-trial
+    score progression and the running-best so we can plot them later.
+
+    MIPROv2 logs lines like ``Scores so far: [21.65, 21.32, ...]`` and
+    ``Best score so far: 28.6`` — we parse those out instead of patching
+    the teleprompter internals.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.scores_so_far: list[float] = []
+        self.best_scores: list[float] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = record.getMessage()
+        if "Scores so far:" in msg:
+            tail = msg.split("Scores so far:", 1)[1].strip()
+            try:
+                self.scores_so_far = json.loads(tail)
+            except Exception:
+                pass
+        elif "Best score so far:" in msg:
+            tail = msg.split("Best score so far:", 1)[1].strip()
+            try:
+                self.best_scores.append(float(tail))
+            except Exception:
+                pass
+
+    def reset(self) -> None:
+        self.scores_so_far = []
+        self.best_scores = []
 
 # ---------------------------------------------------------------- corpus
 RAW_QA = [
@@ -267,6 +305,14 @@ def run_dspy_optimize(records, label: str) -> dict:
     student = build_dspy_lm()
     dspy.configure(lm=student)
 
+    # Capture the per-trial score progression so the dashboard can plot it.
+    capture = _MIPROTrialScoreCapture()
+    capture.setLevel(logging.INFO)
+    mipro_logger = logging.getLogger("dspy.teleprompt.mipro_optimizer_v2")
+    mipro_logger.addHandler(capture)
+    prior_level = mipro_logger.level
+    mipro_logger.setLevel(logging.INFO)
+
     adapter = DSPyAdapter()
     try:
         result = adapter.optimize(
@@ -277,13 +323,26 @@ def run_dspy_optimize(records, label: str) -> dict:
             optimizer_kwargs={"auto": "light"},
         )
     except Exception as exc:
+        mipro_logger.removeHandler(capture)
+        mipro_logger.setLevel(prior_level)
         print(f"  optimize() raised: {type(exc).__name__}: {exc}")
-        return {"label": label, "error": f"{type(exc).__name__}: {exc}"}
+        return {
+            "label": label,
+            "error": f"{type(exc).__name__}: {exc}",
+            "trial_scores": list(capture.scores_so_far),
+            "best_score_progression": list(capture.best_scores),
+        }
+    finally:
+        mipro_logger.removeHandler(capture)
+        mipro_logger.setLevel(prior_level)
 
     print("\n  Optimisation done.")
     kv("  gt_mode", result["gt_mode"])
     kv("  optimizer", result["optimizer"])
     kv("  trainset_size", result["trainset_size"])
+    kv("  total trials", len(capture.scores_so_far))
+    if capture.best_scores:
+        kv("  best score", capture.best_scores[-1])
     for name, instr in result["instructions"].items():
         print(f"\n  Instructions for predictor {name!r}:")
         for line in (instr or "").splitlines() or [""]:
@@ -306,7 +365,97 @@ def run_dspy_optimize(records, label: str) -> dict:
         "trainset_size": result["trainset_size"],
         "instructions": dict(result["instructions"]),
         "demos": serial_demos,
+        "trial_scores": list(capture.scores_so_far),
+        "best_score_progression": list(capture.best_scores),
     }
+
+
+# ----------------------------------------- Actual evaluation step
+def build_ragas_judge():
+    """ragas-compatible LLM wrapper around GLM-4-Flash."""
+    from langchain_openai import ChatOpenAI
+    from ragas.llms import LangchainLLMWrapper
+
+    chat = ChatOpenAI(
+        model="glm-4-flash",
+        api_key=KEY,
+        base_url="https://open.bigmodel.cn/api/paas/v4",
+        temperature=0.01,
+        timeout=60,
+        max_retries=2,
+    )
+    return LangchainLLMWrapper(chat)
+
+
+def run_evaluation(records, label: str) -> dict:
+    """Run UnifiedEvaluator twice on the same records: once with the
+    dependency-free embedding-proxy (fast deterministic baseline), once
+    with real ragas (GLM-as-judge). Returns per-bucket scores for the
+    dashboard."""
+    print(f"\n  Running UnifiedEvaluator({label}) ...")
+    evaluator = UnifiedEvaluator()
+
+    # Cell A: embedding-proxy (instant, no API)
+    print("    [A] embedding-proxy ...")
+    proxy = evaluator.evaluate(
+        records,
+        use_ragas=False, use_ragchecker=False, use_embedding=True,
+    )
+    proxy_pack = {
+        "retrieval": dict(proxy.retrieval),
+        "generation": dict(proxy.generation),
+        "e2e": dict(proxy.e2e),
+        "metadata": dict(proxy.metadata),
+    }
+    print(f"        retrieval={proxy_pack['retrieval']}")
+    print(f"        generation={proxy_pack['generation']}")
+    print(f"        e2e={proxy_pack['e2e']}")
+
+    # Cell B: ragas with GLM judge (real eval calls)
+    print("    [B] ragas (GLM-4-Flash judge) ...")
+    ragas_judge = build_ragas_judge()
+    try:
+        from ragas.metrics import (
+            answer_correctness,
+            answer_relevancy,
+            context_precision,
+            context_recall,
+            faithfulness,
+        )
+        requested_metrics = [
+            faithfulness,
+            answer_relevancy,
+            context_precision,
+            context_recall,
+            answer_correctness,
+        ]
+        real = evaluator.evaluate(
+            records,
+            use_ragas=True, run_ragas=True,
+            use_ragchecker=False, use_embedding=False,
+            ragas_kwargs={
+                "llm": ragas_judge,
+                "metrics": requested_metrics,
+            },
+        )
+        real_pack = {
+            "retrieval": dict(real.retrieval),
+            "generation": dict(real.generation),
+            "e2e": dict(real.e2e),
+            "metadata": {
+                k: v for k, v in real.metadata.items()
+                if k in ("ragas_metrics", "skipped_metrics", "data_diagnostics", "mode")
+            },
+        }
+        print(f"        retrieval={real_pack['retrieval']}")
+        print(f"        generation={real_pack['generation']}")
+        print(f"        e2e={real_pack['e2e']}")
+        print(f"        skipped={real_pack['metadata'].get('skipped_metrics', {})}")
+    except Exception as exc:
+        print(f"    ragas eval failed: {type(exc).__name__}: {exc}")
+        real_pack = {"error": f"{type(exc).__name__}: {exc}"}
+
+    return {"label": label, "embedding_proxy": proxy_pack, "ragas": real_pack}
 
 
 # ---------------------------------------------------------------- main
@@ -335,7 +484,11 @@ def main() -> None:
     filter_with = show_metric_filter(records_gt, "with-GT")
     filter_no = show_metric_filter(records_no, "no-GT")
 
-    section("STEP 4 / 4 -- DSPy MIPROv2 optimize (real LLM calls)")
+    section("STEP 4 / 5 -- Actual evaluation (UnifiedEvaluator: embedding-proxy + ragas)")
+    eval_with = run_evaluation(records_gt, "with-GT")
+    eval_no = run_evaluation(records_no, "no-GT")
+
+    section("STEP 5 / 5 -- DSPy MIPROv2 optimize (real LLM calls)")
     print("  LLM: GLM-4-Flash via Zhipu (openai-compatible endpoint)")
     print("  Optimizer: MIPROv2 (auto='light')")
     dspy_with = run_dspy_optimize(records_gt, "with-GT")
@@ -363,6 +516,7 @@ def main() -> None:
         },
         "autorag": {"with_gt": autorag_with, "no_gt": autorag_no},
         "metric_filter": {"with_gt": filter_with, "no_gt": filter_no},
+        "evaluation": {"with_gt": eval_with, "no_gt": eval_no},
         "dspy": {"with_gt": dspy_with, "no_gt": dspy_no},
     }
     OUTPUT_JSON.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")

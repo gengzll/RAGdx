@@ -254,6 +254,103 @@
       }
     }
   },
+  "evaluation": {
+    "with_gt": {
+      "label": "with-GT",
+      "embedding_proxy": {
+        "retrieval": {
+          "context_precision": 0.0717920786660313,
+          "context_recall": 0.19198995005990693
+        },
+        "generation": {
+          "faithfulness": 0.13683285767013081,
+          "response_relevancy": 0.0889804119230641
+        },
+        "e2e": {
+          "answer_correctness": 0.33129358466396386
+        },
+        "metadata": {
+          "tool": "embedding-proxy",
+          "mode": "embedding-proxy",
+          "record_count": 5,
+          "note": "Metrics computed via TF-IDF cosine similarity. They are proxies for the conventional ragas/RAGChecker metrics — treat as relative-quality signal, not absolute ground truth."
+        }
+      },
+      "ragas": {
+        "retrieval": {
+          "context_precision": 0.89999999992,
+          "context_recall": 1.0
+        },
+        "generation": {
+          "faithfulness": 0.9
+        },
+        "e2e": {
+          "answer_correctness": NaN
+        },
+        "metadata": {
+          "mode": "evaluated",
+          "ragas_metrics": [
+            "faithfulness",
+            "answer_relevancy",
+            "context_precision",
+            "context_recall",
+            "answer_correctness"
+          ],
+          "skipped_metrics": {},
+          "data_diagnostics": {
+            "has_ground_truth": true,
+            "has_answers": true,
+            "has_contexts": true
+          }
+        }
+      }
+    },
+    "no_gt": {
+      "label": "no-GT",
+      "embedding_proxy": {
+        "retrieval": {
+          "context_precision": 0.0695913091946837
+        },
+        "generation": {
+          "faithfulness": 0.12918817460622115,
+          "response_relevancy": 0.09174452709814167
+        },
+        "e2e": {},
+        "metadata": {
+          "tool": "embedding-proxy",
+          "mode": "embedding-proxy",
+          "record_count": 5,
+          "note": "Metrics computed via TF-IDF cosine similarity. They are proxies for the conventional ragas/RAGChecker metrics — treat as relative-quality signal, not absolute ground truth."
+        }
+      },
+      "ragas": {
+        "retrieval": {
+          "context_precision": 0.39999999996
+        },
+        "generation": {
+          "faithfulness": 0.9
+        },
+        "e2e": {},
+        "metadata": {
+          "mode": "evaluated",
+          "ragas_metrics": [
+            "faithfulness",
+            "answer_relevancy",
+            "context_precision"
+          ],
+          "skipped_metrics": {
+            "context_recall": "no ground_truth in dataset",
+            "answer_correctness": "no ground_truth in dataset"
+          },
+          "data_diagnostics": {
+            "has_ground_truth": false,
+            "has_answers": true,
+            "has_contexts": true
+          }
+        }
+      }
+    }
+  },
   "dspy": {
     "with_gt": {
       "label": "with-GT",
@@ -261,11 +358,36 @@
       "optimizer": "MIPROv2",
       "trainset_size": 5,
       "instructions": {
-        "predict": "In a high-stakes scenario where the accuracy of a legal document is critical, answer the question \"What is the significance of the statute of limitations in personal injury cases?\" using only the provided context. Ensure your response is concise and includes a clear reasoning process that directly references the context. Remember, the stakes are high, and any extraneous information or inaccuracies could have serious consequences. Be concise. Do not invent facts that are not in the context."
+        "predict": "Prompt a Language Model to answer a question based on a provided context, ensuring the response is derived solely from the context and not from external knowledge. The task requires the LM to provide a concise answer and a reasoning explanation for the answer, highlighting the importance of accuracy and the avoidance of invented facts. To enhance the LM's performance, frame the task within a high-stakes scenario where the correctness of the answer could have significant real-world implications."
       },
       "demos": {
         "predict": []
-      }
+      },
+      "trial_scores": [
+        21.6,
+        18.07,
+        29.13,
+        18.07,
+        23.42,
+        25.19,
+        29.13,
+        23.42,
+        18.07,
+        23.42,
+        23.42
+      ],
+      "best_score_progression": [
+        21.6,
+        29.13,
+        29.13,
+        29.13,
+        29.13,
+        29.13,
+        29.13,
+        29.13,
+        29.13,
+        29.13
+      ]
     },
     "no_gt": {
       "label": "no-GT",
@@ -277,7 +399,32 @@
       },
       "demos": {
         "predict": []
-      }
+      },
+      "trial_scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        95.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "best_score_progression": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
     }
   }
 }
