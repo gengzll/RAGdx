@@ -79,16 +79,29 @@ def show_spec_panel(panel: dict) -> None:
 
 
 def show_filter_panel(panel: dict) -> None:
-    st.write("**Requested**")
-    st.write(", ".join(panel["requested"]))
-    st.write("**Kept**")
-    st.write(", ".join(panel["kept"]) if panel["kept"] else "_(none -- pre-flight rejected all)_")
-    if panel["skipped"]:
-        st.write("**Skipped (with reasons)**")
-        for m, reason in panel["skipped"].items():
-            st.write(f"- `{m}` -- {reason}")
-    else:
-        st.success("Every requested metric is supported by the data.")
+    """Static gt_mode -> metric map (no record inspection)."""
+    metrics = panel.get("metrics") or []
+    if "requested" in panel and "kept" in panel:
+        # Legacy bundle shape: data-driven filter result
+        st.write("**Requested**")
+        st.write(", ".join(panel["requested"]))
+        st.write("**Kept**")
+        st.write(", ".join(panel["kept"]) if panel["kept"] else "_(none -- pre-flight rejected all)_")
+        if panel.get("skipped"):
+            st.write("**Skipped (with reasons)**")
+            for m, reason in panel["skipped"].items():
+                st.write(f"- `{m}` -- {reason}")
+        else:
+            st.success("Every requested metric is supported by the data.")
+        return
+    # New shape: static metric map for this gt_mode
+    st.write(f"**Canonical metric set ({len(metrics)} metrics)**")
+    for m in metrics:
+        st.write(f"- `{m}`")
+    st.caption(
+        "Adapters call `validate_metrics_for_mode()` and raise on any "
+        "metric outside this set -- no silent skip."
+    )
 
 
 # ---------------------- AutoRAG grid chart
@@ -375,7 +388,7 @@ def main() -> None:
             st.markdown("#### no-GT")
             show_filter_panel(bundle["metric_filter"]["no_gt"])
 
-    # -- Step 4: AutoRAG REAL grid search
+    # -- Step 4: AutoRAG REAL grid search (BOTH gt_modes)
     if "autorag_grid" in bundle:
         st.divider()
         st.subheader("Step 4 — AutoRAG REAL grid search")
@@ -383,21 +396,42 @@ def main() -> None:
             "For each `top_k`, the demo actually built a RAG pipeline "
             "(HuggingFace embeddings + FAISS + GLM-4-Flash), generated "
             "answers, and evaluated them with ragas. The winner becomes "
-            "the fixed config for step 5."
+            "the fixed config for step 5. The two modes pick the winner "
+            "by different objectives -- with-GT uses `context_recall` "
+            "(a GT-aware retrieval signal), no-GT uses `faithfulness`."
         )
-        show_autorag_grid(bundle["autorag_grid"])
+        grid = bundle["autorag_grid"]
+        # Support both shapes: old (flat) and new (with_gt + no_gt).
+        if "runs" in grid:  # legacy
+            show_autorag_grid(grid)
+        else:
+            tabs = st.tabs(["with-GT", "no-GT"])
+            with tabs[0]:
+                show_autorag_grid(grid["with_gt"])
+            with tabs[1]:
+                show_autorag_grid(grid["no_gt"])
 
-    # -- Step 5: DSPy before/after
+    # -- Step 5: DSPy before/after (BOTH gt_modes)
     if "dspy_before_after" in bundle:
         st.divider()
         st.subheader("Step 5 — DSPy before/after at the AutoRAG winner config")
         st.caption(
             "Baseline = default `RAGSignature` running on records "
-            "pre-retrieved with the best `top_k`. Optimized = the same "
-            "records run through the MIPROv2-tuned program. Both phases "
-            "are scored with the SAME ragas metrics so the comparison is fair."
+            "pre-retrieved with that mode's best `top_k`. Optimized = the "
+            "same records re-run through the MIPROv2-tuned program. Both "
+            "phases are scored with the same ragas metric set so the "
+            "comparison is fair. The MIPROv2 inner-loop metric differs by "
+            "GT mode: token-F1 (with-GT) vs LLM-as-judge (no-GT)."
         )
-        show_dspy_before_after(bundle["dspy_before_after"])
+        ba = bundle["dspy_before_after"]
+        if "baseline_scores" in ba:  # legacy flat shape
+            show_dspy_before_after(ba)
+        else:
+            tabs = st.tabs(["with-GT", "no-GT"])
+            with tabs[0]:
+                show_dspy_before_after(ba["with_gt"])
+            with tabs[1]:
+                show_dspy_before_after(ba["no_gt"])
 
     # -- Step 6: DSPy descriptive trial charts (GT-mode contrast)
     if "dspy_descriptive" in bundle:

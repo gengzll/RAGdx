@@ -22,9 +22,11 @@ from typing import Any
 from ragdx.core.normalization import RAGAS_MAP
 from ragdx.optim._gt_helpers import (
     filter_metrics_by_data,
+    gt_mode,
     has_answers,
     has_contexts,
     has_ground_truth,
+    validate_metrics_for_mode,
 )
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
 from ragdx.utils.logging import get_logger
@@ -116,19 +118,29 @@ class RagasAdapter:
                 "pass `metrics=[...]` explicitly."
             )
 
-        # Pre-flight data check: drop metrics whose data dependencies are not met
-        # so we don't waste tokens computing them and don't emit fake 0.0 scores.
-        used_metrics, skipped = self._filter_metrics_by_data(used_metrics, records)
-        if not used_metrics:
+        # Declarative pre-flight (raise on mode mismatch): user explicitly asked
+        # for these metrics, so refuse any that don't match the data's GT mode
+        # rather than silently dropping them. This is the contract spelled out
+        # in `select_metrics(mode)`.
+        mode = gt_mode(records)
+        requested_names = [self._metric_name(m) for m in used_metrics]
+        mode_errors = validate_metrics_for_mode(requested_names, mode)
+        if mode_errors:
             raise RuntimeError(
-                "All requested ragas metrics were filtered out by data pre-flight: "
-                f"{skipped}. Provide records with the missing fields, or pick metrics "
-                "that match the data you have (e.g. faithfulness when no GT exists)."
+                f"Requested ragas metrics incompatible with gt_mode={mode!r}: "
+                f"{mode_errors}. Use ragdx.optim._gt_helpers.select_metrics({mode!r}) "
+                "to see the canonical metric set for this mode."
             )
+
+        # Defensive data check (still useful: records might be claimed-but-broken,
+        # e.g. ground_truth field present but empty for every row). Adapter raises
+        # rather than silently emitting 0s.
+        used_metrics, skipped = self._filter_metrics_by_data(used_metrics, records)
         if skipped:
-            logger.warning(
-                "Skipping %d ragas metric(s) due to missing data: %s",
-                len(skipped), skipped,
+            raise RuntimeError(
+                f"Records do not actually carry the data needed by these metrics: "
+                f"{skipped}. Run the RAG pipeline first to populate answer/contexts, "
+                "or check that ground_truth is populated."
             )
 
         dataset = Dataset.from_list(self._to_ragas_records(records))

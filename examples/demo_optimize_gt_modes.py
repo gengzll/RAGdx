@@ -91,11 +91,11 @@ import logging  # noqa: E402
 
 from ragdx import UnifiedEvaluator  # noqa: E402
 from ragdx.optim._gt_helpers import (  # noqa: E402
-    filter_metrics_by_data,
     gt_mode,
     has_answers,
     has_contexts,
     has_ground_truth,
+    select_metrics,
 )
 from ragdx.optim.autorag_adapter import AutoRAGAdapter  # noqa: E402
 from ragdx.optim.dspy_adapter import DSPyAdapter  # noqa: E402
@@ -289,6 +289,28 @@ def build_ref_free_ragas_metrics():
     return [faithfulness, answer_relevancy, context_precision]
 
 
+def build_with_gt_ragas_metrics():
+    """Reference-free metrics + context_recall (the only ref-required metric
+    that works reliably with the GLM judge + HF embeddings stack we have).
+    ``answer_correctness`` is skipped because its embedding-similarity
+    component currently returns NaN against our HuggingFace wrapper."""
+    from ragas.metrics import (
+        answer_relevancy,
+        context_precision,
+        context_recall,
+        faithfulness,
+    )
+
+    return [faithfulness, answer_relevancy, context_precision, context_recall]
+
+
+def build_ragas_metrics_for_mode(mode: str) -> list:
+    """Pick the ragas metric instances appropriate for the GT mode."""
+    if mode == "with_gt":
+        return build_with_gt_ragas_metrics()
+    return build_ref_free_ragas_metrics()
+
+
 def evaluate_records_with_ragas(records, judge, embeddings, metrics) -> dict:
     """Run UnifiedEvaluator + ragas on the records, return flat metric dict."""
     evaluator = UnifiedEvaluator()
@@ -352,37 +374,43 @@ def show_autorag(records, label: str) -> dict:
     }
 
 
-# ------------------------------ STEP 3 — pre-flight (descriptive)
-def show_metric_filter(records, label: str) -> dict:
-    requested = [
-        "faithfulness",
-        "context_precision",
-        "context_recall",
-        "answer_correctness",
-        "answer_relevancy",
-    ]
-    kept, skipped = filter_metrics_by_data(requested, records)
-    print(f"\n  Asking for the full ragas-style suite ({label}):")
-    kv("  requested", requested)
-    kv("  kept", kept)
-    if skipped:
-        kv("  skipped (reasons)", skipped)
-    else:
-        kv("  skipped", "none -- data supports every metric")
-    return {"label": label, "requested": requested, "kept": kept, "skipped": skipped}
+# ------------------------------ STEP 3 — static metric map by GT mode
+def show_metric_map(label: str, mode: str) -> dict:
+    """Render the canonical metric set for a GT mode (purely declarative,
+    no record inspection). This is the contract: gt_mode in -> metric set out.
+    The adapters use validate_metrics_for_mode() to fail loudly on any
+    metric request that breaks this contract."""
+    metrics = select_metrics(mode)
+    print(f"\n  Canonical metric set for gt_mode='{mode}' ({label}):")
+    print(f"    {len(metrics)} metrics: {metrics}")
+    return {"label": label, "gt_mode": mode, "metrics": metrics}
 
 
 # --------------------- STEP 4 — AutoRAG REAL grid search (with eval)
-def run_autorag_grid_search(corpus_chunks, base_records, top_ks, judge, ragas_embeddings, metrics) -> dict:
-    """For each top_k: build RAG, generate answers, eval with ragas."""
-    print("\n  Building shared embeddings + vector store ...")
+def run_autorag_grid_search(
+    corpus_chunks,
+    base_records,
+    top_ks,
+    judge,
+    ragas_embeddings,
+    metrics,
+    *,
+    objective: str = "faithfulness",
+    label: str = "",
+) -> dict:
+    """For each top_k: build RAG, generate answers, eval with ragas. The
+    ``objective`` controls which metric we pick the winner by — defaults to
+    ``faithfulness`` (works in both modes); with-GT runs use
+    ``context_recall`` to actually exercise the GT signal."""
+    tag = f" [{label}]" if label else ""
+    print(f"\n  Building shared embeddings + vector store{tag} ...")
     embeddings = build_embeddings()
     vstore = build_vector_store(corpus_chunks, embeddings)
     lm = build_litellm_callable()
 
     runs = []
     for top_k in top_ks:
-        print(f"\n  [AutoRAG] top_k={top_k}")
+        print(f"\n  [AutoRAG{tag}] top_k={top_k}")
         answered = []
         for i, r in enumerate(base_records):
             ctxs = retrieve(vstore, r.question, top_k)
@@ -412,11 +440,22 @@ def run_autorag_grid_search(corpus_chunks, base_records, top_ks, judge, ragas_em
             }
         )
 
-    # Pick best by faithfulness (the universal ref-free target).
-    best = max(runs, key=lambda r: r["scores"].get("faithfulness", -1.0))
-    print(f"\n  -> Best config: top_k={best['top_k']} (faithfulness={best['scores'].get('faithfulness'):.3f})")
+    # Pick best by the declared objective (NaN-safe).
+    def _obj_value(r):
+        v = r["scores"].get(objective)
+        try:
+            v = float(v)
+            if v != v:  # NaN guard
+                return -1.0
+            return v
+        except (TypeError, ValueError):
+            return -1.0
+
+    best = max(runs, key=_obj_value)
+    print(f"\n  -> Best config{tag}: top_k={best['top_k']} ({objective}={_obj_value(best):.3f})")
     return {
-        "objective": "faithfulness",
+        "objective": objective,
+        "label": label,
         "runs": runs,
         "best_top_k": best["top_k"],
         "best_scores": best["scores"],
@@ -424,15 +463,23 @@ def run_autorag_grid_search(corpus_chunks, base_records, top_ks, judge, ragas_em
 
 
 # ------------------- STEP 5 — DSPy before/after using best top_k
-def run_dspy_before_after(records_with_ctxs, judge, ragas_embeddings, metrics) -> dict:
+def run_dspy_before_after(
+    records_with_ctxs,
+    judge,
+    ragas_embeddings,
+    metrics,
+    *,
+    label: str = "",
+) -> dict:
     """Compare baseline RAG Signature vs MIPROv2-optimized variant on the
     SAME records (already retrieved with the best top_k from step 4).
 
-    Runs three sub-passes:
-      a) baseline:  default Signature -> generate -> ragas eval
-      b) MIPROv2:   adapter.optimize(...) -- captures trial scores
-      c) optimized: re-run with optimised program -> generate -> ragas eval
+    The MIPROv2 inner-loop metric is decided automatically by DSPyAdapter
+    based on whether records carry GT (token-F1 vs LLM-as-judge). The ragas
+    eval uses the metrics passed in (caller picks an appropriate set).
     """
+    tag = f" [{label}]" if label else ""
+    print(f"\n  DSPy before/after{tag}")
     import dspy
 
     student = build_dspy_lm()
@@ -611,40 +658,69 @@ def main() -> None:
     autorag_with = show_autorag(records_gt, "with-GT")
     autorag_no = show_autorag(records_no, "no-GT")
 
-    section("STEP 3 / 6 -- Metric pre-flight (descriptive)")
-    filter_with = show_metric_filter(records_gt, "with-GT")
-    filter_no = show_metric_filter(records_no, "no-GT")
+    section("STEP 3 / 6 -- Canonical metric set by GT mode (static)")
+    print(
+        "  Step 3 is purely declarative: gt_mode determines which metrics\n"
+        "  ragdx will let through. Adapters call validate_metrics_for_mode()\n"
+        "  on every explicit request and RAISE on mismatch."
+    )
+    filter_with = show_metric_map("with-GT", "with_gt")
+    filter_no = show_metric_map("no-GT", "no_gt")
 
     judge = build_ragas_judge()
     ragas_embeddings = build_ragas_embeddings()
-    metrics = build_ref_free_ragas_metrics()
-    print(f"\n  Reference-free ragas metrics in play: {[m.name for m in metrics]}")
+    metrics_with_gt = build_ragas_metrics_for_mode("with_gt")
+    metrics_no_gt = build_ragas_metrics_for_mode("no_gt")
+    print(f"\n  ragas metrics (with-GT path): {[m.name for m in metrics_with_gt]}")
+    print(f"  ragas metrics (no-GT path):   {[m.name for m in metrics_no_gt]}")
 
-    section("STEP 4 / 6 -- AutoRAG REAL grid search (top_k in {1, 3, 6})")
-    autorag_grid = run_autorag_grid_search(
+    # ------------------------------------------------ STEP 4: AutoRAG grid
+    section("STEP 4 / 6 -- AutoRAG REAL grid search in BOTH GT modes")
+    print("  with-GT: objective = context_recall (the GT-aware retrieval signal)")
+    print("  no-GT:   objective = faithfulness  (ref-free, universally applicable)")
+
+    autorag_grid_with = run_autorag_grid_search(
         corpus_chunks, records_gt, top_ks=[1, 3, 6],
-        judge=judge, ragas_embeddings=ragas_embeddings, metrics=metrics,
+        judge=judge, ragas_embeddings=ragas_embeddings, metrics=metrics_with_gt,
+        objective="context_recall", label="with-GT",
+    )
+    autorag_grid_no = run_autorag_grid_search(
+        corpus_chunks, records_no, top_ks=[1, 3, 6],
+        judge=judge, ragas_embeddings=ragas_embeddings, metrics=metrics_no_gt,
+        objective="faithfulness", label="no-GT",
     )
 
-    section("STEP 5 / 6 -- DSPy before/after at best top_k")
-    best_top_k = autorag_grid["best_top_k"]
-    print(f"  Using best_top_k={best_top_k} from step 4 ...")
+    # ------------------------------------------------ STEP 5: DSPy A/B
+    section("STEP 5 / 6 -- DSPy before/after in BOTH GT modes")
 
-    # Pre-retrieve contexts so DSPy program just sees (question, context).
-    embeddings = build_embeddings()
-    vstore = build_vector_store(corpus_chunks, embeddings)
-    records_for_dspy = []
-    for r in records_gt:
-        ctxs = retrieve(vstore, r.question, best_top_k)
-        records_for_dspy.append(
+    def _records_with_ctxs(records, top_k, vstore):
+        return [
             DatasetRecord(
                 question=r.question,
                 ground_truth=r.ground_truth,
-                contexts=ctxs,
+                contexts=retrieve(vstore, r.question, top_k),
             )
-        )
+            for r in records
+        ]
 
-    dspy_before_after = run_dspy_before_after(records_for_dspy, judge, ragas_embeddings, metrics)
+    embeddings = build_embeddings()
+    vstore = build_vector_store(corpus_chunks, embeddings)
+
+    best_with = autorag_grid_with["best_top_k"]
+    best_no = autorag_grid_no["best_top_k"]
+    print(f"  Best top_k -- with-GT: {best_with}, no-GT: {best_no}")
+
+    print(f"\n  Preparing records with top_k={best_with} for with-GT DSPy ...")
+    records_dspy_with = _records_with_ctxs(records_gt, best_with, vstore)
+    dspy_before_after_with = run_dspy_before_after(
+        records_dspy_with, judge, ragas_embeddings, metrics_with_gt, label="with-GT",
+    )
+
+    print(f"\n  Preparing records with top_k={best_no} for no-GT DSPy ...")
+    records_dspy_no = _records_with_ctxs(records_no, best_no, vstore)
+    dspy_before_after_no = run_dspy_before_after(
+        records_dspy_no, judge, ragas_embeddings, metrics_no_gt, label="no-GT",
+    )
 
     section("STEP 6 / 6 -- DSPy MIPROv2 trial chart (with-GT vs no-GT)")
     print("  Re-running MIPROv2 in both GT modes just to expose the")
@@ -675,8 +751,11 @@ def main() -> None:
         },
         "autorag_spec": {"with_gt": autorag_with, "no_gt": autorag_no},
         "metric_filter": {"with_gt": filter_with, "no_gt": filter_no},
-        "autorag_grid": autorag_grid,
-        "dspy_before_after": dspy_before_after,
+        "autorag_grid": {"with_gt": autorag_grid_with, "no_gt": autorag_grid_no},
+        "dspy_before_after": {
+            "with_gt": dspy_before_after_with,
+            "no_gt": dspy_before_after_no,
+        },
         "dspy_descriptive": {"with_gt": dspy_with, "no_gt": dspy_no},
         "questions": [
             {"question": r.question, "ground_truth": r.ground_truth}
@@ -687,12 +766,17 @@ def main() -> None:
     print(f"\n  Structured result saved -> {OUTPUT_JSON}")
 
     section("SUMMARY")
-    bs = dspy_before_after["baseline_scores"]
-    os_ = dspy_before_after["optimized_scores"]
-    print("  AutoRAG winner    :", f"top_k={best_top_k} (faithfulness={autorag_grid['best_scores'].get('faithfulness'):.3f})")
-    print("  DSPy baseline     :", bs)
-    print("  DSPy optimized    :", os_)
-    print("  Delta             :", dspy_before_after["delta"])
+    for mode, grid, ab in [
+        ("with-GT", autorag_grid_with, dspy_before_after_with),
+        ("no-GT", autorag_grid_no, dspy_before_after_no),
+    ]:
+        obj = grid["objective"]
+        best = grid["best_scores"].get(obj, float("nan"))
+        print(f"  [{mode}] AutoRAG winner : top_k={grid['best_top_k']} ({obj}={best:.3f})")
+        print(f"  [{mode}] DSPy baseline  : {ab['baseline_scores']}")
+        print(f"  [{mode}] DSPy optimized : {ab['optimized_scores']}")
+        print(f"  [{mode}] Delta          : {ab['delta']}")
+        print()
 
 
 if __name__ == "__main__":

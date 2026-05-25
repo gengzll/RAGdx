@@ -16,6 +16,7 @@ from ragdx.optim._gt_helpers import (
     gt_mode,
     has_ground_truth,
     select_metrics,
+    validate_metrics_for_mode,
 )
 from ragdx.optim.autorag_adapter import AutoRAGAdapter
 from ragdx.optim.dspy_adapter import DSPyAdapter, _token_f1
@@ -71,6 +72,30 @@ def test_select_metrics_extra_and_drop():
     metrics = select_metrics("no_gt", extra=["custom_score"], drop=["hallucination"])
     assert "custom_score" in metrics
     assert "hallucination" not in metrics
+
+
+# ----------------------------------------- declarative validate_metrics_for_mode
+def test_validate_metrics_for_mode_accepts_matching_set():
+    assert validate_metrics_for_mode(
+        ["faithfulness", "context_precision", "hallucination"], "no_gt"
+    ) == {}
+    assert validate_metrics_for_mode(
+        ["faithfulness", "context_recall", "answer_correctness"], "with_gt"
+    ) == {}
+
+
+def test_validate_metrics_for_mode_rejects_gt_required_in_no_gt():
+    errors = validate_metrics_for_mode(
+        ["faithfulness", "context_recall", "answer_correctness"], "no_gt"
+    )
+    assert set(errors) == {"context_recall", "answer_correctness"}
+    for reason in errors.values():
+        assert "ground_truth" in reason or "no_gt" in reason
+
+
+def test_validate_metrics_for_mode_rejects_unknown_metric():
+    errors = validate_metrics_for_mode(["faithfulness", "not_a_real_metric"], "with_gt")
+    assert "not_a_real_metric" in errors
 
 
 # ------------------------------------------------------------ autorag adapter

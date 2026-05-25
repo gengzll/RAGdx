@@ -152,19 +152,38 @@ def select_metrics(
     return chosen
 
 
+def validate_metrics_for_mode(
+    requested: Sequence[str],
+    mode: GTMode,
+) -> dict[str, str]:
+    """Static validation: every requested metric must be in
+    ``select_metrics(mode)``. Returns a ``{metric: reason}`` mapping for any
+    metric that is *not* supported in the declared mode. Empty dict means OK.
+
+    This is the canonical, declarative pre-flight: ``gt_mode`` -> fixed metric
+    set, no peeking at records. Use it when the caller has already
+    committed to a mode and you want to fail loudly on a bad request.
+    """
+    allowed = set(select_metrics(mode))
+    errors: dict[str, str] = {}
+    for m in requested:
+        if m not in allowed:
+            if m in REFERENCE_REQUIRED_METRICS and mode == "no_gt":
+                errors[m] = f"metric '{m}' requires ground_truth; gt_mode='no_gt' has no GT"
+            else:
+                errors[m] = f"metric '{m}' is not in the canonical set for gt_mode='{mode}'"
+    return errors
+
+
 def filter_metrics_by_data(
     requested: Sequence[str],
     records: Iterable[DatasetRecord],
     *,
     threshold: float = 0.5,
 ) -> tuple[list[str], dict[str, str]]:
-    """Filter ``requested`` metrics down to those the data can actually support.
-
-    Returns
-    -------
-    (kept, skipped) where ``skipped`` maps a metric name to a short reason
-    string explaining why it was filtered out. Useful for adapter callers to
-    log honestly and to attach to ``EvaluationResult.metadata``.
+    """Defensive data-driven filter (kept for adapters that need to inspect
+    records before paying for an LLM-judge call). Prefer
+    :func:`validate_metrics_for_mode` for the declarative path.
     """
     records = list(records)
     has_gt = has_ground_truth(records, threshold=threshold)
@@ -199,4 +218,5 @@ __all__ = [
     "has_contexts",
     "has_ground_truth",
     "select_metrics",
+    "validate_metrics_for_mode",
 ]

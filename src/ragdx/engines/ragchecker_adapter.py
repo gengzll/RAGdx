@@ -13,9 +13,11 @@ from typing import Any
 from ragdx.core.normalization import RAGCHECKER_MAP
 from ragdx.optim._gt_helpers import (
     filter_metrics_by_data,
+    gt_mode,
     has_answers,
     has_contexts,
     has_ground_truth,
+    validate_metrics_for_mode,
 )
 from ragdx.schemas.models import DatasetRecord, EvaluationResult
 from ragdx.utils.logging import get_logger
@@ -90,17 +92,27 @@ class RAGCheckerAdapter:
                 "RAGChecker requires `contexts` (retrieved chunks) to verify claims. "
                 "The supplied records have no contexts."
             )
+        mode = gt_mode(records)
         requested = list(metric_names) if metric_names else list(RAGCHECKER_MAP.keys())
-        kept, skipped = filter_metrics_by_data(requested, records)
-        if not kept:
+
+        # Declarative pre-flight: requested metrics must be in the canonical set
+        # for this gt_mode (raise loudly rather than silently dropping).
+        mode_errors = validate_metrics_for_mode(requested, mode)
+        if mode_errors:
             raise RuntimeError(
-                f"No RAGChecker metrics survived the data pre-flight: {skipped}. "
-                "Pick metrics that match the data you have, or enrich your records."
+                f"Requested RAGChecker metrics incompatible with gt_mode={mode!r}: "
+                f"{mode_errors}. Use ragdx.optim._gt_helpers.select_metrics({mode!r}) "
+                "to see the canonical metric set for this mode."
             )
+
+        # Defensive data-driven check (records may carry the mode but have
+        # broken/empty fields). Raise rather than silently drop.
+        kept, skipped = filter_metrics_by_data(requested, records)
         if skipped:
-            logger.warning(
-                "Skipping %d ragchecker metric(s) due to missing data: %s",
-                len(skipped), skipped,
+            raise RuntimeError(
+                f"Records do not actually carry the data needed by these metrics: "
+                f"{skipped}. Check that answers/contexts were populated by the "
+                "RAG pipeline."
             )
 
         prepared = self._to_ragchecker_records(records)
