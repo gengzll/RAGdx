@@ -194,34 +194,76 @@ class CompositeObjective:
 
 
 # --------------------------------------------------------------- defaults
+#
+# Production-grounded defaults: in practice teams shipping RAG to users
+# care most about (a) not hallucinating, (b) producing the right answer
+# in spirit (correctness / coverage), and only then (c) retrieval
+# efficiency. The weights encode that hierarchy; the constraints encode
+# the "must not" -- a tuned prompt that scores high on average but
+# hallucinates 30% of the time is unshippable.
+#
+# Why these specific numbers:
+# * ``faithfulness=1.5`` -- highest single weight. The #1 reason users
+#   abandon a RAG product is "it made up an answer". Half a point more
+#   than the next-tier metrics so it dominates ties.
+# * ``context_recall=1.0`` (with-GT only) and ``answer_correctness=1.0``
+#   (with-GT only) -- the two GT-grounded "did the system find AND say
+#   the right thing" signals; tied at 1.0 because both matter equally.
+# * ``answer_relevancy=1.0`` -- in no-GT mode this replaces correctness:
+#   we can't check if the answer is right, but we can check it actually
+#   answers the question.
+# * ``context_precision=0.3`` -- low weight on retrieval efficiency.
+#   Important for cost / latency but not directly user-visible; we
+#   accept a slightly noisy retrieval if it boosts recall.
+# * ``hallucination max=0.15`` -- hard ceiling. Industry rule of thumb:
+#   keep claim hallucination under 15-20% for general-purpose RAG;
+#   stricter (5-10%) for medical / legal verticals where you should
+#   tighten this in ``with_overrides``.
 def default_objective(mode: GTMode) -> CompositeObjective:
-    """Sensible default composite for each GT mode.
+    """Production-realistic default objective per GT mode.
 
-    * with-GT prioritises retrieval coverage (``context_recall`` weight 1.0)
-      alongside grounding (``faithfulness`` 1.0). Other metrics get smaller
-      weights as supporting signals.
-    * no-GT prioritises grounding + answer relevance (both 1.0) since
-      recall-against-truth isn't available. ``context_precision`` is a
-      half-weight tiebreaker.
+    Weights follow the priority hierarchy
+    ``no-hallucination > correctness > relevance > efficiency``.
+    Constraints encode hard requirements -- a candidate that violates them
+    (e.g. hallucinates more than 15% of the time) is ranked behind every
+    constraint-satisfying candidate even if it scores higher on average.
 
-    These defaults are intentionally simple — adjust weights or add
-    constraints with ``.with_overrides(...)`` for any real project.
+    Override these for project-specific priorities, e.g.::
+
+        # Medical RAG: zero tolerance for hallucination
+        obj = default_objective("with_gt").with_overrides(
+            constraints={"hallucination": ("max", 0.05)},
+        )
+
+        # Cost-sensitive deployment: bump precision weight
+        obj = default_objective("no_gt").with_overrides(
+            metrics={"context_precision": 1.0},
+        )
     """
     if mode == "with_gt":
         return CompositeObjective(
             metrics={
-                "faithfulness": 1.0,
+                "faithfulness": 1.5,
+                "answer_correctness": 1.0,
                 "context_recall": 1.0,
-                "context_precision": 0.5,
                 "answer_relevancy": 0.5,
+                "context_precision": 0.3,
+            },
+            constraints={
+                "hallucination": ("max", 0.15),
             },
             mode="weighted_sum",
         )
+    # no-GT: drop GT-required metrics; lean on answer_relevancy in place
+    # of correctness as the "is the answer actually useful" signal.
     return CompositeObjective(
         metrics={
-            "faithfulness": 1.0,
+            "faithfulness": 1.5,
             "answer_relevancy": 1.0,
-            "context_precision": 0.5,
+            "context_precision": 0.3,
+        },
+        constraints={
+            "hallucination": ("max", 0.15),
         },
         mode="weighted_sum",
     )

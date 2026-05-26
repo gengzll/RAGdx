@@ -1,0 +1,378 @@
+tee: .ragdx_pdf_no_gt_demo/transcript.log: No such file or directory
+D:\work\RAGdx-main\RAGdx-main\examples\demo_pdf_no_gt.py:151: DeprecationWarning: LangchainLLMWrapper is deprecated and will be removed in a future version. Use llm_factory instead: from openai import OpenAI; from ragas.llms import llm_factory; llm = llm_factory('gpt-4o-mini', client=OpenAI(api_key='...'))
+  return LangchainLLMWrapper(ChatOpenAI(
+D:\work\RAGdx-main\RAGdx-main\examples\demo_pdf_no_gt.py:162: DeprecationWarning: LangchainEmbeddingsWrapper is deprecated and will be removed in a future version. Use the modern embedding providers instead: embedding_factory('openai', model='text-embedding-3-small', client=openai_client) or from ragas.embeddings import OpenAIEmbeddings, GoogleEmbeddings, HuggingFaceEmbeddings
+  return LangchainEmbeddingsWrapper(HuggingFaceEmbeddings(
+2026-05-26 15:29:22 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+
+==============================================================================
+STEP 1 / 4 â€” Load PDF and chunk
+==============================================================================
+  PDF: D:\work\RAGdx-main\RAGdx-main\e0522-asmptesgreport.pdf
+  pages                  114
+  chunks                 548
+  raw_text_chars         211339
+  sample chunk (first): 'ASMPT LIMITED (Incorporated in the Cayman Islands with limited liability) (Stock Code: 0522) 2023 Environmental, Social and Governance Report'
+  sample chunk (mid):   '. in all that we do â€¢ We make a difference. We strive for excellence â€“ learning and continuously adding value. â€¢ We are enthusiastic contributors. We are determined to succeed and to consistently deli'
+
+==============================================================================
+STEP 2 / 4 â€” Synthesise questions from the corpus (no-GT)
+==============================================================================
+  generated 5 questions:
+    Q1                   What is the primary focus of ASMPTâ€™s WORKS Optimisation system in contrast to traditional inspection systems?
+    Q2                   What is the primary reason for ASMPT's success according to the passage?
+    Q3                   What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?
+    Q4                   What e-learning course did over 500 colleagues in China engage in in 2023?
+    Q5                   What are the three key components mentioned for ensuring employee health and safety in the passages?
+
+==============================================================================
+STEP 3 / 4 â€” AutoRAG search (BO over chunk_size + overlap + top_k)
+==============================================================================
+  Production objective: metrics={'faithfulness': 1.5, 'answer_relevancy': 1.0, 'context_precision': 0.3}
+                        constraints={'hallucination': ('max', 0.15)}
+  Search space (grid size = 36):
+    chunk_size: [256, 512, 1024]
+    chunk_overlap: [0, 50, 100]
+    top_k: [1, 3, 5, 7]
+  BO: n_init=3, max_trials=8
+
+  [Trial 1/8] {'chunk_size': 256, 'chunk_overlap': 100, 'top_k': 3}
+    re-chunked: 1202 chunks
+      Q1: 3 ctxs, answer='ASMPTâ€™s WORKS Optimisation system focuses on the comprehensive view of'
+      Q2: 3 ctxs, answer="The primary reason for ASMPT's success according to the passage is the"
+      Q3: 3 ctxs, answer='The Group made adjustments to the ESG Material Factors to enhance clar'
+      Q4: 3 ctxs, answer='An "Unconscious Bias" e-learning course.'
+      Q5: 3 ctxs, answer='Risk assessment, incident investigation, and occupational health servi'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:34,  2.48s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:09,  1.24it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:07,  1.46it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:05,  1.96it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:06<00:13,  1.45s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:08<00:12,  1.55s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:09<00:09,  1.29s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:09<00:06,  1.04s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:10<00:04,  1.12it/s]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:10<00:02,  1.38it/s]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:13<00:03,  1.32s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:17<00:04,  2.17s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:20<00:02,  2.32s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:21<00:00,  2.01s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:21<00:00,  1.44s/it]
+2026-05-26 15:30:01 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.99999999994, 'faithfulness': 0.9}
+    composite=1.650  feasible=False  (43.2s)
+
+  [Trial 2/8] {'chunk_size': 512, 'chunk_overlap': 0, 'top_k': 1}
+    re-chunked: 544 chunks
+      Q1: 1 ctxs, answer='ASMPTâ€™s WORKS Optimisation system focuses on the entire operational pr'
+      Q2: 1 ctxs, answer="The primary reason for ASMPT's success according to the passage is its"
+      Q3: 1 ctxs, answer='The context does not provide specific information about adjustments ma'
+      Q4: 1 ctxs, answer='Over 500 colleagues in China engaged in an â€œUnconscious Biasâ€ e-learni'
+      Q5: 1 ctxs, answer='1. Compliance with relevant laws and regulations.\n2. Providing a safe '
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:32,  2.34s/it]Evaluating:  20%|¨€¨€        | 3/15 [00:03<00:10,  1.14it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:04,  2.02it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:03<00:03,  2.52it/s]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:03<00:03,  2.59it/s]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:04<00:03,  2.18it/s]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:04<00:02,  2.38it/s]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:06<00:03,  1.53it/s]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:10<00:07,  1.87s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:15<00:07,  2.60s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:15<00:04,  2.02s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:17<00:01,  1.81s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:17<00:00,  1.53s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:17<00:00,  1.20s/it]
+2026-05-26 15:30:34 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.79999999992, 'faithfulness': 0.8}
+    composite=1.440  feasible=False  (34.8s)
+
+  [Trial 3/8] {'chunk_size': 256, 'chunk_overlap': 50, 'top_k': 3}
+    re-chunked: 1161 chunks
+      Q1: 3 ctxs, answer='ASMPTâ€™s WORKS Optimisation system focuses on the comprehensive view of'
+      Q2: 3 ctxs, answer="The primary reason for ASMPT's success according to the passage is its"
+      Q3: 3 ctxs, answer='The Group made adjustments to the ESG Material Factors to enhance clar'
+      Q4: 3 ctxs, answer='An "Unconscious Bias" e-learning course.'
+      Q5: 3 ctxs, answer='Risk assessment, incident investigation, and occupational health servi'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:01<00:25,  1.80s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:15,  1.21s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:08,  1.38it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:06,  1.63it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:05,  1.71it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:09<00:22,  2.48s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:10<00:09,  1.32s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:11<00:07,  1.27s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:12<00:06,  1.21s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:12<00:03,  1.08it/s]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:14<00:01,  1.16it/s]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:19<00:01,  1.94s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:19<00:00,  1.57s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:19<00:00,  1.33s/it]
+C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\sklearn\gaussian_process\kernels.py:440: ConvergenceWarning: The optimal value found for dimension 0 of parameter k2__noise_level is close to the specified lower bound 1e-05. Decreasing the bound and calling fit again may find a better value.
+  warnings.warn(
+2026-05-26 15:31:04 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.9999999999333333, 'faithfulness': 0.8333333333333334}
+    composite=1.550  feasible=False  (34.8s)
+
+  [Trial 4/8] {'chunk_size': 256, 'chunk_overlap': 100, 'top_k': 5}
+      Q1: 5 ctxs, answer='ASMPTâ€™s WORKS Optimisation system focuses on the comprehensive view of'
+      Q2: 5 ctxs, answer="The primary reason for ASMPT's success according to the passage is the"
+      Q3: 5 ctxs, answer='The Group made adjustments to the ESG Material Factors by conducting a'
+      Q4: 5 ctxs, answer='An "Unconscious Bias" e-learning course.'
+      Q5: 5 ctxs, answer='Risk assessment, incident investigation, and occupational health servi'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:01<00:27,  1.95s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:14,  1.11s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:08,  1.35it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:10,  1.09it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:06<00:10,  1.12s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:12<00:19,  2.38s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:14<00:15,  2.28s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:15<00:12,  2.03s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:18<00:06,  1.68s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:19<00:04,  1.58s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:22<00:01,  1.49s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:25<00:00,  1.92s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:25<00:00,  1.71s/it]
+C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\sklearn\gaussian_process\kernels.py:440: ConvergenceWarning: The optimal value found for dimension 0 of parameter k2__noise_level is close to the specified lower bound 1e-05. Decreasing the bound and calling fit again may find a better value.
+  warnings.warn(
+2026-05-26 15:31:50 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.9899999999445834, 'faithfulness': 0.9}
+    composite=1.647  feasible=False  (35.0s)
+
+  [Trial 5/8] {'chunk_size': 1024, 'chunk_overlap': 100, 'top_k': 7}
+    re-chunked: 280 chunks
+      Q1: 7 ctxs, answer='The primary focus of ASMPTâ€™s WORKS Optimisation system is on a compreh'
+      Q2: 7 ctxs, answer="The primary reason for ASMPT's success, according to the passage, is i"
+      Q3: 7 ctxs, answer='The Group made adjustments to the ESG Material Factors to enhance clar'
+      Q4: 7 ctxs, answer='Over 500 colleagues in China engaged in an â€œUnconscious Biasâ€ e-learni'
+      Q5: 7 ctxs, answer='Establishing and maintaining comprehensive policies and programmes, vi'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:01<00:26,  1.92s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:13,  1.01s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:08,  1.37it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:07,  1.42it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:04,  2.05it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:11<00:28,  3.19s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:13<00:21,  2.66s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:15<00:16,  2.37s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:20<00:20,  3.34s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:23<00:15,  3.05s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:24<00:10,  2.54s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:25<00:06,  2.16s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:25<00:03,  1.54s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:26<00:01,  1.27s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:27<00:00,  1.05s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:27<00:00,  1.80s/it]
+C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\sklearn\gaussian_process\kernels.py:440: ConvergenceWarning: The optimal value found for dimension 0 of parameter k2__noise_level is close to the specified lower bound 1e-05. Decreasing the bound and calling fit again may find a better value.
+  warnings.warn(
+2026-05-26 15:32:28 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.8063492063152117, 'faithfulness': 1.0}
+    composite=1.742  feasible=False  (47.8s)
+
+  [Trial 6/8] {'chunk_size': 1024, 'chunk_overlap': 100, 'top_k': 3}
+      Q1: 3 ctxs, answer='The primary focus of ASMPTâ€™s WORKS Optimisation system is on a compreh'
+      Q2: 3 ctxs, answer="The primary reason for ASMPT's success according to the passage is its"
+      Q3: 3 ctxs, answer='The Group made adjustments to the ESG Material Factors to enhance clar'
+      Q4: 3 ctxs, answer='Over 500 colleagues in China engaged in an â€œUnconscious Biasâ€ e-learni'
+      Q5: 3 ctxs, answer='Establish and maintain comprehensive policies and programmes, vigilant'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:01<00:26,  1.86s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:17,  1.38s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:04<00:15,  1.32s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:04<00:10,  1.08it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:05<00:10,  1.03s/it]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:08<00:13,  1.50s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:09<00:12,  1.56s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:10<00:08,  1.16s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:10<00:05,  1.02it/s]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:11<00:05,  1.05s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:12<00:04,  1.03s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:14<00:03,  1.28s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:18<00:04,  2.17s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:27<00:00,  3.13s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:27<00:00,  1.83s/it]
+C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\sklearn\gaussian_process\kernels.py:440: ConvergenceWarning: The optimal value found for dimension 0 of parameter k2__noise_level is close to the specified lower bound 1e-05. Decreasing the bound and calling fit again may find a better value.
+  warnings.warn(
+2026-05-26 15:33:16 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.8666666666166666, 'faithfulness': 0.9666666666666668}
+    composite=1.710  feasible=False  (38.2s)
+
+  [Trial 7/8] {'chunk_size': 1024, 'chunk_overlap': 0, 'top_k': 7}
+    re-chunked: 278 chunks
+      Q1: 7 ctxs, answer='The primary focus of ASMPTâ€™s WORKS Optimisation system is on a compreh'
+      Q2: 7 ctxs, answer="The primary reason for ASMPT's success, according to the passage, is i"
+      Q3: 7 ctxs, answer='The Group made adjustments to the ESG Material Factors to enhance clar'
+      Q4: 7 ctxs, answer='Over 500 colleagues in China engaged in an "Unconscious Bias" e-learni'
+      Q5: 7 ctxs, answer='Establishing and maintaining comprehensive policies and programmes, vi'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:29,  2.11s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:13,  1.04s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:02<00:05,  1.96it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:05,  1.68it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:10<00:21,  2.40s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:12<00:19,  2.45s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:23<00:34,  4.91s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:24<00:23,  3.96s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:28<00:11,  2.99s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:30<00:08,  2.75s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:31<00:04,  2.19s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:33<00:02,  2.17s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:35<00:00,  2.03s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:35<00:00,  2.34s/it]
+C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\sklearn\gaussian_process\kernels.py:440: ConvergenceWarning: The optimal value found for dimension 0 of parameter k2__noise_level is close to the specified lower bound 1e-05. Decreasing the bound and calling fit again may find a better value.
+  warnings.warn(
+2026-05-26 15:34:14 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.8099999999552999, 'faithfulness': 1.0}
+    composite=1.743  feasible=False  (56.1s)
+
+  [Trial 8/8] {'chunk_size': 1024, 'chunk_overlap': 50, 'top_k': 7}
+    re-chunked: 278 chunks
+      Q1: 7 ctxs, answer='The primary focus of ASMPTâ€™s WORKS Optimisation system is on a compreh'
+      Q2: 7 ctxs, answer="The primary reason for ASMPT's success, according to the passage, is i"
+      Q3: 7 ctxs, answer='The Group made adjustments to the ESG Material Factors to enhance clar'
+      Q4: 7 ctxs, answer='Over 500 colleagues in China engaged in an "Unconscious Bias" e-learni'
+      Q5: 7 ctxs, answer='Establishing and maintaining comprehensive policies and programmes, vi'
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:31,  2.24s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:12,  1.01it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:09,  1.26it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:05,  1.86it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:04<00:07,  1.42it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:12<00:28,  3.20s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:13<00:21,  2.65s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:22<00:32,  4.64s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:23<00:21,  3.53s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:24<00:13,  2.61s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:24<00:08,  2.06s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:25<00:04,  1.67s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:28<00:01,  1.47s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:32<00:00,  2.16s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:32<00:00,  2.16s/it]
+2026-05-26 15:35:38 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+    scores: {'context_precision': 0.8099999999552999, 'faithfulness': 1.0}
+    composite=1.743  feasible=False  (55.3s)
+
+  -> BO winner: params={'chunk_size': 1024, 'chunk_overlap': 0, 'top_k': 7} composite=1.743
+
+==============================================================================
+STEP 4 / 4 â€” DSPy before/after at BO winner config
+==============================================================================
+  Best config from BO: {'chunk_size': 1024, 'chunk_overlap': 0, 'top_k': 7}
+
+  (a) BASELINE â€” default RAG Signature ...
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:31,  2.26s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:09,  1.20it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:06,  1.58it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:09<00:16,  1.87s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:18<00:31,  3.98s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:22<00:26,  3.86s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:24<00:19,  3.30s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:24<00:12,  2.40s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:27<00:10,  2.60s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:27<00:06,  2.02s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:28<00:02,  1.46s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:28<00:01,  1.08s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:29<00:00,  1.01it/s]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:29<00:00,  1.94s/it]
+2026/05/26 15:36:07 INFO dspy.teleprompt.mipro_optimizer_v2: 
+RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
+num_trials: 10
+minibatch: False
+num_fewshot_candidates: 6
+num_instruct_candidates: 3
+valset size: 4
+
+2026/05/26 15:36:07 INFO dspy.teleprompt.mipro_optimizer_v2: 
+==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
+2026/05/26 15:36:07 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
+
+2026/05/26 15:36:07 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
+      baseline scores: {'context_precision': 0.8099999999552999, 'faithfulness': 0.96}
+
+  (b) MIPROv2 optimisation ...
+Bootstrapping set 1/6
+Bootstrapping set 2/6
+Bootstrapping set 3/6
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.35s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.35s/it]
+Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
+Bootstrapping set 4/6
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.40s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.40s/it]
+Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
+Bootstrapping set 5/6
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.24s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.24s/it]
+Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
+Bootstrapping set 6/6
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.46s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.46s/it]
+2026/05/26 15:36:39 INFO dspy.teleprompt.mipro_optimizer_v2: 
+==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
+2026/05/26 15:36:39 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
+2026/05/26 15:36:52 INFO dspy.teleprompt.mipro_optimizer_v2: 
+Proposing N=3 instructions...
+
+2026/05/26 15:37:03 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
+2026/05/26 15:37:09 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
+2026/05/26 15:37:18 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
+2026/05/26 15:37:26 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
+2026/05/26 15:37:42 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
+2026/05/26 15:37:49 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
+
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: 0: Answer the question using only the retrieved context.
+
+Be concise. Do not invent facts that are not in the context.
+
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: 1: Prompt the Language Model to analyze the provided context about ASMPT¡¯s WORKS Optimisation system and traditional inspection systems. The task is to identify the primary focus of ASMPT¡¯s WORKS Optimisation system in contrast to traditional inspection systems. The response should be concise, based solely on the information given in the context, and should not include any external facts or assumptions.
+
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: 2: Prompt the Language Model to answer the question: "What is the primary focus of ASMPT¡¯s WORKS Optimisation system in contrast to traditional inspection systems?" using the provided context. The answer must be derived from the context and must not exceed a sentence in length. Additionally, explain the reasoning behind the answer, ensuring it is concise and factually accurate, relying solely on the information present in the context. The reasoning should also be derived from the context and must not exceed a sentence in length. The task is critical for an upcoming conference presentation where the accuracy of the information provided is crucial to the audience's understanding of ASMPT's technological advancements.
+
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: 
+
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
+
+2026/05/26 15:37:56 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
+Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.07s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:18,  6.07s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:07,  3.59s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:07,  3.59s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.51s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:12<00:03,  3.51s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:12<00:00,  2.65s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:12<00:00,  3.17s/it]2026/05/26 15:38:09 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:38:09 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 100.0
+
+C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\optuna\_experimental.py:33: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
+  optuna_warn(
+2026/05/26 15:38:09 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:20,  6.84s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:09<00:20,  6.84s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:08,  4.15s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:08,  4.15s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:13<00:04,  4.15s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:13<00:00,  2.78s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:13<00:00,  3.26s/it]2026/05/26 15:38:22 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:38:22 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
+2026/05/26 15:38:22 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0]
+2026/05/26 15:38:22 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:38:22 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:38:22 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.47s/it]Average Metric: 1.30 / 2 (65.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:16,  5.47s/it]Average Metric: 1.30 / 2 (65.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.81s/it]Average Metric: 2.30 / 3 (76.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.81s/it]Average Metric: 3.30 / 4 (82.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.81s/it]Average Metric: 3.30 / 4 (82.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  1.72s/it]Average Metric: 3.30 / 4 (82.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  2.14s/it]2026/05/26 15:38:31 INFO dspy.evaluate.evaluate: Average Metric: 3.3 / 4 (82.5%)
+2026/05/26 15:38:31 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 82.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
+2026/05/26 15:38:31 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5]
+2026/05/26 15:38:31 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:38:31 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:38:31 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.77s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:23,  7.77s/it] Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.56s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:10<00:07,  3.56s/it]Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.81s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.81s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.59s/it]2026/05/26 15:38:41 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
+2026/05/26 15:38:41 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
+2026/05/26 15:38:41 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5]
+2026/05/26 15:38:41 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:38:41 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:38:41 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:04<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:13,  4.62s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:13,  4.62s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:05,  2.50s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:05,  2.50s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.13s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.13s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.43s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.92s/it]2026/05/26 15:38:49 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:38:49 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
+2026/05/26 15:38:49 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0]
+2026/05/26 15:38:49 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:38:49 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:38:49 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:17,  5.94s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:17,  5.94s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.55s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.55s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:06<00:01,  1.67s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:01,  1.67s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  1.82s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  2.20s/it]2026/05/26 15:38:58 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:38:58 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
+2026/05/26 15:38:58 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0, 100.0]
+2026/05/26 15:38:58 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:38:58 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:38:58 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.27s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.27s/it]Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.80s/it]Average Metric: 2.30 / 3 (76.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.80s/it]Average Metric: 3.30 / 4 (82.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.80s/it]Average Metric: 3.30 / 4 (82.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.24s/it]Average Metric: 3.30 / 4 (82.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.82s/it]2026/05/26 15:39:05 INFO dspy.evaluate.evaluate: Average Metric: 3.3 / 4 (82.5%)
+2026/05/26 15:39:05 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 82.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
+2026/05/26 15:39:05 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0, 100.0, 82.5]
+2026/05/26 15:39:05 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:39:05 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:39:05 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:15,  5.13s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:15,  5.13s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.80s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.80s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:06<00:01,  1.60s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.60s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.27s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.81s/it]2026/05/26 15:39:12 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:39:12 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
+2026/05/26 15:39:12 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0, 100.0, 82.5, 100.0]
+2026/05/26 15:39:12 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:39:12 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:39:12 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:21,  7.18s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:21,  7.18s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.70s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.70s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.13s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.13s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  1.85s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.53s/it]2026/05/26 15:39:22 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:39:22 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
+2026/05/26 15:39:22 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0, 100.0, 82.5, 100.0, 100.0]
+2026/05/26 15:39:22 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:39:22 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/05/26 15:39:22 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:15,  5.05s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:15,  5.05s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:04,  2.39s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:04,  2.39s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:06<00:01,  1.85s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.85s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.48s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.92s/it]2026/05/26 15:39:30 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:39:30 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
+2026/05/26 15:39:30 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0, 100.0, 82.5, 100.0, 100.0, 100.0]
+2026/05/26 15:39:30 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:39:30 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+
+
+2026/05/26 15:39:30 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
+
+  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.93s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:23,  7.93s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:15,  7.93s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.55s/it]Average Metric: 4.00 / 4 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.55s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  1.81s/it]Average Metric: 4.00 / 4 (100.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.42s/it]2026/05/26 15:39:40 INFO dspy.evaluate.evaluate: Average Metric: 4.0 / 4 (100.0%)
+2026/05/26 15:39:40 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 0'].
+2026/05/26 15:39:40 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 82.5, 87.5, 100.0, 100.0, 82.5, 100.0, 100.0, 100.0, 100.0]
+2026/05/26 15:39:40 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/05/26 15:39:40 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+
+
+2026/05/26 15:39:40 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 100.0!
+2026-05-26 15:40:09 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
+
+      MIPROv2 done: 11 trials, best=100.00
+
+  (c) OPTIMIZED â€” re-run with optimised program ...
+Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:32,  2.29s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:08,  1.38it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:07,  1.55it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
+Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:10<00:18,  2.11s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:15<00:23,  3.00s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:18<00:19,  2.78s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:19<00:13,  2.32s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:19<00:09,  1.86s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:22<00:08,  2.15s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:23<00:05,  1.67s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:24<00:03,  1.54s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:25<00:01,  1.52s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:26<00:00,  1.16s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:26<00:00,  1.75s/it]
+      optimised scores: {'context_precision': 0.8099999999552999, 'faithfulness': 0.96}
+
+  composite: baseline=1.683 -> optimized=1.683 (Î”=+0.000)
+
+  Bundle saved -> D:\work\RAGdx-main\RAGdx-main\.ragdx_pdf_no_gt_demo\result.json
+
+==============================================================================
+SUMMARY
+==============================================================================
+  PDF                : e0522-asmptesgreport.pdf (114 pages)
+  Synthesised Qs     : 5
+  BO trials          : 8
+  BO best params     : {'chunk_size': 1024, 'chunk_overlap': 0, 'top_k': 7}
+  BO best composite  : 1.743
+  DSPy baseline      : {'context_precision': 0.8099999999552999, 'faithfulness': 0.96}
+  DSPy optimized     : {'context_precision': 0.8099999999552999, 'faithfulness': 0.96}
+  Composite Î”        : +0.000

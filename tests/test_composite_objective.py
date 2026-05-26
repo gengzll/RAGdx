@@ -138,9 +138,23 @@ def test_default_objective_with_gt_contains_recall():
 def test_default_objective_no_gt_excludes_recall():
     obj = default_objective("no_gt")
     assert "context_recall" not in obj.metrics
-    assert obj.metrics["faithfulness"] == 1.0
+    # production default: faithfulness gets the highest weight (>=1.0)
+    assert obj.metrics["faithfulness"] >= 1.0
 
 
-def test_default_objective_no_constraints_by_default():
-    assert default_objective("with_gt").constraints == {}
-    assert default_objective("no_gt").constraints == {}
+def test_default_objective_has_hallucination_ceiling():
+    """Production defaults include a hard hallucination ceiling on both modes."""
+    for mode in ("with_gt", "no_gt"):
+        obj = default_objective(mode)
+        assert "hallucination" in obj.constraints
+        direction, threshold = obj.constraints["hallucination"]
+        assert direction == "max"
+        assert 0.0 < threshold <= 0.3  # 15% default, < 30% sanity ceiling
+
+
+def test_default_objective_faithfulness_outranks_efficiency():
+    """faithfulness weight should be strictly higher than context_precision
+    in both modes -- the safety-over-efficiency hierarchy."""
+    for mode in ("with_gt", "no_gt"):
+        obj = default_objective(mode)
+        assert obj.metrics["faithfulness"] > obj.metrics["context_precision"]

@@ -137,3 +137,10 @@ dmypy.json
 .claude/
 result/
 examples/*.json
+mem0_chroma/
+# Large input PDFs -- user-supplied, not part of the repo. Demos point at
+# paths the user provides; sample PDFs they download stay local.
+*.pdf
+!docs/**/*.pdf
+# Demo transcripts live in docs/examples/ as committed reference output
+!docs/examples/*.log
