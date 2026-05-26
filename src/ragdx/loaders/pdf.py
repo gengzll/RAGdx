@@ -107,6 +107,12 @@ def load_pdf_chunks(
     ``.sources`` carries page + chunk index per chunk so you can map
     answers back to the original document.
     """
+    # File existence first so a bad path raises FileNotFoundError even on
+    # environments missing the optional langchain text-splitter dep.
+    pdf_path = Path(path)
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+
     try:
         from langchain_text_splitters import RecursiveCharacterTextSplitter
     except Exception as exc:  # pragma: no cover - depends on user env
@@ -115,10 +121,6 @@ def load_pdf_chunks(
             "`pip install langchain-text-splitters` (also bundled with the "
             "ragdx[langchain] extra)."
         ) from exc
-
-    pdf_path = Path(path)
-    if not pdf_path.exists():
-        raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
     pages = _read_pdf_pages(pdf_path)
     splitter = RecursiveCharacterTextSplitter(
