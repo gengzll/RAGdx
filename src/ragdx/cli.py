@@ -371,7 +371,16 @@ def normalize_tools(
         "normalized_evaluation.json", help="Destination for the unified EvaluationResult."
     ),
 ):
-    """Normalize external evaluator outputs into a unified EvaluationResult."""
+    """Normalize external evaluator outputs into a unified EvaluationResult.
+
+    Only the adapters whose input file is supplied are exercised. This
+    avoids tripping the (unrelated) optional-dependency import inside the
+    other adapter when the user only has one tool installed.
+    """
+    if not ragas_json and not ragchecker_json:
+        raise typer.BadParameter(
+            "Pass at least one of --ragas-json / --ragchecker-json."
+        )
     evaluator = UnifiedEvaluator()
     ragas_scores = (
         json.loads(Path(ragas_json).read_text(encoding="utf-8")) if ragas_json else None
@@ -379,7 +388,13 @@ def normalize_tools(
     ragchecker_scores = (
         json.loads(Path(ragchecker_json).read_text(encoding="utf-8")) if ragchecker_json else None
     )
-    result = evaluator.evaluate([], ragas_scores=ragas_scores, ragchecker_scores=ragchecker_scores)
+    result = evaluator.evaluate(
+        [],
+        ragas_scores=ragas_scores,
+        ragchecker_scores=ragchecker_scores,
+        use_ragas=ragas_scores is not None,
+        use_ragchecker=ragchecker_scores is not None,
+    )
     Path(output_json).write_text(result.model_dump_json(indent=2), encoding="utf-8")
     print(f"Wrote {output_json}")
 

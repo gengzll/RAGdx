@@ -20,10 +20,17 @@ supported corpus and writes a JSON bundle that the bundled Streamlit
 dashboards render directly:
 
 ```text
-corpus -> resolve / synthesise questions -> AutoRAG Bayesian search
+corpus -> resolve / synthesise questions -> Bayesian RAG-config search
        -> DSPy before / after at the winner config -> composite scoring
        -> JSON bundle for the dashboard
 ```
+
+Note: the Bayesian search is ragdx's own implementation in
+`ragdx.optim.bayes_search` (sklearn GP + Expected Improvement). It is
+inspired by AutoRAG's design but does NOT shell out to AutoRAG itself.
+The :class:`AutoRAGAdapter` is a separate, lighter-weight surface that
+only renders an AutoRAG-style YAML config you can hand to AutoRAG
+externally.
 
 Required arguments:
 
@@ -48,18 +55,18 @@ ragdx experiment explodinggradients/amnesty_qa \
     --n-questions 5 --bo-trials 8 \
     --output-dir .ragdx_optimize_demo
 
-streamlit run src/ragdx/ui/optimization_dashboard.py
+streamlit run src/ragdx/ui/experiment_dashboard.py
 ```
 
 ### No-GT example (PDF corpus, questions synthesised from the document)
 
 ```bash
-ragdx experiment docs/asmpt-esg-report.pdf \
+ragdx experiment <path/to/your.pdf> \
     --no-gt \
     --n-questions 5 --bo-trials 8 \
     --output-dir .ragdx_pdf_no_gt_demo
 
-streamlit run src/ragdx/ui/pdf_no_gt_dashboard.py
+streamlit run src/ragdx/ui/experiment_dashboard.py
 ```
 
 ### Programmatic API
@@ -150,6 +157,9 @@ Available extras:
 - `ragas`, `ragchecker` — evaluation backends
 - `dspy`, `autorag` — optimization adapters
 - `langchain`, `llamaindex` — runtime framework adapters
+- `experiment` — everything `ragdx experiment` / `ragdx.run_experiment`
+  need to drive the full pipeline (PDF loader, HF datasets, FAISS,
+  sentence-transformers, langchain HF/OpenAI wrappers, ragas, dspy)
 - `bo` — heavy Bayesian optimization (Ax / BoTorch / Torch)
 - `dev` — pytest, ruff, mypy, coverage, build
 - `all` — every optional runtime backend (no `dev`)
@@ -346,7 +356,7 @@ pip install -e ".[openai]"
 
 ```bash
 export OPENAI_API_KEY=your_key
-export RAGDX_OPENAI_MODEL=gpt-5.4-thinking
+export RAGDX_LLM_MODEL=gpt-4o-mini   # or any other OpenAI-compatible model id
 ```
 
 Examples:

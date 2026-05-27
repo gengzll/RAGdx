@@ -474,7 +474,7 @@ def _evaluate_with_ragas(
 # =====================================================================
 # AutoRAG BO + DSPy A/B (one helper each, called once per GT mode)
 # =====================================================================
-def _autorag_bo(
+def _run_bayes_search(
     cfg: ExperimentConfig,
     runtime: _Runtime,
     chunks_master: list[str],
@@ -671,7 +671,7 @@ def _run_one_mode(
     objective = (cfg.objective_overrides or {}).get(mode) or default_objective(mode)
     metrics = _build_ragas_metrics_for_mode(mode)
 
-    bo_result = _autorag_bo(cfg, runtime, chunks_master, records, objective, metrics, mode)
+    bo_result = _run_bayes_search(cfg, runtime, chunks_master, records, objective, metrics, mode)
 
     # Build records pre-retrieved at the BO winner's top_k + chunk size.
     best_params = bo_result["best_params"] or {}
