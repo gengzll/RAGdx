@@ -1,11 +1,19 @@
-"""End-to-end experiment driver for the ragdx demo pipeline.
+"""End-to-end experiment driver for the ragdx pipeline.
 
-The ``demo_optimize_gt_modes.py`` and ``demo_pdf_no_gt.py`` scripts in
-``examples/`` walk the user through every step of a complete run.
-``run_experiment`` is the importable equivalent: one function call that
-takes a corpus + a few flags, runs AutoRAG Bayesian search, runs DSPy
-before/after for each requested GT mode, and returns a structured
-result you can save / inspect / feed into the dashboards.
+``run_experiment`` is the importable equivalent of the demo scripts in
+``examples/``: one function call that takes a corpus + a few flags,
+runs a Bayesian RAG-config search, runs DSPy before/after for each
+requested GT mode, and returns a bundle you can save / inspect / feed
+into the dashboards.
+
+Bundle schema
+-------------
+
+The bundle output uses ``schema_version: 1`` — a stable, mode-keyed
+shape that the generic dashboard renders directly. See
+:func:`_build_unified_bundle` for the layout. Legacy bundles produced
+by the older demo scripts can be normalized via
+:func:`migrate_legacy_bundle`.
 
 Usage::
 
@@ -21,17 +29,16 @@ Usage::
 
     # no-GT (PDF demo equivalent)
     result = run_experiment(
-        corpus="docs/asmpt-esg-report.pdf",
+        corpus="<path/to/your.pdf>",
         has_gt=False,
         api_key="<glm-key>",
     )
 
-    print(result.bundle["autorag_bo"]["with_gt"]["best_params"])
+    print(result.bundle["bayes_search"]["with_gt"]["best_params"])
 
-The bundle is also written to ``output_dir/result.json`` so the
-Streamlit dashboards
-(``ragdx.ui.optimization_dashboard`` / ``ragdx.ui.pdf_no_gt_dashboard``)
-can render it directly.
+The bundle is also written to ``output_dir/result.json`` so
+``ragdx.ui.experiment_dashboard`` (the generic dashboard) can render it
+directly.
 """
 
 from __future__ import annotations
@@ -696,10 +703,246 @@ def _run_one_mode(
     dspy_result = _dspy_before_after(runtime, records_dspy, objective, metrics, mode)
 
     return {
-        "autorag_bo": bo_result,
-        "dspy_before_after": dspy_result,
+        "bayes_search": bo_result,
+        "dspy_a_b": dspy_result,
         "objective_spec": objective.to_dict(),
     }
+
+
+# =====================================================================
+# Unified bundle (schema_version: 1)
+# =====================================================================
+SCHEMA_VERSION = 1
+
+
+def _build_unified_bundle(
+    cfg: ExperimentConfig,
+    results_by_mode: dict[str, dict],
+    source_meta: dict,
+    base_records: list[DatasetRecord],
+) -> dict:
+    """Assemble the canonical ``schema_version: 1`` bundle.
+
+    Layout (every mode-keyed section is *always* a dict, so dashboards
+    never have to disambiguate single-mode vs multi-mode runs)::
+
+        {
+          "schema_version": 1,
+          "meta": {
+            "model", "model_endpoint",
+            "experiment_mode",            # the resolved cfg.mode
+            "modes_run": [<mode>, ...],
+            "has_gt", "detected_gt_mode",
+            "source": {kind, corpus, ...} # corpus-source descriptor
+          },
+          "questions": [{"question", "ground_truth"}, ...],
+          "data_diagnostics": {<mode>: {has_ground_truth, gt_mode, record_count}},
+          "objectives":     {<mode>: <objective spec>},
+          "bayes_search":   {<mode>: <BO result>},
+          "dspy_a_b":       {<mode>: <DSPy before/after result>},
+          "extras": {
+            "pdf_meta"?:               # only when corpus is a PDF
+            "synthesized_questions"?:  # only when questions were LLM-synthesized
+            ...
+          }
+        }
+    """
+    detected = detect_gt_mode(base_records)
+    modes_run = list(results_by_mode.keys())
+
+    # Pull source-specific extras out so meta.source stays a clean
+    # descriptor and the bulky bits live under bundle.extras.
+    extras: dict[str, Any] = {}
+    if source_meta.get("synthesized_meta"):
+        extras["synthesized_questions"] = source_meta["synthesized_meta"]
+    if source_meta.get("pdf_meta"):
+        extras["pdf_meta"] = source_meta["pdf_meta"]
+
+    source_clean = {
+        k: v for k, v in source_meta.items() if k not in {"synthesized_meta"}
+    }
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "meta": {
+            "model": cfg.model,
+            "model_endpoint": cfg.api_base,
+            "experiment_mode": cfg.mode,
+            "modes_run": modes_run,
+            "has_gt": cfg.has_gt,
+            "detected_gt_mode": detected,
+            "source": source_clean,
+        },
+        "questions": [
+            {"question": r.question, "ground_truth": r.ground_truth}
+            for r in base_records
+        ],
+        "data_diagnostics": {
+            m: {
+                "has_ground_truth": (m == "with_gt"),
+                "gt_mode": m,
+                "record_count": len(base_records),
+            }
+            for m in results_by_mode
+        },
+        "objectives": {m: r["objective_spec"] for m, r in results_by_mode.items()},
+        "bayes_search": {m: r["bayes_search"] for m, r in results_by_mode.items()},
+        "dspy_a_b": {m: r["dspy_a_b"] for m, r in results_by_mode.items()},
+        "extras": extras,
+    }
+
+
+def migrate_legacy_bundle(bundle: dict) -> dict:
+    """Best-effort upgrade of a pre-``schema_version: 1`` bundle.
+
+    Recognised legacy shapes:
+
+    * Multi-mode amnesty/grid demo (``optimize_gt_modes_result.json``)
+      with top-level ``autorag_grid``, ``autorag_spec``, ``metric_map``,
+      ``data_diagnostics``, ``dspy_before_after`` keyed by mode.
+    * Single-mode PDF/no-GT demo (``pdf_no_gt_result.json``) with flat
+      ``autorag_bo`` / ``dspy_before_after`` and a top-level ``gt_mode``.
+
+    Unrecognised bundles pass through unchanged with a ``schema_version``
+    tag of ``0`` so callers can detect the situation. Already-v1 bundles
+    are returned untouched.
+    """
+    if bundle.get("schema_version") == SCHEMA_VERSION:
+        return bundle
+
+    # ------ shape A: multi-mode grid (optimize_gt_modes demo) -------------
+    if "autorag_grid" in bundle and isinstance(bundle["autorag_grid"], dict):
+        grid = bundle["autorag_grid"]
+        dspy = bundle.get("dspy_before_after") or {}
+        modes_run = [m for m in ("with_gt", "no_gt") if m in grid]
+
+        bayes_search: dict[str, dict] = {}
+        objectives: dict[str, dict] = {}
+        for m, payload in grid.items():
+            runs = payload.get("runs") or []
+            trials = []
+            for i, run in enumerate(runs):
+                trials.append({
+                    "trial_index": i,
+                    "params": {"top_k": run.get("top_k")},
+                    "n_chunks": run.get("n_chunks"),
+                    "scores": run.get("scores", {}),
+                    "composite_score": run.get("composite_score"),
+                    "feasible": run.get("feasible", True),
+                    "violations": run.get("violations", []),
+                    "answers_preview": [
+                        (a or "")[:200] for a in (run.get("answers") or [])
+                    ],
+                })
+            bayes_search[m] = {
+                "search_space": {"top_k": sorted({r.get("top_k") for r in runs if r.get("top_k") is not None})},
+                "trials": trials,
+                "best_params": {"top_k": payload.get("best_top_k")} if payload.get("best_top_k") is not None else None,
+                "best_composite": payload.get("best_composite"),
+                "objective_spec": payload.get("objective_spec"),
+                "_legacy_kind": "grid",  # marker so dashboards can label this honestly
+            }
+            objectives[m] = payload.get("objective_spec") or {
+                "metrics": {payload.get("objective"): 1.0} if payload.get("objective") else {},
+                "constraints": {},
+                "mode": "weighted_sum",
+            }
+
+        dspy_v1 = {m: dspy[m] for m in modes_run if m in dspy}
+
+        diagnostics = bundle.get("data_diagnostics") or {
+            m: {"has_ground_truth": (m == "with_gt"), "gt_mode": m,
+                "record_count": bundle.get("corpus_size", 0)}
+            for m in modes_run
+        }
+
+        source: dict[str, Any] = {"kind": "huggingface"}
+        if "dataset" in bundle:
+            source["dataset"] = bundle["dataset"]
+            source["corpus"] = bundle["dataset"]
+        if "corpus_chunks" in bundle:
+            source["corpus_chunks"] = bundle["corpus_chunks"]
+        if "corpus_size" in bundle:
+            source["records"] = bundle["corpus_size"]
+
+        out = {
+            "schema_version": SCHEMA_VERSION,
+            "meta": {
+                "model": bundle.get("model"),
+                "model_endpoint": bundle.get("model_endpoint"),
+                "experiment_mode": "both" if len(modes_run) > 1 else (modes_run[0] if modes_run else "unknown"),
+                "modes_run": modes_run,
+                "has_gt": "with_gt" in modes_run,
+                "detected_gt_mode": "with_gt" if "with_gt" in modes_run else "no_gt",
+                "source": source,
+                "_migrated_from": "legacy_grid_v0",
+            },
+            "questions": bundle.get("questions", []),
+            "data_diagnostics": diagnostics,
+            "objectives": objectives,
+            "bayes_search": bayes_search,
+            "dspy_a_b": dspy_v1,
+            "extras": {},
+        }
+        if "autorag_spec" in bundle:
+            out["extras"]["autorag_spec"] = bundle["autorag_spec"]
+        if "metric_map" in bundle:
+            out["extras"]["metric_map"] = bundle["metric_map"]
+        return out
+
+    # ------ shape B: single-mode flat (pdf_no_gt demo) --------------------
+    if "autorag_bo" in bundle and isinstance(bundle.get("autorag_bo"), dict) and "trials" in bundle["autorag_bo"]:
+        mode = bundle.get("gt_mode") or ("with_gt" if bundle.get("has_gt") else "no_gt")
+        bo = bundle["autorag_bo"]
+        dspy = bundle.get("dspy_before_after") or {}
+        objective_spec = (
+            bundle.get("objective_spec")
+            or bo.get("objective_spec")
+            or {"metrics": {}, "constraints": {}, "mode": "weighted_sum"}
+        )
+
+        source: dict[str, Any] = {"kind": "pdf" if "pdf_meta" in bundle or "source_pdf" in bundle else "unknown"}
+        if "source_pdf" in bundle:
+            source["corpus"] = bundle["source_pdf"]
+        if "pdf_meta" in bundle:
+            source["pdf_meta"] = bundle["pdf_meta"]
+
+        extras: dict[str, Any] = {}
+        if "pdf_meta" in bundle:
+            extras["pdf_meta"] = bundle["pdf_meta"]
+        if "synthesized_meta" in bundle:
+            extras["synthesized_questions"] = bundle["synthesized_meta"]
+
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "meta": {
+                "model": bundle.get("model"),
+                "model_endpoint": bundle.get("model_endpoint"),
+                "experiment_mode": mode,
+                "modes_run": [mode],
+                "has_gt": mode == "with_gt",
+                "detected_gt_mode": mode,
+                "source": source,
+                "_migrated_from": "legacy_pdf_v0",
+            },
+            "questions": bundle.get("questions", []),
+            "data_diagnostics": {
+                mode: {
+                    "has_ground_truth": mode == "with_gt",
+                    "gt_mode": mode,
+                    "record_count": len(bundle.get("questions") or []),
+                }
+            },
+            "objectives": {mode: objective_spec},
+            "bayes_search": {mode: bo},
+            "dspy_a_b": {mode: dspy} if dspy else {},
+            "extras": extras,
+        }
+
+    # Unknown shape -- stamp with schema_version=0 so callers can detect.
+    out = dict(bundle)
+    out["schema_version"] = 0
+    return out
 
 
 # =====================================================================
@@ -821,36 +1064,7 @@ def run_experiment(
             cfg, runtime, chunks_master, records_no, "no_gt"
         )
 
-    autorag_bundle = {
-        k: v["autorag_bo"] for k, v in results_by_mode.items()
-    }
-    dspy_bundle = {k: v["dspy_before_after"] for k, v in results_by_mode.items()}
-
-    bundle: dict[str, Any] = {
-        "model": cfg.model,
-        "model_endpoint": cfg.api_base,
-        "experiment_mode": cfg.mode,
-        "has_gt": cfg.has_gt,
-        "source": source_meta,
-        "questions": [
-            {"question": r.question, "ground_truth": r.ground_truth} for r in base_records
-        ],
-        "data_diagnostics": {
-            mode_key: {
-                "has_ground_truth": (mode_key == "with_gt"),
-                "gt_mode": mode_key,
-                "record_count": len(base_records),
-            }
-            for mode_key in results_by_mode
-        },
-        "autorag_bo": autorag_bundle if len(autorag_bundle) > 1 else next(iter(autorag_bundle.values())),
-        "dspy_before_after": dspy_bundle if len(dspy_bundle) > 1 else next(iter(dspy_bundle.values())),
-        "_modes_run": list(results_by_mode),
-    }
-    if "synthesized_meta" in source_meta:
-        bundle["synthesized_meta"] = source_meta["synthesized_meta"]
-    detected = detect_gt_mode(base_records)
-    bundle["detected_gt_mode"] = detected
+    bundle = _build_unified_bundle(cfg, results_by_mode, source_meta, base_records)
 
     output_path = cfg.output_dir / "result.json"
     result = ExperimentResult(config=cfg, bundle=bundle, output_path=output_path)
@@ -859,4 +1073,11 @@ def run_experiment(
     return result
 
 
-__all__ = ["ExperimentConfig", "ExperimentMode", "ExperimentResult", "run_experiment"]
+__all__ = [
+    "SCHEMA_VERSION",
+    "ExperimentConfig",
+    "ExperimentMode",
+    "ExperimentResult",
+    "migrate_legacy_bundle",
+    "run_experiment",
+]

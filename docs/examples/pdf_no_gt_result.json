@@ -1,13 +1,26 @@
 {
-  "model": "openai/glm-4-flash",
-  "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
-  "source_pdf": "e0522-asmptesgreport.pdf",
-  "pdf_meta": {
-    "page_count": 114,
-    "chunks": 548,
-    "chunk_size": 512,
-    "chunk_overlap": 50,
-    "raw_text_chars": 211339
+  "schema_version": 1,
+  "meta": {
+    "model": "openai/glm-4-flash",
+    "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "experiment_mode": "no_gt",
+    "modes_run": [
+      "no_gt"
+    ],
+    "has_gt": false,
+    "detected_gt_mode": "no_gt",
+    "source": {
+      "kind": "pdf",
+      "corpus": "e0522-asmptesgreport.pdf",
+      "pdf_meta": {
+        "page_count": 114,
+        "chunks": 548,
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "raw_text_chars": 211339
+      }
+    },
+    "_migrated_from": "legacy_pdf_v0"
   },
   "questions": [
     {
@@ -31,80 +44,15 @@
       "ground_truth": null
     }
   ],
-  "synthesized_meta": [
-    {
-      "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
-      "source_chunk_ids": [
-        331,
-        154
-      ]
-    },
-    {
-      "question": "What is the primary reason for ASMPT's success according to the passage?",
-      "source_chunk_ids": [
-        404,
-        49
-      ]
-    },
-    {
-      "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
-      "source_chunk_ids": [
-        74,
-        96
-      ]
-    },
-    {
-      "question": "What e-learning course did over 500 colleagues in China engage in in 2023?",
-      "source_chunk_ids": [
-        374,
-        59
-      ]
-    },
-    {
-      "question": "What are the three key components mentioned for ensuring employee health and safety in the passages?",
-      "source_chunk_ids": [
-        519,
-        219
-      ]
+  "data_diagnostics": {
+    "no_gt": {
+      "has_ground_truth": false,
+      "gt_mode": "no_gt",
+      "record_count": 5
     }
-  ],
-  "gt_mode": "no_gt",
-  "objective_spec": {
-    "metrics": {
-      "faithfulness": 1.5,
-      "answer_relevancy": 1.0,
-      "context_precision": 0.3
-    },
-    "constraints": {
-      "hallucination": [
-        "max",
-        0.15
-      ]
-    },
-    "mode": "weighted_sum"
   },
-  "autorag_bo": {
-    "search_space": {
-      "chunk_size": [
-        256,
-        512,
-        1024
-      ],
-      "chunk_overlap": [
-        0,
-        50,
-        100
-      ],
-      "top_k": [
-        1,
-        3,
-        5,
-        7
-      ]
-    },
-    "n_init": 3,
-    "max_trials": 8,
-    "objective_spec": {
+  "objectives": {
+    "no_gt": {
       "metrics": {
         "faithfulness": 1.5,
         "answer_relevancy": 1.0,
@@ -117,230 +65,30 @@
         ]
       },
       "mode": "weighted_sum"
-    },
-    "trials": [
-      {
-        "trial_index": 0,
-        "params": {
-          "chunk_size": 256,
-          "chunk_overlap": 100,
-          "top_k": 3
-        },
-        "n_chunks": 1202,
-        "scores": {
-          "context_precision": 0.99999999994,
-          "faithfulness": 0.9
-        },
-        "composite_score": 1.649999999982,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "ASMPT’s WORKS Optimisation system focuses on the comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual produ",
-          "The primary reason for ASMPT's success according to the passage is their unwavering commitment to quality and adherence to the POWER values, with people being at the heart of their success.",
-          "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognised standards and practices in the industry and ESG arena.",
-          "An \"Unconscious Bias\" e-learning course.",
-          "Risk assessment, incident investigation, and occupational health services."
-        ]
-      },
-      {
-        "trial_index": 1,
-        "params": {
-          "chunk_size": 512,
-          "chunk_overlap": 0,
-          "top_k": 1
-        },
-        "n_chunks": 544,
-        "scores": {
-          "context_precision": 0.79999999992,
-          "faithfulness": 0.8
-        },
-        "composite_score": 1.4399999999760003,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "ASMPT’s WORKS Optimisation system focuses on the entire operational process on the software side, integrating and visualizing data from all machines on the line, in contrast to traditional systems tha",
-          "The primary reason for ASMPT's success according to the passage is its people's experience, commitment, and performance.",
-          "The context does not provide specific information about adjustments made to the ESG Material Factors by the Group.",
-          "Over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023.",
-          "1. Compliance with relevant laws and regulations.\n2. Providing a safe working environment.\n3. Protecting employees from occupational hazards."
-        ]
-      },
-      {
-        "trial_index": 2,
-        "params": {
-          "chunk_size": 256,
-          "chunk_overlap": 50,
-          "top_k": 3
-        },
-        "n_chunks": 1161,
-        "scores": {
-          "context_precision": 0.9999999999333333,
-          "faithfulness": 0.8333333333333334
-        },
-        "composite_score": 1.54999999998,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "ASMPT’s WORKS Optimisation system focuses on the comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual produ",
-          "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality and innovation.",
-          "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognised standards and practices in the industry and ESG arena.",
-          "An \"Unconscious Bias\" e-learning course.",
-          "Risk assessment, incident investigation, and occupational health services."
-        ]
-      },
-      {
-        "trial_index": 3,
-        "params": {
-          "chunk_size": 256,
-          "chunk_overlap": 100,
-          "top_k": 5
-        },
-        "n_chunks": 1202,
-        "scores": {
-          "context_precision": 0.9899999999445834,
-          "faithfulness": 0.9
-        },
-        "composite_score": 1.646999999983375,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "ASMPT’s WORKS Optimisation system focuses on the comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual produ",
-          "The primary reason for ASMPT's success according to the passage is the combination of its unwavering commitment to quality, the POWER VALUES guiding its people, recognition of DEI as a strategic imper",
-          "The Group made adjustments to the ESG Material Factors by conducting a thorough review and prioritisation of them.",
-          "An \"Unconscious Bias\" e-learning course.",
-          "Risk assessment, incident investigation, and occupational health services."
-        ]
-      },
-      {
-        "trial_index": 4,
-        "params": {
-          "chunk_size": 1024,
-          "chunk_overlap": 100,
-          "top_k": 7
-        },
-        "n_chunks": 280,
-        "scores": {
-          "context_precision": 0.8063492063152117,
-          "faithfulness": 1.0
-        },
-        "composite_score": 1.7419047618945636,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
-          "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people.",
-          "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. These adjustments included ",
-          "Over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023.",
-          "Establishing and maintaining comprehensive policies and programmes, vigilantly identifying and eliminating hazards, and regularly monitoring, inspecting, and reassessing the efficacy of safety policie"
-        ]
-      },
-      {
-        "trial_index": 5,
-        "params": {
-          "chunk_size": 1024,
-          "chunk_overlap": 100,
-          "top_k": 3
-        },
-        "n_chunks": 280,
-        "scores": {
-          "context_precision": 0.8666666666166666,
-          "faithfulness": 0.9666666666666668
-        },
-        "composite_score": 1.7099999999850002,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
-          "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality, driven by its people's experience, commitment, and performance, along with a strong corporate c",
-          "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency with recognized standards and practices in the industry and ESG arena.",
-          "Over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023.",
-          "Establish and maintain comprehensive policies and programmes, vigilantly identify and eliminate hazards, and regularly monitor, inspect, and reassess the efficacy of safety policies and initiatives."
-        ]
-      },
-      {
-        "trial_index": 6,
-        "params": {
-          "chunk_size": 1024,
-          "chunk_overlap": 0,
-          "top_k": 7
-        },
-        "n_chunks": 278,
-        "scores": {
-          "context_precision": 0.8099999999552999,
-          "faithfulness": 1.0
-        },
-        "composite_score": 1.74299999998659,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
-          "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, driven by its people's experience, commitment, and performance, along with a strong corporate",
-          "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency by incorporating four additional factors: \"Product sustainability & Innovation\", \"Customer Relationship Manage",
-          "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
-          "Establishing and maintaining comprehensive policies and programmes, vigilantly identifying and eliminating hazards, and regularly monitoring, inspecting, and reassessing the efficacy of safety policie"
-        ]
-      },
-      {
-        "trial_index": 7,
-        "params": {
-          "chunk_size": 1024,
-          "chunk_overlap": 50,
-          "top_k": 7
-        },
-        "n_chunks": 278,
-        "scores": {
-          "context_precision": 0.8099999999552999,
-          "faithfulness": 1.0
-        },
-        "composite_score": 1.74299999998659,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
-        ],
-        "answers_preview": [
-          "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
-          "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, driven by its people's experience, commitment, and performance, along with a strong corporate",
-          "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. These adjustments included ",
-          "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
-          "Establishing and maintaining comprehensive policies and programmes, vigilantly identifying and eliminating hazards, and regularly monitoring, inspecting, and reassessing the efficacy of safety policie"
-        ]
-      }
-    ],
-    "best_params": {
-      "chunk_size": 1024,
-      "chunk_overlap": 0,
-      "top_k": 7
-    },
-    "best_composite": 1.74299999998659
+    }
   },
-  "dspy_before_after": {
-    "baseline_scores": {
-      "context_precision": 0.8099999999552999,
-      "faithfulness": 0.96
-    },
-    "optimized_scores": {
-      "context_precision": 0.8099999999552999,
-      "faithfulness": 0.96
-    },
-    "delta": {
-      "context_precision": 0.0,
-      "faithfulness": 0.0
-    },
-    "composite": {
+  "bayes_search": {
+    "no_gt": {
+      "search_space": {
+        "chunk_size": [
+          256,
+          512,
+          1024
+        ],
+        "chunk_overlap": [
+          0,
+          50,
+          100
+        ],
+        "top_k": [
+          1,
+          3,
+          5,
+          7
+        ]
+      },
+      "n_init": 3,
+      "max_trials": 8,
       "objective_spec": {
         "metrics": {
           "faithfulness": 1.5,
@@ -355,69 +103,355 @@
         },
         "mode": "weighted_sum"
       },
-      "baseline": {
-        "score": 1.68299999998659,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
+      "trials": [
+        {
+          "trial_index": 0,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 3
+          },
+          "n_chunks": 1202,
+          "scores": {
+            "context_precision": 0.99999999994,
+            "faithfulness": 0.9
+          },
+          "composite_score": 1.649999999982,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system focuses on the comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual produ",
+            "The primary reason for ASMPT's success according to the passage is their unwavering commitment to quality and adherence to the POWER values, with people being at the heart of their success.",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognised standards and practices in the industry and ESG arena.",
+            "An \"Unconscious Bias\" e-learning course.",
+            "Risk assessment, incident investigation, and occupational health services."
+          ]
+        },
+        {
+          "trial_index": 1,
+          "params": {
+            "chunk_size": 512,
+            "chunk_overlap": 0,
+            "top_k": 1
+          },
+          "n_chunks": 544,
+          "scores": {
+            "context_precision": 0.79999999992,
+            "faithfulness": 0.8
+          },
+          "composite_score": 1.4399999999760003,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system focuses on the entire operational process on the software side, integrating and visualizing data from all machines on the line, in contrast to traditional systems tha",
+            "The primary reason for ASMPT's success according to the passage is its people's experience, commitment, and performance.",
+            "The context does not provide specific information about adjustments made to the ESG Material Factors by the Group.",
+            "Over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023.",
+            "1. Compliance with relevant laws and regulations.\n2. Providing a safe working environment.\n3. Protecting employees from occupational hazards."
+          ]
+        },
+        {
+          "trial_index": 2,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 50,
+            "top_k": 3
+          },
+          "n_chunks": 1161,
+          "scores": {
+            "context_precision": 0.9999999999333333,
+            "faithfulness": 0.8333333333333334
+          },
+          "composite_score": 1.54999999998,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system focuses on the comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual produ",
+            "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality and innovation.",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognised standards and practices in the industry and ESG arena.",
+            "An \"Unconscious Bias\" e-learning course.",
+            "Risk assessment, incident investigation, and occupational health services."
+          ]
+        },
+        {
+          "trial_index": 3,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 5
+          },
+          "n_chunks": 1202,
+          "scores": {
+            "context_precision": 0.9899999999445834,
+            "faithfulness": 0.9
+          },
+          "composite_score": 1.646999999983375,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system focuses on the comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual produ",
+            "The primary reason for ASMPT's success according to the passage is the combination of its unwavering commitment to quality, the POWER VALUES guiding its people, recognition of DEI as a strategic imper",
+            "The Group made adjustments to the ESG Material Factors by conducting a thorough review and prioritisation of them.",
+            "An \"Unconscious Bias\" e-learning course.",
+            "Risk assessment, incident investigation, and occupational health services."
+          ]
+        },
+        {
+          "trial_index": 4,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 100,
+            "top_k": 7
+          },
+          "n_chunks": 280,
+          "scores": {
+            "context_precision": 0.8063492063152117,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.7419047618945636,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
+            "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people.",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. These adjustments included ",
+            "Over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023.",
+            "Establishing and maintaining comprehensive policies and programmes, vigilantly identifying and eliminating hazards, and regularly monitoring, inspecting, and reassessing the efficacy of safety policie"
+          ]
+        },
+        {
+          "trial_index": 5,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 100,
+            "top_k": 3
+          },
+          "n_chunks": 280,
+          "scores": {
+            "context_precision": 0.8666666666166666,
+            "faithfulness": 0.9666666666666668
+          },
+          "composite_score": 1.7099999999850002,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
+            "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality, driven by its people's experience, commitment, and performance, along with a strong corporate c",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency with recognized standards and practices in the industry and ESG arena.",
+            "Over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023.",
+            "Establish and maintain comprehensive policies and programmes, vigilantly identify and eliminate hazards, and regularly monitor, inspect, and reassess the efficacy of safety policies and initiatives."
+          ]
+        },
+        {
+          "trial_index": 6,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 7
+          },
+          "n_chunks": 278,
+          "scores": {
+            "context_precision": 0.8099999999552999,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.74299999998659,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
+            "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, driven by its people's experience, commitment, and performance, along with a strong corporate",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency by incorporating four additional factors: \"Product sustainability & Innovation\", \"Customer Relationship Manage",
+            "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
+            "Establishing and maintaining comprehensive policies and programmes, vigilantly identifying and eliminating hazards, and regularly monitoring, inspecting, and reassessing the efficacy of safety policie"
+          ]
+        },
+        {
+          "trial_index": 7,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 50,
+            "top_k": 7
+          },
+          "n_chunks": 278,
+          "scores": {
+            "context_precision": 0.8099999999552999,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.74299999998659,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ],
+          "answers_preview": [
+            "The primary focus of ASMPT’s WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on in",
+            "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, driven by its people's experience, commitment, and performance, along with a strong corporate",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. These adjustments included ",
+            "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
+            "Establishing and maintaining comprehensive policies and programmes, vigilantly identifying and eliminating hazards, and regularly monitoring, inspecting, and reassessing the efficacy of safety policie"
+          ]
+        }
+      ],
+      "best_params": {
+        "chunk_size": 1024,
+        "chunk_overlap": 0,
+        "top_k": 7
+      },
+      "best_composite": 1.74299999998659
+    }
+  },
+  "dspy_a_b": {
+    "no_gt": {
+      "baseline_scores": {
+        "context_precision": 0.8099999999552999,
+        "faithfulness": 0.96
+      },
+      "optimized_scores": {
+        "context_precision": 0.8099999999552999,
+        "faithfulness": 0.96
+      },
+      "delta": {
+        "context_precision": 0.0,
+        "faithfulness": 0.0
+      },
+      "composite": {
+        "objective_spec": {
+          "metrics": {
+            "faithfulness": 1.5,
+            "answer_relevancy": 1.0,
+            "context_precision": 0.3
+          },
+          "constraints": {
+            "hallucination": [
+              "max",
+              0.15
+            ]
+          },
+          "mode": "weighted_sum"
+        },
+        "baseline": {
+          "score": 1.68299999998659,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ]
+        },
+        "optimized": {
+          "score": 1.68299999998659,
+          "feasible": false,
+          "violations": [
+            "hallucination: missing from scores"
+          ]
+        },
+        "delta": 0.0
+      },
+      "baseline_sample_answers": [
+        "The primary focus of ASMPT’s WORKS Optimisation system is its comprehensive view of the entire operational process, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+        "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, the strength of their people, their focus on innovation, and their strong corporate culture that promotes diversity, inclusion, and equal opportunity.",
+        "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These additions were based on the common expectations of key stakeholders and recommendations from industry standards bodies and ESG ratings agencies.",
+        "The e-learning course that over 500 colleagues in China engaged in in 2023 was the “Unconscious Bias” course.",
+        "The three key components mentioned for ensuring employee health and safety are: \n1. Hazard identification, risk assessment, and incident investigation\n2. Worker participation, consultation, and communication on occupational health and safety\n3. Worker training on occupational health and safety"
+      ],
+      "optimized_sample_answers": [
+        "The primary focus of ASMPT’s WORKS Optimisation system is its comprehensive view of the entire operational process, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+        "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, the strength of their people, their focus on innovation, and their strong corporate culture that promotes diversity, inclusion, and equal opportunity.",
+        "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These additions were based on the common expectations of key stakeholders and recommendations from industry standards bodies and ESG ratings agencies.",
+        "The e-learning course that over 500 colleagues in China engaged in in 2023 was the “Unconscious Bias” course.",
+        "The three key components mentioned for ensuring employee health and safety are: \n1. Hazard identification, risk assessment, and incident investigation\n2. Worker participation, consultation, and communication on occupational health and safety\n3. Worker training on occupational health and safety"
+      ],
+      "instructions": {
+        "predict": "Answer the question using only the retrieved context.\n\nBe concise. Do not invent facts that are not in the context."
+      },
+      "demos": {
+        "predict": []
+      },
+      "trial_scores": [
+        100.0,
+        100.0,
+        82.5,
+        87.5,
+        100.0,
+        100.0,
+        82.5,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "best_score_progression": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "gt_mode": "no_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 5
+    }
+  },
+  "extras": {
+    "pdf_meta": {
+      "page_count": 114,
+      "chunks": 548,
+      "chunk_size": 512,
+      "chunk_overlap": 50,
+      "raw_text_chars": 211339
+    },
+    "synthesized_questions": [
+      {
+        "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+        "source_chunk_ids": [
+          331,
+          154
         ]
       },
-      "optimized": {
-        "score": 1.68299999998659,
-        "feasible": false,
-        "violations": [
-          "hallucination: missing from scores"
+      {
+        "question": "What is the primary reason for ASMPT's success according to the passage?",
+        "source_chunk_ids": [
+          404,
+          49
         ]
       },
-      "delta": 0.0
-    },
-    "baseline_sample_answers": [
-      "The primary focus of ASMPT’s WORKS Optimisation system is its comprehensive view of the entire operational process, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-      "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, the strength of their people, their focus on innovation, and their strong corporate culture that promotes diversity, inclusion, and equal opportunity.",
-      "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These additions were based on the common expectations of key stakeholders and recommendations from industry standards bodies and ESG ratings agencies.",
-      "The e-learning course that over 500 colleagues in China engaged in in 2023 was the “Unconscious Bias” course.",
-      "The three key components mentioned for ensuring employee health and safety are: \n1. Hazard identification, risk assessment, and incident investigation\n2. Worker participation, consultation, and communication on occupational health and safety\n3. Worker training on occupational health and safety"
-    ],
-    "optimized_sample_answers": [
-      "The primary focus of ASMPT’s WORKS Optimisation system is its comprehensive view of the entire operational process, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-      "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, the strength of their people, their focus on innovation, and their strong corporate culture that promotes diversity, inclusion, and equal opportunity.",
-      "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These additions were based on the common expectations of key stakeholders and recommendations from industry standards bodies and ESG ratings agencies.",
-      "The e-learning course that over 500 colleagues in China engaged in in 2023 was the “Unconscious Bias” course.",
-      "The three key components mentioned for ensuring employee health and safety are: \n1. Hazard identification, risk assessment, and incident investigation\n2. Worker participation, consultation, and communication on occupational health and safety\n3. Worker training on occupational health and safety"
-    ],
-    "instructions": {
-      "predict": "Answer the question using only the retrieved context.\n\nBe concise. Do not invent facts that are not in the context."
-    },
-    "demos": {
-      "predict": []
-    },
-    "trial_scores": [
-      100.0,
-      100.0,
-      82.5,
-      87.5,
-      100.0,
-      100.0,
-      82.5,
-      100.0,
-      100.0,
-      100.0,
-      100.0
-    ],
-    "best_score_progression": [
-      100.0,
-      100.0,
-      100.0,
-      100.0,
-      100.0,
-      100.0,
-      100.0,
-      100.0,
-      100.0,
-      100.0
-    ],
-    "gt_mode": "no_gt",
-    "optimizer": "MIPROv2",
-    "trainset_size": 5
+      {
+        "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+        "source_chunk_ids": [
+          74,
+          96
+        ]
+      },
+      {
+        "question": "What e-learning course did over 500 colleagues in China engage in in 2023?",
+        "source_chunk_ids": [
+          374,
+          59
+        ]
+      },
+      {
+        "question": "What are the three key components mentioned for ensuring employee health and safety in the passages?",
+        "source_chunk_ids": [
+          519,
+          219
+        ]
+      }
+    ]
   }
 }

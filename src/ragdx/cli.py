@@ -408,6 +408,33 @@ def dashboard():
     )
 
 
+@app.command("experiment-dashboard")
+def experiment_dashboard(
+    bundle: str = typer.Option(
+        "",
+        "--bundle",
+        help="Path to a ragdx experiment bundle (result.json). Falls back to "
+        ".ragdx_experiment/result.json, then docs/examples/pdf_no_gt_result.json.",
+    ),
+    port: int = typer.Option(
+        8501, "--port", help="Streamlit server port.",
+    ),
+):
+    """Launch the generic Streamlit dashboard for ``ragdx experiment`` bundles.
+
+    Renders any ``schema_version: 1`` bundle. Legacy bundles are
+    auto-upgraded via ``migrate_legacy_bundle``.
+    """
+    script = Path(__file__).parent / "ui" / "experiment_dashboard.py"
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", str(script),
+        "--server.port", str(port),
+    ]
+    if bundle:
+        cmd += ["--", "--bundle", bundle]
+    subprocess.run(cmd, check=False)
+
+
 @app.command("monitor-session")
 def monitor_session(
     session_id: str = typer.Argument(..., help="Optimization session id."),
@@ -513,10 +540,10 @@ def experiment(
     """Run the complete end-to-end RAG optimization experiment.
 
     Pipeline: load corpus -> resolve / synthesize questions -> Bayesian
-    AutoRAG search -> DSPy before/after at the winner config -> evaluate
-    everything with the production composite objective. Writes a bundle
-    that the ``ragdx-optimize-dashboard`` and ``ragdx-pdf-no-gt-dashboard``
-    Streamlit pages can render directly.
+    RAG-config search -> DSPy before/after at the winner config -> evaluate
+    everything with the production composite objective. Writes a
+    ``schema_version: 1`` bundle that ``ragdx experiment-dashboard``
+    renders directly.
 
     Examples::
 
@@ -524,10 +551,10 @@ def experiment(
         ragdx experiment explodinggradients/amnesty_qa --has-gt --mode both
 
         # No-GT PDF: questions synthesised from the corpus
-        ragdx experiment docs/asmpt-esg-report.pdf --no-gt
+        ragdx experiment <path/to/your.pdf> --no-gt
 
         # With-GT PDF: external labelled questions file
-        ragdx experiment docs/report.pdf --has-gt \\
+        ragdx experiment <path/to/report.pdf> --has-gt \\
             --questions data/labelled_qa.jsonl --mode with_gt
     """
     if mode not in {"with_gt", "no_gt", "both", "auto"}:
@@ -563,30 +590,28 @@ def experiment(
     table.add_column("composite (BO winner)", justify="right")
     table.add_column("DSPy composite Δ", justify="right")
 
-    modes_run = result.bundle.get("_modes_run") or []
-    autorag = result.bundle.get("autorag_bo") or {}
-    dspy_bundle = result.bundle.get("dspy_before_after") or {}
+    meta = result.bundle.get("meta") or {}
+    modes_run = meta.get("modes_run") or []
+    bayes_search = result.bundle.get("bayes_search") or {}
+    dspy_a_b = result.bundle.get("dspy_a_b") or {}
 
-    def _row_for_mode(mode_key: str | None) -> tuple[str, str, str, str, str]:
-        bo = autorag if mode_key is None else autorag.get(mode_key, {})
-        ba = dspy_bundle if mode_key is None else dspy_bundle.get(mode_key, {})
+    def _row_for_mode(mode_key: str) -> tuple[str, str, str, str, str]:
+        bo = bayes_search.get(mode_key, {})
+        ba = dspy_a_b.get(mode_key, {})
         best_params = (bo or {}).get("best_params") or {}
         best_comp = (bo or {}).get("best_composite")
         comp = (ba or {}).get("composite") or {}
         delta = comp.get("delta")
         return (
-            mode_key or "single",
+            mode_key,
             str(best_params.get("top_k", "—")),
             str(best_params.get("chunk_size", "—")),
             f"{best_comp:.3f}" if isinstance(best_comp, (int, float)) else "—",
             f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—",
         )
 
-    if len(modes_run) > 1:
-        for m in modes_run:
-            table.add_row(*_row_for_mode(m))
-    else:
-        table.add_row(*_row_for_mode(None))
+    for m in modes_run:
+        table.add_row(*_row_for_mode(m))
     print(table)
     print(f"[green]Bundle written to[/green] {result.output_path}")
     if save_run:
@@ -595,7 +620,7 @@ def experiment(
         from ragdx.schemas.models import EvaluationResult as _ER
 
         first_mode = modes_run[0] if modes_run else None
-        bo = autorag if first_mode is None else autorag.get(first_mode, {})
+        bo = bayes_search.get(first_mode, {}) if first_mode else {}
         winner_scores = (bo or {}).get("best_scores") or {}
         baseline_result = _ER(
             retrieval={k: v for k, v in winner_scores.items() if "context" in k},

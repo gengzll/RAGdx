@@ -55,7 +55,8 @@ ragdx experiment explodinggradients/amnesty_qa \
     --n-questions 5 --bo-trials 8 \
     --output-dir .ragdx_optimize_demo
 
-streamlit run src/ragdx/ui/experiment_dashboard.py
+# Render the bundle in the generic dashboard
+ragdx experiment-dashboard --bundle .ragdx_optimize_demo/result.json
 ```
 
 ### No-GT example (PDF corpus, questions synthesised from the document)
@@ -66,7 +67,7 @@ ragdx experiment <path/to/your.pdf> \
     --n-questions 5 --bo-trials 8 \
     --output-dir .ragdx_pdf_no_gt_demo
 
-streamlit run src/ragdx/ui/experiment_dashboard.py
+ragdx experiment-dashboard --bundle .ragdx_pdf_no_gt_demo/result.json
 ```
 
 ### Programmatic API
@@ -86,9 +87,15 @@ result = run_experiment(
     output_dir=".ragdx_pdf_no_gt_demo",
 )
 
-print(result.bundle["autorag_bo"]["best_params"])
+print(result.bundle["bayes_search"]["no_gt"]["best_params"])
 print(result.output_path)   # .ragdx_pdf_no_gt_demo/result.json
 ```
+
+The bundle uses a stable `schema_version: 1` layout — `meta`, `questions`,
+`data_diagnostics`, `objectives`, `bayes_search`, `dspy_a_b`, `extras`,
+each mode-keyed dict — so the dashboard never branches on single-mode
+vs. side-by-side runs. Bundles produced by the older demo scripts are
+auto-upgraded by `ragdx.experiments.migrate_legacy_bundle`.
 
 `run_experiment` returns an `ExperimentResult` (`.config`, `.bundle`,
 `.output_path`, `.save(path?)`). For finer control, the underlying

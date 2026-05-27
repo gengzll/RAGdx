@@ -13,11 +13,13 @@ from pathlib import Path
 import pytest
 
 from ragdx.experiments import (
+    SCHEMA_VERSION,
     ExperimentConfig,
     ExperimentMode,
     ExperimentResult,
     _load_jsonl_questions,
     _looks_like_hf_dataset,
+    migrate_legacy_bundle,
     run_experiment,
 )
 
@@ -182,6 +184,149 @@ def test_run_experiment_rejects_unsupported_corpus(monkeypatch: pytest.MonkeyPat
     )
     with pytest.raises(ValueError, match="Unsupported corpus"):
         _load_corpus_and_records(cfg, _StubRuntime())  # type: ignore[arg-type]
+
+
+# ====================================================================
+# schema_version: 1 unified bundle + migration
+# ====================================================================
+def _v1_skeleton(mode_keys: list[str]) -> dict:
+    """Minimal example v1 bundle for testing migrate_legacy_bundle idempotency."""
+    return {
+        "schema_version": 1,
+        "meta": {
+            "model": "openai/glm-4-flash",
+            "model_endpoint": "https://example.com/v1",
+            "experiment_mode": "both" if len(mode_keys) > 1 else mode_keys[0],
+            "modes_run": mode_keys,
+            "has_gt": "with_gt" in mode_keys,
+            "detected_gt_mode": "with_gt" if "with_gt" in mode_keys else "no_gt",
+            "source": {"kind": "huggingface", "corpus": "x/y"},
+        },
+        "questions": [{"question": "Q1", "ground_truth": "A1"}],
+        "data_diagnostics": {m: {"has_ground_truth": m == "with_gt", "gt_mode": m, "record_count": 1} for m in mode_keys},
+        "objectives": {m: {"metrics": {"faithfulness": 1.0}, "constraints": {}, "mode": "weighted_sum"} for m in mode_keys},
+        "bayes_search": {m: {"trials": [], "best_params": None, "best_composite": None} for m in mode_keys},
+        "dspy_a_b": {m: {"baseline_scores": {}, "optimized_scores": {}, "delta": {}} for m in mode_keys},
+        "extras": {},
+    }
+
+
+def test_schema_version_constant():
+    assert SCHEMA_VERSION == 1
+
+
+def test_migrate_legacy_bundle_passes_through_v1():
+    """Already-v1 bundles must be returned untouched (no re-wrapping)."""
+    b = _v1_skeleton(["with_gt", "no_gt"])
+    out = migrate_legacy_bundle(b)
+    assert out is b  # identity, not a copy
+
+
+def test_migrate_legacy_bundle_grid_shape():
+    """The optimize_gt_modes demo wrote ``autorag_grid`` with mode-keyed
+    runs. After migration the bundle must be v1 with both modes."""
+    legacy = {
+        "model": "openai/glm-4-flash",
+        "model_endpoint": "https://example.com/v1",
+        "dataset": "explodinggradients/amnesty_qa[:5]",
+        "corpus_size": 5,
+        "corpus_chunks": 15,
+        "data_diagnostics": {
+            "with_gt": {"has_ground_truth": True, "gt_mode": "with_gt"},
+            "no_gt": {"has_ground_truth": False, "gt_mode": "no_gt"},
+        },
+        "autorag_grid": {
+            "with_gt": {
+                "objective": "context_recall",
+                "best_top_k": 3,
+                "best_composite": 1.5,
+                "runs": [
+                    {"top_k": 1, "scores": {"context_recall": 0.6}, "composite_score": 1.0, "feasible": True, "violations": [], "answers": ["a"]},
+                    {"top_k": 3, "scores": {"context_recall": 0.9}, "composite_score": 1.5, "feasible": True, "violations": [], "answers": ["a"]},
+                ],
+            },
+            "no_gt": {
+                "objective": "faithfulness",
+                "best_top_k": 1,
+                "best_composite": 0.8,
+                "runs": [{"top_k": 1, "scores": {"faithfulness": 0.8}, "composite_score": 0.8, "feasible": True, "violations": [], "answers": ["a"]}],
+            },
+        },
+        "dspy_before_after": {
+            "with_gt": {"baseline_scores": {}, "optimized_scores": {}, "delta": {}},
+            "no_gt": {"baseline_scores": {}, "optimized_scores": {}, "delta": {}},
+        },
+        "questions": [{"question": "Q", "ground_truth": "A"}],
+    }
+    v1 = migrate_legacy_bundle(legacy)
+    assert v1["schema_version"] == 1
+    assert v1["meta"]["modes_run"] == ["with_gt", "no_gt"]
+    assert v1["meta"]["source"]["kind"] == "huggingface"
+    assert v1["meta"]["_migrated_from"] == "legacy_grid_v0"
+    # Every legacy run becomes a v1 trial.
+    assert len(v1["bayes_search"]["with_gt"]["trials"]) == 2
+    assert v1["bayes_search"]["with_gt"]["trials"][0]["params"]["top_k"] == 1
+    assert v1["bayes_search"]["with_gt"]["_legacy_kind"] == "grid"
+    # dspy_a_b is mode-keyed.
+    assert set(v1["dspy_a_b"]) == {"with_gt", "no_gt"}
+
+
+def test_migrate_legacy_bundle_pdf_no_gt_shape():
+    """The pdf_no_gt demo wrote a flat ``autorag_bo`` (single mode).
+    Migration must wrap it under {no_gt: ...}."""
+    legacy = {
+        "model": "openai/glm-4-flash",
+        "model_endpoint": "https://example.com/v1",
+        "source_pdf": "report.pdf",
+        "pdf_meta": {"page_count": 100, "chunks": 500},
+        "questions": [{"question": "Q1", "ground_truth": None}],
+        "synthesized_meta": [{"question": "Q1", "source_chunk_ids": [1, 2]}],
+        "gt_mode": "no_gt",
+        "objective_spec": {"metrics": {"faithfulness": 1.5}, "constraints": {}, "mode": "weighted_sum"},
+        "autorag_bo": {
+            "search_space": {"top_k": [1, 3]},
+            "trials": [{"trial_index": 0, "params": {"top_k": 1}, "scores": {"faithfulness": 0.8}, "composite_score": 1.2, "feasible": True}],
+            "best_params": {"top_k": 1},
+            "best_composite": 1.2,
+        },
+        "dspy_before_after": {"baseline_scores": {"faithfulness": 0.5}, "optimized_scores": {"faithfulness": 0.7}, "delta": {"faithfulness": 0.2}},
+    }
+    v1 = migrate_legacy_bundle(legacy)
+    assert v1["schema_version"] == 1
+    assert v1["meta"]["modes_run"] == ["no_gt"]
+    assert v1["meta"]["source"]["kind"] == "pdf"
+    assert v1["meta"]["_migrated_from"] == "legacy_pdf_v0"
+    assert "pdf_meta" in v1["extras"]
+    assert "synthesized_questions" in v1["extras"]
+    # Single mode is wrapped in a {no_gt: ...} dict.
+    assert set(v1["bayes_search"]) == {"no_gt"}
+    assert set(v1["dspy_a_b"]) == {"no_gt"}
+
+
+def test_migrate_legacy_bundle_unknown_shape_stamps_zero():
+    out = migrate_legacy_bundle({"random": "stuff"})
+    assert out["schema_version"] == 0
+    assert out["random"] == "stuff"
+
+
+def test_committed_example_snapshots_are_v1(tmp_path: Path):
+    """The two snapshots in docs/examples/ must already be v1 so the
+    generic dashboard renders them directly without invoking the migrator."""
+    repo = Path(__file__).resolve().parents[1]
+    for name in ("optimize_gt_modes_result.json", "pdf_no_gt_result.json"):
+        p = repo / "docs" / "examples" / name
+        bundle = json.loads(p.read_text(encoding="utf-8"))
+        assert bundle.get("schema_version") == 1, f"{name} is not v1"
+        # The dashboard relies on these top-level keys being present.
+        for key in ("meta", "questions", "bayes_search", "dspy_a_b", "objectives", "extras"):
+            assert key in bundle, f"{name} missing top-level key {key}"
+        # Mode-keyed sections are *always* dicts (never flat).
+        assert isinstance(bundle["bayes_search"], dict)
+        assert isinstance(bundle["dspy_a_b"], dict)
+        modes_run = bundle["meta"]["modes_run"]
+        assert modes_run, f"{name} has empty modes_run"
+        for m in modes_run:
+            assert m in bundle["bayes_search"], f"{name} bayes_search missing mode {m}"
 
 
 # ====================================================================
