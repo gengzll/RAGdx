@@ -294,6 +294,152 @@ def test_in_process_runner_handles_factory_error(tmp_path: Path):
     assert all(t.status == "failed" for t in session.trials)
 
 
+def test_in_process_runner_refuses_missing_dataset(tmp_path: Path):
+    """No silent fallback to examples/demo_dataset.jsonl: when neither
+    explicit records, explicit dataset_path, nor experiment.parameters
+    carry a dataset, the runner must raise — not score the user's
+    pipeline against demo data."""
+    from ragdx.optim.langchain_adapter import LangChainAdapter
+    from ragdx.schemas.models import (
+        EvaluationResult as _ER,
+    )
+    from ragdx.schemas.models import (
+        OptimizationExperiment as _OE,
+    )
+    from ragdx.schemas.models import (
+        OptimizationTrial as _OT,
+    )
+
+    adapter = LangChainAdapter()
+    runner = adapter.make_in_process_runner()  # no records, no dataset_path
+    exp = _OE(
+        name="e", tool="langchain", target_component="retrieval",
+        description="d", parameters={"pipeline_module": "x:y"},
+        objectives={"answer_correctness": 1.0},
+        search_space={"top_k": [4]}, max_trials=1, stage="retrieval",
+    )
+    trial = _OT(
+        trial_id="t1", experiment_name="e",
+        tool="langchain", strategy="bayesian",
+        parameters={"top_k": 4},
+    )
+    with pytest.raises(ValueError, match="no dataset configured"):
+        runner(experiment=exp, trial=trial, baseline=_ER())
+
+
+def test_in_process_runner_refuses_missing_pipeline_module(tmp_path: Path):
+    """Same guarantee for the pipeline factory: no silent fallback to
+    the bundled examples module."""
+    from ragdx.optim.langchain_adapter import LangChainAdapter
+    from ragdx.schemas.models import (
+        EvaluationResult as _ER,
+    )
+    from ragdx.schemas.models import (
+        OptimizationExperiment as _OE,
+    )
+    from ragdx.schemas.models import (
+        OptimizationTrial as _OT,
+    )
+
+    adapter = LangChainAdapter()
+    runner = adapter.make_in_process_runner(records=[DatasetRecord(question="q", ground_truth="g")])
+    exp = _OE(
+        name="e", tool="langchain", target_component="retrieval",
+        description="d", parameters={},  # no pipeline_module
+        objectives={"answer_correctness": 1.0},
+        search_space={"top_k": [4]}, max_trials=1, stage="retrieval",
+    )
+    trial = _OT(
+        trial_id="t1", experiment_name="e",
+        tool="langchain", strategy="bayesian",
+        parameters={"top_k": 4},
+    )
+    with pytest.raises(ValueError, match="pipeline_module"):
+        runner(experiment=exp, trial=trial, baseline=_ER())
+
+
+def test_simulate_mode_sets_session_notes_banner(tmp_path: Path, monkeypatch):
+    """Simulate mode is convenient for plan-smoke-testing but its scores
+    are meaningless. The executor must mark the session with a visible
+    notes banner so users / dashboards know not to trust the numbers."""
+    plan, baseline = _trivial_plan()
+    # pipeline_module isn't needed for simulate (no runner is invoked).
+    executor = OptimizationExecutor(root=tmp_path, strict_execute=False)
+    session = executor.execute_plan(plan, baseline=baseline, mode="simulate")
+    assert session.mode == "simulate"
+    assert "SIMULATED" in session.notes
+    assert "hash-based" in session.notes or "stub" in session.notes
+
+
+def _capture_ragdx_logs(level: int = 0) -> tuple[logging.Handler, list[logging.LogRecord]]:
+    """Attach a list-capturing handler directly to the ragdx root logger.
+
+    The ragdx logger uses ``propagate=False`` so pytest's ``caplog``
+    fixture can't see records via the root logger. This helper hooks
+    into the namespace directly and returns the (handler, records)
+    pair — caller is responsible for ``removeHandler`` cleanup.
+    """
+    records: list[logging.LogRecord] = []
+
+    class _ListHandler(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    h = _ListHandler(level=level)
+    logging.getLogger("ragdx").addHandler(h)
+    return h, records
+
+
+def test_simulate_mode_logs_warning(tmp_path: Path):
+    """The simulate banner must hit the logger at WARNING level so it
+    surfaces in standard log destinations (CI, file sinks, …)."""
+    plan, baseline = _trivial_plan()
+    executor = OptimizationExecutor(root=tmp_path, strict_execute=False)
+    handler, records = _capture_ragdx_logs(level=logging.WARNING)
+    try:
+        executor.execute_plan(plan, baseline=baseline, mode="simulate")
+    finally:
+        logging.getLogger("ragdx").removeHandler(handler)
+    matched = [r for r in records if r.levelno >= logging.WARNING and "SIMULATED" in r.getMessage()]
+    assert matched, "simulate mode must emit a WARNING-level SIMULATED banner"
+
+
+def test_execute_mode_does_not_emit_simulate_banner(tmp_path: Path, monkeypatch):
+    """The simulate banner is gated on mode='simulate' only. Real
+    execute runs (even failed ones) must NOT carry the SIMULATED note."""
+    monkeypatch.delenv("RAGDX_LANGCHAIN_RUNNER_CMD", raising=False)
+    monkeypatch.delenv("RAGDX_FALLBACK_SIMULATE_ON_MISSING_RUNNER", raising=False)
+    plan, baseline = _trivial_plan()
+    plan.experiments[0].parameters["pipeline_module"] = "x:y"  # any value
+    executor = OptimizationExecutor(root=tmp_path, strict_execute=True)
+    handler, records = _capture_ragdx_logs(level=logging.WARNING)
+    try:
+        session = executor.execute_plan(plan, baseline=baseline, mode="execute")
+    finally:
+        logging.getLogger("ragdx").removeHandler(handler)
+    assert "SIMULATED" not in session.notes
+    matched = [r for r in records if "SIMULATED" in r.getMessage()]
+    assert not matched
+
+
+def test_build_runner_spec_does_not_silently_default_dataset(tmp_path: Path):
+    """``build_runner_spec`` (used to render the external runner config)
+    must NOT inject examples/demo_dataset.jsonl when dataset_path is
+    missing — the downstream runner should see None and fail loudly."""
+    from ragdx.optim.langchain_adapter import LangChainAdapter
+    from ragdx.schemas.models import OptimizationExperiment as _OE
+
+    exp = _OE(
+        name="e", tool="langchain", target_component="retrieval",
+        description="d", parameters={},  # no dataset_path, no pipeline_module
+        objectives={"answer_correctness": 1.0},
+        search_space={"top_k": [4]}, max_trials=1, stage="retrieval",
+    )
+    spec = LangChainAdapter().build_runner_spec(exp, {"top_k": 4})
+    assert spec["program_contract"]["dataset_path"] is None
+    assert spec["program_contract"]["pipeline_module"] is None
+
+
 # --------------------------------------------------------------------- #
 # Ragas adapter normalization-only path stays cheap and pure
 # --------------------------------------------------------------------- #

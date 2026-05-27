@@ -1,4 +1,14 @@
-"""AutoRAG adapter — renders a search spec for AutoRAG.
+"""AutoRAG **spec renderer** — builds an AutoRAG-style YAML payload.
+
+.. important::
+   This adapter does *not* invoke AutoRAG. It produces a YAML / dict
+   spec that mirrors AutoRAG's configuration shape and returns it
+   inside a :class:`ToolRunResult`. To actually execute the spec, the
+   project relies on the executor's subprocess runner contract — set
+   the ``RAGDX_AUTORAG_RUNNER_CMD`` environment variable to a command
+   that consumes ``{config}`` (the rendered YAML path) and writes a
+   ``{output}`` JSON with metric scores. See
+   :func:`ragdx.cli.show_runner_templates` for examples.
 
 The adapter is GT-aware: when the trainset has populated ground-truths it
 includes reference-based metrics (``answer_correctness``, ``context_recall``)
@@ -103,6 +113,11 @@ class AutoRAGAdapter:
             "search_parameters": parameters,
         }
 
+    # The env var consumed by ``OptimizationExecutor`` to launch the
+    # external AutoRAG run. Surfaced here so callers can document /
+    # validate the integration without reaching into the executor.
+    RUNNER_ENV_VAR = "RAGDX_AUTORAG_RUNNER_CMD"
+
     def run(
         self,
         experiment: OptimizationExperiment,
@@ -110,19 +125,36 @@ class AutoRAGAdapter:
         *,
         records: Iterable[DatasetRecord] | None = None,
     ) -> ToolRunResult:
+        """Render an AutoRAG spec.
+
+        .. warning::
+           This does **not** execute AutoRAG. The returned
+           :class:`ToolRunResult` carries the spec under ``.payload``;
+           ``OptimizationExecutor`` writes it to a YAML config and
+           invokes ``$RAGDX_AUTORAG_RUNNER_CMD`` to run the actual
+           AutoRAG search. With no runner configured, execution falls
+           back to simulated scoring (loud warning in `strict_execute`
+           mode).
+        """
         spec = self.build_search_spec(experiment, parameters, records=records)
         mode = spec["gt_mode"]
+        runner_hint = (
+            f" Set {self.RUNNER_ENV_VAR}='<cmd> --config {{config}} "
+            "--output {output}' to execute this spec via your installed "
+            "AutoRAG release."
+        )
         if mode == "with_gt":
             note = (
-                "Config rendered for AutoRAG (with-GT mode). Reference-based metrics "
-                "like answer_correctness / context_recall are included. Save the YAML "
-                "payload and adjust node names to match your installed AutoRAG release."
+                "Spec rendered for AutoRAG (with-GT mode). Reference-based metrics "
+                "like answer_correctness / context_recall are included. The YAML "
+                "node names mirror AutoRAG's shape — adjust to match your installed "
+                "AutoRAG release if needed." + runner_hint
             )
         else:
             note = (
-                "Config rendered for AutoRAG (no-GT mode). Only reference-free metrics "
+                "Spec rendered for AutoRAG (no-GT mode). Only reference-free metrics "
                 "(faithfulness, answer_relevancy, context_precision, hallucination) are "
                 "included. Provide an LLM-as-judge in your AutoRAG runtime so these "
-                "metrics can be computed."
+                "metrics can be computed." + runner_hint
             )
         return ToolRunResult(tool="autorag", success=True, payload=spec, note=note)

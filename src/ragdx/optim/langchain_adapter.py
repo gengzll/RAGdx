@@ -43,7 +43,18 @@ ScorerFn = Callable[[list[dict[str, Any]]], dict[str, float]]
 
 
 class LangChainAdapter:
-    def build_runner_spec(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> dict[str, Any]:
+    RUNNER_ENV_VAR = "RAGDX_LANGCHAIN_RUNNER_CMD"
+
+    def build_runner_spec(
+        self, experiment: OptimizationExperiment, parameters: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Render a subprocess-runner spec for a LangChain pipeline.
+
+        Note: ``dataset_path`` and ``pipeline_module`` are *not* silently
+        defaulted to the demo dataset / factory; if the user omits them
+        the spec passes through ``None`` so the downstream runner fails
+        loudly instead of scoring real pipelines against tutorial data.
+        """
         llm_provider = parameters.get("llm_provider", "openai")
         return {
             "framework": "langchain",
@@ -52,10 +63,9 @@ class LangChainAdapter:
             "objectives": experiment.objectives,
             "constraints": experiment.constraints,
             "program_contract": {
-                "dataset_path": experiment.parameters.get("dataset_path", "examples/demo_dataset.jsonl"),
-                "pipeline_module": experiment.parameters.get(
-                    "pipeline_module", "examples.langchain_pipeline:create_pipeline"
-                ),
+                # No silent demo fallback — the runner must check these.
+                "dataset_path": experiment.parameters.get("dataset_path"),
+                "pipeline_module": experiment.parameters.get("pipeline_module"),
                 "evaluator_mode": experiment.parameters.get("evaluator_mode", "offline"),
             },
             "runtime": {
@@ -92,15 +102,22 @@ class LangChainAdapter:
     ) -> Callable[..., dict[str, float]]:
         """Return an ``in_process_runners["langchain"]`` callable.
 
-        Resolution order for the dataset:
-        ``records`` (explicit) → ``dataset_path`` → ``experiment.parameters["dataset_path"]``
-        (resolved at call-time) → ``examples/demo_dataset.jsonl``.
+        Resolution order for the dataset (no silent fallback to the
+        bundled demo data — see :issue:`production-hardening`):
 
-        The pipeline factory is loaded from ``experiment.parameters["pipeline_module"]``
-        in ``module:attr`` form, called with the trial parameters as kwargs, and is
-        expected to return a callable that accepts a ``DatasetRecord`` (or just a
-        query string) and returns either a string answer or a dict containing at
-        least ``answer`` and ``contexts``.
+        1. ``records`` (explicit argument here)
+        2. ``dataset_path`` (explicit argument here)
+        3. ``experiment.parameters["dataset_path"]`` (resolved at call-time)
+
+        If none of the three is supplied, the runner raises a
+        ``ValueError`` so the user is forced to make an explicit choice.
+
+        The pipeline factory must be specified via
+        ``experiment.parameters["pipeline_module"]`` in ``module:attr``
+        form. It is called with the trial parameters as kwargs and is
+        expected to return a callable that accepts a ``DatasetRecord``
+        (or just a query string) and returns either a string answer or
+        a dict containing at least ``answer`` and ``contexts``.
         """
         cached_records = list(records) if records is not None else None
         default_dataset = Path(dataset_path) if dataset_path else None
@@ -112,17 +129,30 @@ class LangChainAdapter:
             trial: OptimizationTrial,
             baseline: EvaluationResult,
         ) -> dict[str, float]:
-            ds_path = (
-                default_dataset
-                or Path(experiment.parameters.get("dataset_path", "examples/demo_dataset.jsonl"))
-            )
-            recs = cached_records if cached_records is not None else _load_jsonl_dataset(ds_path)
+            if cached_records is not None:
+                recs = cached_records
+            else:
+                ds_path = default_dataset
+                if ds_path is None:
+                    cfg_path = experiment.parameters.get("dataset_path")
+                    if cfg_path:
+                        ds_path = Path(cfg_path)
+                if ds_path is None:
+                    raise ValueError(
+                        "LangChain in-process runner has no dataset configured. "
+                        "Pass `records=` / `dataset_path=` to make_in_process_runner(), "
+                        "or set experiment.parameters['dataset_path']."
+                    )
+                recs = _load_jsonl_dataset(ds_path)
             if not recs:
-                raise RuntimeError(f"Dataset {ds_path} produced zero records")
+                raise RuntimeError("Dataset produced zero records")
 
-            factory_spec = experiment.parameters.get(
-                "pipeline_module", "examples.langchain_pipeline:create_pipeline"
-            )
+            factory_spec = experiment.parameters.get("pipeline_module")
+            if not factory_spec:
+                raise ValueError(
+                    "LangChain in-process runner requires "
+                    "experiment.parameters['pipeline_module'] in 'module:attr' form."
+                )
             factory = _import_attr(factory_spec)
             logger.info(
                 "Building LangChain pipeline factory=%s trial=%s",

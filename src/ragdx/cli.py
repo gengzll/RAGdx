@@ -189,6 +189,16 @@ def optimize(
     if mode not in {"simulate", "prepare_only", "execute"}:
         raise typer.BadParameter("mode must be simulate, prepare_only, or execute")
 
+    if mode == "simulate":
+        # Loud, visible warning — easy to miss when this scrolls past in a
+        # busy terminal. The executor also writes this to session.notes.
+        print(
+            "[bold yellow]⚠️  SIMULATED MODE[/bold yellow]: "
+            "trial scores come from a deterministic hash-based stub, "
+            "not a real runner. Use `--mode execute` (with a configured "
+            "RAGDX_<tool>_RUNNER_CMD) for real metrics."
+        )
+
     result = _load_eval(eval_json)
     report, opt_plan = _diagnose_and_plan(
         result,

@@ -679,6 +679,15 @@ class OptimizationExecutor:
         total_trials = sum(exp.max_trials for exp in plan.experiments)
         initial_status = "running" if mode in {"simulate", "execute"} else "prepared"
         session = OptimizationSession(session_id=session_id, created_at=self._timestamp(), run_id=run_id, strategy=strategy, mode=mode, status=initial_status, plan=plan, total_trials=total_trials)
+        if mode == "simulate":
+            banner = (
+                "⚠️  SIMULATED MODE: trial scores are produced by a deterministic hash-based "
+                "stub — NOT by any real RAG runner. Use this only for plan / search-space "
+                "smoke tests. For real metrics run with mode='execute' and a configured "
+                "RAGDX_<tool>_RUNNER_CMD (or an in-process runner)."
+            )
+            logger.warning(banner, extra={"session_id": session_id, "run_id": run_id})
+            session.notes = banner
         logger.info(
             "Starting optimization session=%s mode=%s strategy=%s total_trials=%s experiments=%s strict_execute=%s",
             session_id, mode, strategy, total_trials, len(plan.experiments), self.strict_execute,
