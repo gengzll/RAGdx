@@ -436,6 +436,171 @@ def show_runner_templates():
     print(json.dumps(templates, indent=2))
 
 
+@app.command("experiment")
+def experiment(
+    corpus: str = typer.Argument(
+        ...,
+        help="Corpus source. One of: "
+        "(a) HuggingFace dataset name like 'explodinggradients/amnesty_qa', "
+        "(b) path to a .pdf file, "
+        "(c) path to a .jsonl corpus file ({text, source?} per line).",
+    ),
+    has_gt: bool = typer.Option(
+        False,
+        "--has-gt/--no-gt",
+        help="Whether the input carries ground-truth answers.",
+    ),
+    mode: str = typer.Option(
+        "auto",
+        "--mode",
+        help="Experiment mode: 'with_gt', 'no_gt', 'both', or 'auto'. "
+        "'with_gt' / 'both' require --has-gt. 'auto' picks 'both' when --has-gt, else 'no_gt'.",
+    ),
+    questions_path: str | None = typer.Option(
+        None,
+        "--questions",
+        help="JSONL with {question, ground_truth, contexts?} per line. "
+        "Required when --has-gt and the corpus is a PDF or plain JSONL.",
+    ),
+    n_questions: int = typer.Option(5, "--n-questions", help="How many records to use."),
+    n_bo_trials: int = typer.Option(8, "--bo-trials", help="Bayesian search trial budget."),
+    n_bo_init: int = typer.Option(3, "--bo-init", help="Random initialisation rounds for BO."),
+    output_dir: str = typer.Option(
+        ".ragdx_experiment",
+        "--output-dir",
+        help="Directory for result.json (also picked up by the matching Streamlit dashboard).",
+    ),
+    api_key: str | None = typer.Option(
+        None, "--api-key",
+        help="LLM API key. Falls back to ZHIPU_API_KEY / OPENAI_API_KEY env vars.",
+    ),
+    api_base: str = typer.Option(
+        "https://open.bigmodel.cn/api/paas/v4", "--api-base",
+        help="OpenAI-compatible base URL (default: Zhipu).",
+    ),
+    model: str = typer.Option(
+        "openai/glm-4-flash", "--model",
+        help="LiteLLM model identifier.",
+    ),
+    seed: int = typer.Option(7, "--seed"),
+    save_run: bool = typer.Option(
+        False, "--save-run",
+        help="Also persist the experiment as a Run in the local RunStore "
+        "so it shows up in `ragdx runs`.",
+    ),
+    name: str = typer.Option("", "--name", help="Optional name for the saved run."),
+    no_save: bool = typer.Option(
+        False, "--no-save",
+        help="Skip writing result.json (only return in-memory).",
+    ),
+):
+    """Run the complete end-to-end RAG optimization experiment.
+
+    Pipeline: load corpus -> resolve / synthesize questions -> Bayesian
+    AutoRAG search -> DSPy before/after at the winner config -> evaluate
+    everything with the production composite objective. Writes a bundle
+    that the ``ragdx-optimize-dashboard`` and ``ragdx-pdf-no-gt-dashboard``
+    Streamlit pages can render directly.
+
+    Examples::
+
+        # With-GT, HuggingFace dataset, run both modes side-by-side
+        ragdx experiment explodinggradients/amnesty_qa --has-gt --mode both
+
+        # No-GT PDF: questions synthesised from the corpus
+        ragdx experiment docs/asmpt-esg-report.pdf --no-gt
+
+        # With-GT PDF: external labelled questions file
+        ragdx experiment docs/report.pdf --has-gt \\
+            --questions data/labelled_qa.jsonl --mode with_gt
+    """
+    if mode not in {"with_gt", "no_gt", "both", "auto"}:
+        raise typer.BadParameter("mode must be one of: with_gt, no_gt, both, auto")
+
+    # Import lazily so `ragdx --help` doesn't pull in dspy / langchain.
+    from ragdx.experiments import run_experiment
+
+    try:
+        result = run_experiment(
+            corpus=corpus,
+            has_gt=has_gt,
+            mode=mode,  # type: ignore[arg-type]
+            questions_path=questions_path,
+            n_questions=n_questions,
+            n_bo_trials=n_bo_trials,
+            n_bo_init=n_bo_init,
+            output_dir=output_dir,
+            api_key=api_key,
+            api_base=api_base,
+            model=model,
+            seed=seed,
+            save=not no_save,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    # Render a concise summary table (full bundle is in result.json).
+    table = Table(title="Experiment summary", show_lines=False)
+    table.add_column("mode", style="cyan")
+    table.add_column("best top_k", justify="right")
+    table.add_column("chunk_size", justify="right")
+    table.add_column("composite (BO winner)", justify="right")
+    table.add_column("DSPy composite Δ", justify="right")
+
+    modes_run = result.bundle.get("_modes_run") or []
+    autorag = result.bundle.get("autorag_bo") or {}
+    dspy_bundle = result.bundle.get("dspy_before_after") or {}
+
+    def _row_for_mode(mode_key: str | None) -> tuple[str, str, str, str, str]:
+        bo = autorag if mode_key is None else autorag.get(mode_key, {})
+        ba = dspy_bundle if mode_key is None else dspy_bundle.get(mode_key, {})
+        best_params = (bo or {}).get("best_params") or {}
+        best_comp = (bo or {}).get("best_composite")
+        comp = (ba or {}).get("composite") or {}
+        delta = comp.get("delta")
+        return (
+            mode_key or "single",
+            str(best_params.get("top_k", "—")),
+            str(best_params.get("chunk_size", "—")),
+            f"{best_comp:.3f}" if isinstance(best_comp, (int, float)) else "—",
+            f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—",
+        )
+
+    if len(modes_run) > 1:
+        for m in modes_run:
+            table.add_row(*_row_for_mode(m))
+    else:
+        table.add_row(*_row_for_mode(None))
+    print(table)
+    print(f"[green]Bundle written to[/green] {result.output_path}")
+    if save_run:
+        # Best-effort: synthesise an EvaluationResult from the winner scores
+        # so the run shows up alongside the legacy ragdx save/optimize ones.
+        from ragdx.schemas.models import EvaluationResult as _ER
+
+        first_mode = modes_run[0] if modes_run else None
+        bo = autorag if first_mode is None else autorag.get(first_mode, {})
+        winner_scores = (bo or {}).get("best_scores") or {}
+        baseline_result = _ER(
+            retrieval={k: v for k, v in winner_scores.items() if "context" in k},
+            generation={k: v for k, v in winner_scores.items() if k in {"faithfulness", "answer_relevancy", "response_relevancy"}},
+            e2e={k: v for k, v in winner_scores.items() if k in {"answer_correctness", "answer_accuracy"}},
+            metadata={
+                "experiment": True,
+                "corpus": corpus,
+                "mode": mode,
+                "bundle_path": str(result.output_path),
+            },
+        )
+        report = RAGDiagnosisEngine().diagnose(baseline_result)
+        opt_plan = OptimizationPlanner().build_plan(
+            report, result=baseline_result, strategy="bayesian", budget=n_bo_trials,
+        )
+        store = _store()
+        run = store.save_run(baseline_result, report, opt_plan, name=name or None)
+        print(f"[green]Saved run[/green] {run.run_id}")
+
+
 @app.command("show-config")
 def show_config():
     """Print the effective ragdx configuration resolved from the environment."""

@@ -182,3 +182,51 @@ def test_run_experiment_rejects_unsupported_corpus(monkeypatch: pytest.MonkeyPat
     )
     with pytest.raises(ValueError, match="Unsupported corpus"):
         _load_corpus_and_records(cfg, _StubRuntime())  # type: ignore[arg-type]
+
+
+# ====================================================================
+# CLI -- ragdx experiment subcommand
+# ====================================================================
+from typer.testing import CliRunner  # noqa: E402
+
+from ragdx.cli import app  # noqa: E402
+
+runner = CliRunner()
+
+
+def test_cli_experiment_help_runs():
+    """Help should render without importing dspy / ragas (those are lazy)."""
+    result = runner.invoke(app, ["experiment", "--help"])
+    assert result.exit_code == 0
+    assert "Run the complete end-to-end RAG optimization experiment" in result.stdout
+    assert "--has-gt" in result.stdout
+    assert "--mode" in result.stdout
+
+
+def test_cli_experiment_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "stub")
+    result = runner.invoke(app, ["experiment", "report.pdf", "--no-gt", "--mode", "nonsense"])
+    assert result.exit_code != 0
+    assert "mode must be one of" in (result.stdout + (result.stderr or ""))
+
+
+def test_cli_experiment_with_gt_required_for_with_gt_mode(monkeypatch: pytest.MonkeyPatch):
+    """``--no-gt --mode with_gt`` is the most common user mistake."""
+    monkeypatch.setenv("OPENAI_API_KEY", "stub")
+    result = runner.invoke(app, ["experiment", "report.pdf", "--no-gt", "--mode", "with_gt"])
+    assert result.exit_code != 0
+    combined = result.stdout + (result.stderr or "")
+    assert "mode='with_gt'" in combined or "has_gt=True" in combined
+
+
+def test_cli_experiment_both_mode_requires_has_gt(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "stub")
+    result = runner.invoke(app, ["experiment", "report.pdf", "--no-gt", "--mode", "both"])
+    assert result.exit_code != 0
+
+
+def test_cli_experiment_listed_in_help():
+    """The new subcommand should show up in the main help."""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "experiment" in result.stdout

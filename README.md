@@ -13,82 +13,81 @@ It sits above an existing RAG application as a **quality and optimization contro
 - persists runs, sessions, traces, feedback, and learned causal priors in a local file store
 - provides both a CLI and a Streamlit dashboard for inspection and reporting
 
-## End-to-end experiment runner (one call)
+## End-to-end experiment (one command)
 
-If you just want a complete pipeline — load a corpus, generate / load
-test questions, run Bayesian AutoRAG search, run DSPy before/after, get
-a JSON bundle ready for the dashboard — call
-[`ragdx.run_experiment`](src/ragdx/experiments.py):
+`ragdx experiment` runs the complete optimization pipeline against any
+supported corpus and writes a JSON bundle that the bundled Streamlit
+dashboards render directly:
 
-```python
-from ragdx import run_experiment
+```text
+corpus -> resolve / synthesise questions -> AutoRAG Bayesian search
+       -> DSPy before / after at the winner config -> composite scoring
+       -> JSON bundle for the dashboard
 ```
 
-### Reproduce the with-GT demo (HuggingFace amnesty_qa, both modes side-by-side)
+Required arguments:
 
-```python
-from ragdx import run_experiment
+| flag | values |
+|---|---|
+| `corpus` (positional) | HuggingFace dataset name (`org/dataset`), `.pdf` path, or `.jsonl` corpus path |
+| `--has-gt` / `--no-gt` | whether the corpus carries ground-truth answers |
+| `--mode` | `with_gt`, `no_gt`, `both`, or `auto`. `with_gt` / `both` require `--has-gt` |
+| `--questions PATH` | optional JSONL with `{question, ground_truth, contexts?}` — required when `--has-gt` and corpus is a PDF or JSONL |
+| `--n-questions`, `--bo-trials`, `--bo-init` | search budget and dataset size |
+| `--output-dir` | where `result.json` is written; defaults to `.ragdx_experiment` |
+| `--api-key`, `--api-base`, `--model` | LLM routing; falls back to `ZHIPU_API_KEY` / `OPENAI_API_KEY` env vars |
+| `--save-run` | also persist the run in the local `RunStore` so it appears in `ragdx runs` |
 
-result = run_experiment(
-    corpus="explodinggradients/amnesty_qa",   # auto-detected as a HF dataset
-    has_gt=True,
-    mode="both",                              # runs with_gt AND no_gt in one call
-    n_questions=5,
-    n_bo_trials=8,
-    api_key="<your-glm-or-openai-key>",       # or set ZHIPU_API_KEY / OPENAI_API_KEY
-    output_dir=".ragdx_optimize_demo",        # so the existing dashboard picks it up
-)
-
-print(result.bundle["autorag_bo"]["with_gt"]["best_params"])
-print(result.bundle["dspy_before_after"]["with_gt"]["composite"]["delta"])
-```
-
-Then visualise:
+### With-GT example (HuggingFace amnesty_qa, runs both modes side-by-side)
 
 ```bash
+export ZHIPU_API_KEY=<your-key>
+
+ragdx experiment explodinggradients/amnesty_qa \
+    --has-gt --mode both \
+    --n-questions 5 --bo-trials 8 \
+    --output-dir .ragdx_optimize_demo
+
 streamlit run src/ragdx/ui/optimization_dashboard.py
 ```
 
-### Reproduce the no-GT PDF demo (questions synthesised from the corpus)
+### No-GT example (PDF corpus, questions synthesised from the document)
+
+```bash
+ragdx experiment docs/asmpt-esg-report.pdf \
+    --no-gt \
+    --n-questions 5 --bo-trials 8 \
+    --output-dir .ragdx_pdf_no_gt_demo
+
+streamlit run src/ragdx/ui/pdf_no_gt_dashboard.py
+```
+
+### Programmatic API
+
+The CLI is a thin wrapper around `ragdx.run_experiment`. The same call
+in Python:
 
 ```python
 from ragdx import run_experiment
 
 result = run_experiment(
-    corpus="docs/asmpt-esg-report.pdf",       # .pdf -> PDF loader
-    has_gt=False,                             # mode auto-resolves to "no_gt"
-    n_questions=5,                            # synthesised via LLM from random chunks
+    corpus="docs/asmpt-esg-report.pdf",
+    has_gt=False,
+    n_questions=5,
     n_bo_trials=8,
-    api_key="<your-glm-or-openai-key>",
+    api_key="<your-key>",
     output_dir=".ragdx_pdf_no_gt_demo",
 )
 
 print(result.bundle["autorag_bo"]["best_params"])
+print(result.output_path)   # .ragdx_pdf_no_gt_demo/result.json
 ```
 
-And:
-
-```bash
-streamlit run src/ragdx/ui/pdf_no_gt_dashboard.py
-```
-
-### Parameters at a glance
-
-| arg | required | what it does |
-|---|---|---|
-| `corpus` | yes | `"org/dataset"` (HuggingFace), `*.pdf` path, or `*.jsonl` corpus path |
-| `has_gt` | yes | Whether the data carries ground-truth answers |
-| `mode` | no (default `"auto"`) | `"with_gt"`, `"no_gt"`, `"both"`, or `"auto"`. `"with_gt"` / `"both"` require `has_gt=True` |
-| `questions_path` | only when `has_gt=True` and corpus isn't a HF dataset | JSONL with `{question, ground_truth, contexts?}` per line |
-| `n_questions` | no | How many records to use (slice for HF, synthesise count for PDF/JSONL no-GT) |
-| `n_bo_trials` / `n_bo_init` | no | Bayesian-search budget |
-| `top_ks` / `chunk_sizes` / `chunk_overlaps` | no | BO search axes (defaults match the demos) |
-| `objective_overrides` | no | `{"with_gt": CompositeObjective, "no_gt": ...}` to replace `default_objective` |
-| `output_dir` | no | Where `result.json` is written |
-| `api_key` / `api_base` / `model` | no | Falls back to env vars; defaults route to GLM-4-Flash via Zhipu |
-
-Returns an `ExperimentResult` with `.bundle` (full dict, same shape the
-dashboards expect) and `.output_path` (file written to disk).
+`run_experiment` returns an `ExperimentResult` (`.config`, `.bundle`,
+`.output_path`, `.save(path?)`). For finer control, the underlying
+building blocks are independently importable: `ragdx.loaders.load_pdf_chunks`,
+`ragdx.datasets.synthesize_questions`, `ragdx.optim.bayes_search.BayesianSearch`,
+`ragdx.optim.objectives.default_objective`, `ragdx.optim.dspy_adapter.DSPyAdapter`.
 
 The standalone scripts under `examples/demo_optimize_gt_modes.py` and
 `examples/demo_pdf_no_gt.py` still exist as readable step-by-step
@@ -306,6 +305,7 @@ Main commands:
 - `ragdx diagnose`
 - `ragdx plan`
 - `ragdx optimize`
+- `ragdx experiment` — end-to-end run (corpus → AutoRAG BO → DSPy A/B → JSON bundle)
 - `ragdx save`
 - `ragdx compare`
 - `ragdx runs`
