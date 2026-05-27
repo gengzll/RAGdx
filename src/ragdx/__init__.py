@@ -45,6 +45,11 @@ from ragdx.errors import (
     RunnerMissingError,
     StorageError,
 )
+from ragdx.experiments import (
+    ExperimentConfig,
+    ExperimentResult,
+    run_experiment,
+)
 from ragdx.llm import (
     DEFAULT_MODELS,
     LLMCallable,
@@ -108,6 +113,10 @@ __all__ = [  # noqa: RUF022 — grouped by category, not alphabetical
     # optim
     "OptimizationPlanner",
     "OptimizationExecutor",
+    # experiments (one-call end-to-end driver)
+    "run_experiment",
+    "ExperimentConfig",
+    "ExperimentResult",
     # storage
     "RunStore",
     # schemas

@@ -13,6 +13,88 @@ It sits above an existing RAG application as a **quality and optimization contro
 - persists runs, sessions, traces, feedback, and learned causal priors in a local file store
 - provides both a CLI and a Streamlit dashboard for inspection and reporting
 
+## End-to-end experiment runner (one call)
+
+If you just want a complete pipeline — load a corpus, generate / load
+test questions, run Bayesian AutoRAG search, run DSPy before/after, get
+a JSON bundle ready for the dashboard — call
+[`ragdx.run_experiment`](src/ragdx/experiments.py):
+
+```python
+from ragdx import run_experiment
+```
+
+### Reproduce the with-GT demo (HuggingFace amnesty_qa, both modes side-by-side)
+
+```python
+from ragdx import run_experiment
+
+result = run_experiment(
+    corpus="explodinggradients/amnesty_qa",   # auto-detected as a HF dataset
+    has_gt=True,
+    mode="both",                              # runs with_gt AND no_gt in one call
+    n_questions=5,
+    n_bo_trials=8,
+    api_key="<your-glm-or-openai-key>",       # or set ZHIPU_API_KEY / OPENAI_API_KEY
+    output_dir=".ragdx_optimize_demo",        # so the existing dashboard picks it up
+)
+
+print(result.bundle["autorag_bo"]["with_gt"]["best_params"])
+print(result.bundle["dspy_before_after"]["with_gt"]["composite"]["delta"])
+```
+
+Then visualise:
+
+```bash
+streamlit run src/ragdx/ui/optimization_dashboard.py
+```
+
+### Reproduce the no-GT PDF demo (questions synthesised from the corpus)
+
+```python
+from ragdx import run_experiment
+
+result = run_experiment(
+    corpus="docs/asmpt-esg-report.pdf",       # .pdf -> PDF loader
+    has_gt=False,                             # mode auto-resolves to "no_gt"
+    n_questions=5,                            # synthesised via LLM from random chunks
+    n_bo_trials=8,
+    api_key="<your-glm-or-openai-key>",
+    output_dir=".ragdx_pdf_no_gt_demo",
+)
+
+print(result.bundle["autorag_bo"]["best_params"])
+```
+
+And:
+
+```bash
+streamlit run src/ragdx/ui/pdf_no_gt_dashboard.py
+```
+
+### Parameters at a glance
+
+| arg | required | what it does |
+|---|---|---|
+| `corpus` | yes | `"org/dataset"` (HuggingFace), `*.pdf` path, or `*.jsonl` corpus path |
+| `has_gt` | yes | Whether the data carries ground-truth answers |
+| `mode` | no (default `"auto"`) | `"with_gt"`, `"no_gt"`, `"both"`, or `"auto"`. `"with_gt"` / `"both"` require `has_gt=True` |
+| `questions_path` | only when `has_gt=True` and corpus isn't a HF dataset | JSONL with `{question, ground_truth, contexts?}` per line |
+| `n_questions` | no | How many records to use (slice for HF, synthesise count for PDF/JSONL no-GT) |
+| `n_bo_trials` / `n_bo_init` | no | Bayesian-search budget |
+| `top_ks` / `chunk_sizes` / `chunk_overlaps` | no | BO search axes (defaults match the demos) |
+| `objective_overrides` | no | `{"with_gt": CompositeObjective, "no_gt": ...}` to replace `default_objective` |
+| `output_dir` | no | Where `result.json` is written |
+| `api_key` / `api_base` / `model` | no | Falls back to env vars; defaults route to GLM-4-Flash via Zhipu |
+
+Returns an `ExperimentResult` with `.bundle` (full dict, same shape the
+dashboards expect) and `.output_path` (file written to disk).
+
+The standalone scripts under `examples/demo_optimize_gt_modes.py` and
+`examples/demo_pdf_no_gt.py` still exist as readable step-by-step
+walkthroughs of the same flow.
+
+
 ## Ecosystem fit
 
 `ragdx` is designed to work with, not replace, tools you may already use:
