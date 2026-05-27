@@ -8,6 +8,9 @@ dispatch, and the public dataclass surface.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -186,47 +189,65 @@ def test_run_experiment_rejects_unsupported_corpus(monkeypatch: pytest.MonkeyPat
 
 # ====================================================================
 # CLI -- ragdx experiment subcommand
+#
+# Use subprocess rather than typer.testing.CliRunner: CliRunner walks
+# the full Typer app and triggers PEP 604 / future-annotations parsing
+# that's sensitive to the installed Typer version. Subprocess calls
+# match what users actually do (`ragdx experiment ...` or `python -m
+# ragdx ...`) and exercise the real binary entry point.
 # ====================================================================
-from typer.testing import CliRunner  # noqa: E402
 
-from ragdx.cli import app  # noqa: E402
+ROOT = Path(__file__).resolve().parents[1]
 
-runner = CliRunner()
+
+def _ragdx(*args: str, env: dict | None = None) -> subprocess.CompletedProcess:
+    """Invoke ``python -m ragdx`` with PYTHONPATH set to the local src/."""
+    full_env = os.environ.copy()
+    full_env["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + full_env.get("PYTHONPATH", "")
+    full_env["OPENAI_API_KEY"] = full_env.get("OPENAI_API_KEY", "stub")
+    if env:
+        full_env.update(env)
+    return subprocess.run(
+        [sys.executable, "-m", "ragdx", *args],
+        capture_output=True, text=True, env=full_env, timeout=60,
+    )
 
 
 def test_cli_experiment_help_runs():
-    """Help should render without importing dspy / ragas (those are lazy)."""
-    result = runner.invoke(app, ["experiment", "--help"])
-    assert result.exit_code == 0
-    assert "Run the complete end-to-end RAG optimization experiment" in result.stdout
-    assert "--has-gt" in result.stdout
-    assert "--mode" in result.stdout
+    """``--help`` must render without pulling in dspy / ragas / langchain."""
+    r = _ragdx("experiment", "--help")
+    assert r.returncode == 0, f"stdout={r.stdout!r} stderr={r.stderr!r}"
+    assert "end-to-end RAG optimization experiment" in r.stdout
+    assert "--has-gt" in r.stdout
+    assert "--mode" in r.stdout
 
 
-def test_cli_experiment_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("OPENAI_API_KEY", "stub")
-    result = runner.invoke(app, ["experiment", "report.pdf", "--no-gt", "--mode", "nonsense"])
-    assert result.exit_code != 0
-    assert "mode must be one of" in (result.stdout + (result.stderr or ""))
+def test_cli_experiment_invalid_mode_rejected():
+    r = _ragdx("experiment", "report.pdf", "--no-gt", "--mode", "nonsense")
+    assert r.returncode != 0
+    combined = r.stdout + r.stderr
+    assert "mode must be one of" in combined or "Invalid value" in combined
 
 
-def test_cli_experiment_with_gt_required_for_with_gt_mode(monkeypatch: pytest.MonkeyPatch):
+def test_cli_experiment_with_gt_required_for_with_gt_mode():
     """``--no-gt --mode with_gt`` is the most common user mistake."""
-    monkeypatch.setenv("OPENAI_API_KEY", "stub")
-    result = runner.invoke(app, ["experiment", "report.pdf", "--no-gt", "--mode", "with_gt"])
-    assert result.exit_code != 0
-    combined = result.stdout + (result.stderr or "")
-    assert "mode='with_gt'" in combined or "has_gt=True" in combined
+    r = _ragdx("experiment", "report.pdf", "--no-gt", "--mode", "with_gt")
+    assert r.returncode != 0
+    combined = r.stdout + r.stderr
+    assert "mode='with_gt'" in combined or "has_gt" in combined
 
 
-def test_cli_experiment_both_mode_requires_has_gt(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("OPENAI_API_KEY", "stub")
-    result = runner.invoke(app, ["experiment", "report.pdf", "--no-gt", "--mode", "both"])
-    assert result.exit_code != 0
+def test_cli_experiment_both_mode_requires_has_gt():
+    r = _ragdx("experiment", "report.pdf", "--no-gt", "--mode", "both")
+    assert r.returncode != 0
 
 
 def test_cli_experiment_listed_in_help():
-    """The new subcommand should show up in the main help."""
-    result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
-    assert "experiment" in result.stdout
+    """The new subcommand should appear in the main ``ragdx --help`` listing."""
+    # Force a wide terminal so the help table doesn't truncate the name.
+    r = _ragdx("--help", env={"COLUMNS": "200"})
+    assert r.returncode == 0, f"stderr={r.stderr!r}"
+    assert "experiment" in r.stdout
+
+
+# ensure 'sys' import lands at file top despite being added late

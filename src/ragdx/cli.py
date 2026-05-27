@@ -6,6 +6,7 @@ workflow plus configuration helpers. LLM-backed features delegate to
 
 Run ``ragdx --help`` for a full command listing. Use ``ragdx show-config``
 to print the effective configuration resolved from environment variables.
+
 """
 
 from __future__ import annotations

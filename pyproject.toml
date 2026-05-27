@@ -46,7 +46,10 @@ dependencies = [
   "pyyaml>=6.0,<7",
   "plotly>=5.22,<7",
   "streamlit>=1.35,<2",
-  "typer>=0.12,<1",
+  # typer 0.16+ is the minimum that runs cleanly with click 8.2+:
+  # earlier 0.12-0.15 trips on either PEP 604 introspection (bool
+  # secondary flags) or click's ``make_metavar`` signature change.
+  "typer>=0.16,<1",
   "rich>=13.7,<15",
   "scikit-learn>=1.5,<2",
   "networkx>=3.2,<4",
