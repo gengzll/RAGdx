@@ -493,10 +493,13 @@ def show_runner_templates():
 def experiment(
     corpus: str = typer.Argument(
         ...,
-        help="Corpus source. One of: "
+        help="Corpus source(s). One of: "
         "(a) HuggingFace dataset name like 'explodinggradients/amnesty_qa', "
         "(b) path to a .pdf file, "
-        "(c) path to a .jsonl corpus file ({text, source?} per line).",
+        "(c) path to a .jsonl corpus file ({text, source?} per line), "
+        "(d) **comma-separated list** of any of the above for "
+        "multi-corpus runs (e.g. 'a.pdf,b.pdf' — chunks pooled, "
+        "questions from --questions or synthesized).",
     ),
     has_gt: bool = typer.Option(
         False,

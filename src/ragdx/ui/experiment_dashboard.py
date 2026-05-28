@@ -105,10 +105,37 @@ def render_header(bundle: dict) -> None:
     cols[2].metric("Has GT", "Yes" if meta.get("has_gt") else "No")
     cols[3].metric("Detected GT", meta.get("detected_gt_mode", "—"))
 
+    run_config = meta.get("run_config") or {}
+    if run_config:
+        with st.expander("Run config (reproducibility)", expanded=False):
+            st.json(run_config)
+            st.caption(
+                "These are the values of ``ragdx experiment``'s flags at "
+                "the time this bundle was produced. To reproduce this run, "
+                "set the same `--llm-max-concurrent` / `--llm-max-retries` "
+                "/ `--bo-trials` / `--bo-init` / `--n-questions` / `--seed`."
+            )
+
     source = meta.get("source") or {}
     if source:
         with st.expander("Corpus source", expanded=False):
-            st.json(source)
+            # PDFs include `pdf_meta.chunk_size` / `chunk_overlap` reflecting
+            # the **initial load** chunking (used for question synthesis),
+            # NOT the BO-winner chunking — keep them but relabel honestly
+            # so users don't mistake them for the optimized config.
+            display = json.loads(json.dumps(source))  # deep copy
+            pm = display.get("pdf_meta") if isinstance(display, dict) else None
+            if isinstance(pm, dict):
+                for k in ("chunk_size", "chunk_overlap"):
+                    if k in pm:
+                        pm[f"initial_load_{k}"] = pm.pop(k)
+            st.json(display)
+            st.caption(
+                "PDF `initial_load_*` fields reflect the chunking used at "
+                "load-time for question synthesis. The Bayesian search below "
+                "explores alternate chunk_size / chunk_overlap values; see "
+                "**Bayesian RAG-config search → best_params** for the winner."
+            )
     if meta.get("_migrated_from"):
         st.caption(
             f"_migrated from legacy bundle ({meta['_migrated_from']})_"
@@ -154,6 +181,14 @@ def render_objectives(bundle: dict) -> None:
     if not objs:
         return
     st.subheader("Composite objectives")
+    st.caption(
+        "**Metric weights** combine into the composite score "
+        "(`sum of weight_i * metric_i`) — what BO and DSPy optimize "
+        "against. **Constraints** are hard pass/fail thresholds (e.g. "
+        "`faithfulness >= 0.85`): a trial that violates one is still "
+        "scored, but marked **infeasible** so the planner can filter "
+        "unsafe configs."
+    )
     for m, spec in objs.items():
         with st.expander(f"`{m}` objective", expanded=False):
             metrics = (spec or {}).get("metrics") or {}
@@ -185,6 +220,94 @@ def render_objectives(bundle: dict) -> None:
                 )
             else:
                 cols[1].caption("_no hard constraints_")
+
+
+# ---------------------------------------------------------------- record selectors
+def _pick_record_indices(
+    n_records: int, key_prefix: str, default_visible: int = 3
+) -> list[int]:
+    """Return the indices of records the user wants to inspect.
+
+    If ``n_records <= default_visible``, all are shown. Otherwise the
+    first ``default_visible`` are shown by default and a multiselect
+    widget lets the user pick others.
+    """
+    if n_records <= default_visible:
+        return list(range(n_records))
+    options = list(range(n_records))
+    default = options[:default_visible]
+    picks = st.multiselect(
+        f"Records to show (default first {default_visible}, "
+        f"{n_records} total)",
+        options=options,
+        default=default,
+        format_func=lambda i: f"record {i + 1}",
+        key=f"{key_prefix}_records",
+    )
+    # Streamlit returns an empty list when the user clears the widget —
+    # in that case fall back to the default so the panel never goes blank.
+    return picks or default
+
+
+def _render_qa_record(rec: dict, has_gt: bool, label: str = "") -> None:
+    """Render one Q+A record (with optional GT and contexts).
+
+    Used by both the BO trial inspector and the DSPy A/B panel.
+    """
+    q = (rec.get("question") or "").strip()
+    gt = (rec.get("ground_truth") or "").strip() if rec.get("ground_truth") else ""
+    contexts = rec.get("contexts") or []
+
+    if label:
+        st.markdown(f"#### {label}")
+    st.markdown(f"**Question.** {q}")
+    if has_gt and gt:
+        st.markdown(f"**Ground truth.** {gt}")
+
+    # Answer fields differ between BO trials (single ``answer``) and
+    # DSPy A/B (``baseline_answer`` + ``optimized_answer``).
+    if "answer" in rec:
+        st.markdown(f"**Answer.** {rec['answer']}")
+    else:
+        cols = st.columns(2)
+        cols[0].markdown("**Baseline answer**")
+        cols[0].write(rec.get("baseline_answer", "") or "_(empty)_")
+        cols[1].markdown("**Optimized answer**")
+        cols[1].write(rec.get("optimized_answer", "") or "_(empty)_")
+
+    if contexts:
+        with st.expander(f"Retrieved contexts ({len(contexts)})", expanded=False):
+            for i, c in enumerate(contexts):
+                st.markdown(f"- **#{i + 1}.** {c[:500]}{'...' if len(c) > 500 else ''}")
+
+
+def _render_trial_inspector(mode: str, trials: list) -> None:
+    """Per-trial Q+A+GT inspector for the Bayesian search panel."""
+    has_records = any(t.get("records") for t in trials)
+    if not has_records:
+        # Older bundles only stored ``answers_preview``; show that as
+        # the degraded fallback.
+        return
+    st.markdown("##### Per-trial Q+A inspector")
+    trial_options = list(range(len(trials)))
+    sel = st.selectbox(
+        "Trial",
+        options=trial_options,
+        index=0,
+        format_func=lambda i: (
+            f"trial {trials[i].get('trial_index', i)}: "
+            f"{_trial_param_label(trials[i].get('params') or {})}"
+            f"  (comp={trials[i].get('composite_score', float('nan')):.3f})"
+        ),
+        key=f"bo_{mode}_trial",
+    )
+    trial = trials[sel]
+    recs = trial.get("records") or []
+    has_gt = any((r.get("ground_truth") or "").strip() for r in recs)
+    picks = _pick_record_indices(len(recs), key_prefix=f"bo_{mode}_t{sel}")
+    for i in picks:
+        st.divider()
+        _render_qa_record(recs[i], has_gt=has_gt, label=f"Record {i + 1}")
 
 
 # ---------------------------------------------------------------- bayes search
@@ -264,6 +387,17 @@ def render_bayes_search(bundle: dict) -> None:
                 )
                 fig.update_layout(height=360, margin=dict(t=60, b=40))
                 st.plotly_chart(fig, use_container_width=True)
+                st.caption(
+                    "**composite** = this trial's composite score (per the "
+                    "objective above). **running best** = highest composite "
+                    "seen up to this trial — the monotonic 'best so far' "
+                    "curve. Flat tail + low composite-vs-running-best "
+                    "delta = BO has converged."
+                )
+
+            # Per-trial Q+A+GT inspector (selectable trial; first 3 records
+            # shown by default, dropdown lets users pick specific records).
+            _render_trial_inspector(mode, trials)
 
 
 # ---------------------------------------------------------------- dspy a/b
@@ -352,10 +486,13 @@ def render_dspy_a_b(bundle: dict) -> None:
                 for s in trial_scores:
                     rb = max(rb, s)
                     running.append(rb)
+                # NB: melt's ``value_name`` must not clash with any existing
+                # column, so we keep the long-form value column name distinct
+                # from the wide-form column names.
                 line_df = pd.DataFrame(
                     {
                         "trial": list(range(1, len(trial_scores) + 1)),
-                        "score": trial_scores,
+                        "per-trial": trial_scores,
                         "running best": running,
                     }
                 ).melt("trial", value_name="score", var_name="series")
@@ -365,16 +502,54 @@ def render_dspy_a_b(bundle: dict) -> None:
                 )
                 fig2.update_layout(height=320, margin=dict(t=60, b=40))
                 st.plotly_chart(fig2, use_container_width=True)
+                st.caption(
+                    "**per-trial** = MIPROv2's inner-loop training-time "
+                    "score for that trial (token-F1 with-GT, LLM-judge "
+                    "without-GT — NOT the ragas composite). "
+                    "**running best** = highest score seen so far, "
+                    "non-decreasing convergence curve."
+                )
 
-            # Sample answers (collapsed)
-            base_ans = payload.get("baseline_sample_answers") or []
-            opt_ans = payload.get("optimized_sample_answers") or []
-            if base_ans or opt_ans:
-                with st.expander("Sample answers (first 5)", expanded=False):
-                    rows_a = []
-                    for i, (b, o) in enumerate(zip(base_ans[:5], opt_ans[:5], strict=False)):
-                        rows_a.append({"#": i + 1, "baseline": (b or "")[:400], "optimized": (o or "")[:400]})
-                    st.dataframe(pd.DataFrame(rows_a), use_container_width=True, hide_index=True)
+            # MIPROv2-optimized prompt instructions. The "baseline prompt"
+            # in our pipeline is just the default DSPy signature (no
+            # bespoke prompt, only field types) -- so we show the
+            # optimized side only and label that explicitly.
+            instructions = payload.get("instructions") or {}
+            if instructions:
+                st.markdown("##### Optimized prompt(s) (MIPROv2 output)")
+                st.caption(
+                    "Baseline is the default DSPy signature "
+                    "(no hand-written prompt — just field types). "
+                    "Below are the instructions MIPROv2 discovered for "
+                    "the optimized program."
+                )
+                for predictor_name, instr in instructions.items():
+                    with st.expander(
+                        f"Instruction for `{predictor_name}`", expanded=False
+                    ):
+                        st.write(instr or "_(empty)_")
+
+            # Q+A inspector (records-based: question / GT / baseline_answer /
+            # optimized_answer per record, with the same first-3 + dropdown UX
+            # used by the BO trial inspector).
+            recs = payload.get("records") or []
+            if recs:
+                st.markdown("##### Per-record before/after inspector")
+                has_gt = any((r.get("ground_truth") or "").strip() for r in recs)
+                picks = _pick_record_indices(len(recs), key_prefix=f"dspy_{mode}")
+                for i in picks:
+                    st.divider()
+                    _render_qa_record(recs[i], has_gt=has_gt, label=f"Record {i + 1}")
+            else:
+                # Older bundles only stored truncated sample arrays.
+                base_ans = payload.get("baseline_sample_answers") or []
+                opt_ans = payload.get("optimized_sample_answers") or []
+                if base_ans or opt_ans:
+                    with st.expander("Sample answers (legacy bundle)", expanded=False):
+                        rows_a = []
+                        for i, (b, o) in enumerate(zip(base_ans[:5], opt_ans[:5], strict=False)):
+                            rows_a.append({"#": i + 1, "baseline": (b or "")[:400], "optimized": (o or "")[:400]})
+                        st.dataframe(pd.DataFrame(rows_a), use_container_width=True, hide_index=True)
 
 
 # ---------------------------------------------------------------- extras

@@ -76,7 +76,7 @@ class ExperimentConfig:
     PDF / amnesty_qa demos when fed the matching ``corpus`` argument.
     """
 
-    corpus: str | Path
+    corpus: str | Path | list[str | Path]
     has_gt: bool
     mode: ExperimentMode = "auto"
     questions_path: str | Path | None = None
@@ -432,59 +432,37 @@ def _load_jsonl_questions(path: Path) -> list[DatasetRecord]:
     return records
 
 
-def _load_corpus_and_records(
-    cfg: ExperimentConfig, runtime: _Runtime
-) -> tuple[list[str], list[DatasetRecord], dict]:
-    """Dispatch on the ``corpus`` argument and produce
-    ``(chunks, records, source_meta)``. Records may have empty GT in
-    no-GT mode -- that's intentional and downstream handles it."""
-    corpus = cfg.corpus
-    source_meta: dict[str, Any] = {"corpus": str(corpus)}
+def _load_single_corpus_item(
+    item: str | Path, cfg: ExperimentConfig
+) -> tuple[list[str], list[DatasetRecord] | None, dict]:
+    """Load one corpus item.
 
-    # ---- HuggingFace dataset (single source for both corpus + records) ----
-    if isinstance(corpus, str) and _looks_like_hf_dataset(corpus):
-        chunks, records = _load_amnesty_style_hf(corpus, cfg.n_questions)
+    Returns ``(chunks, records_or_None, source_meta)``:
+
+    * ``records_or_None`` is populated *only* when the item is a
+      HuggingFace dataset (which inherently carries Q+GT). For PDFs
+      and JSONL corpora the caller is responsible for either loading
+      ``cfg.questions_path`` or synthesizing questions from the
+      merged chunk pool.
+    """
+    source_meta: dict[str, Any] = {"corpus": str(item)}
+
+    if isinstance(item, str) and _looks_like_hf_dataset(item):
+        chunks, records = _load_amnesty_style_hf(item, cfg.n_questions)
         source_meta["kind"] = "huggingface"
-        source_meta["dataset"] = corpus
+        source_meta["dataset"] = item
         source_meta["records"] = len(records)
         source_meta["corpus_chunks"] = len(chunks)
         return chunks, records, source_meta
 
-    # ---- PDF corpus -- need to synthesize questions or load externally ----
-    path = Path(corpus)
+    path = Path(item)
     if path.suffix.lower() == ".pdf":
         loader = load_pdf_chunks(path, chunk_size=512, chunk_overlap=50)
         chunks = loader.chunks
         source_meta["kind"] = "pdf"
         source_meta["pdf_meta"] = loader.metadata
+        return chunks, None, source_meta
 
-        if cfg.questions_path:
-            records = _load_jsonl_questions(Path(cfg.questions_path))
-            source_meta["questions_path"] = str(cfg.questions_path)
-        elif cfg.has_gt:
-            raise ValueError(
-                "PDF corpus + has_gt=True requires `questions_path` to point "
-                "at a JSONL with {question, ground_truth, ...} per line."
-            )
-        else:
-            # No GT mode -- synthesize questions from the corpus.
-            synthesised = synthesize_questions(
-                chunks,
-                n=cfg.n_questions,
-                llm_callable=runtime.llm_callable,
-                chunks_per_question=2,
-            )
-            records = [
-                DatasetRecord(question=q.question, ground_truth=None, contexts=[])
-                for q in synthesised
-            ]
-            source_meta["synthesized_meta"] = [
-                {"question": q.question, "source_chunk_ids": q.source_chunk_ids}
-                for q in synthesised
-            ]
-        return chunks, records, source_meta
-
-    # ---- JSONL corpus path: {text, source} per line ----
     if path.suffix.lower() == ".jsonl":
         chunks = []
         with path.open(encoding="utf-8") as f:
@@ -498,31 +476,113 @@ def _load_corpus_and_records(
                     chunks.append(text.strip())
         source_meta["kind"] = "jsonl"
         source_meta["corpus_chunks"] = len(chunks)
-
-        if cfg.questions_path:
-            records = _load_jsonl_questions(Path(cfg.questions_path))
-        elif cfg.has_gt:
-            raise ValueError(
-                "JSONL corpus + has_gt=True requires `questions_path` for the "
-                "question / ground_truth set."
-            )
-        else:
-            synthesised = synthesize_questions(
-                chunks,
-                n=cfg.n_questions,
-                llm_callable=runtime.llm_callable,
-                chunks_per_question=2,
-            )
-            records = [
-                DatasetRecord(question=q.question, ground_truth=None, contexts=[])
-                for q in synthesised
-            ]
-        return chunks, records, source_meta
+        return chunks, None, source_meta
 
     raise ValueError(
-        f"Unsupported corpus: {corpus!r}. Accepts: HuggingFace dataset name "
+        f"Unsupported corpus: {item!r}. Accepts: HuggingFace dataset name "
         "(e.g. 'org/dataset'), .pdf path, or .jsonl path."
     )
+
+
+def _normalize_corpus(corpus: Any) -> list[str | Path]:
+    """Coerce ``corpus`` into a flat list of items, accepting:
+
+    * a single string / Path  → ``[item]``
+    * a list of strings / Paths → ``list(corpus)``
+    * a comma-separated string (CLI passes them this way) → ``[a, b, ...]``
+    """
+    if isinstance(corpus, (list, tuple)):
+        return list(corpus)
+    if isinstance(corpus, str) and "," in corpus:
+        return [p.strip() for p in corpus.split(",") if p.strip()]
+    return [corpus]
+
+
+def _load_corpus_and_records(
+    cfg: ExperimentConfig, runtime: _Runtime
+) -> tuple[list[str], list[DatasetRecord], dict]:
+    """Dispatch on the ``corpus`` argument and produce
+    ``(chunks, records, source_meta)``. Records may have empty GT in
+    no-GT mode -- that's intentional and downstream handles it.
+
+    ``cfg.corpus`` accepts a single item or a list. For multi-corpus
+    runs chunks are concatenated into one pool; records come from
+    (in order of precedence) ``cfg.questions_path``, then the first
+    HuggingFace item that carries Q+GT, then synthesis from the
+    merged chunk pool.
+    """
+    items = _normalize_corpus(cfg.corpus)
+    all_chunks: list[str] = []
+    sources: list[dict] = []
+    hf_records: list[DatasetRecord] | None = None
+    pdf_chunks_used = False
+
+    for item in items:
+        chunks_i, records_i, meta_i = _load_single_corpus_item(item, cfg)
+        all_chunks.extend(chunks_i)
+        sources.append(meta_i)
+        if hf_records is None and records_i:
+            hf_records = records_i
+        if meta_i.get("kind") == "pdf":
+            pdf_chunks_used = True
+
+    # Records resolution: explicit JSONL path always wins; otherwise HF
+    # records if any; otherwise synthesize / fail.
+    if cfg.questions_path:
+        records = _load_jsonl_questions(Path(cfg.questions_path))
+        for s in sources:
+            s["questions_path"] = str(cfg.questions_path)
+    elif hf_records is not None:
+        records = hf_records
+    elif cfg.has_gt:
+        raise ValueError(
+            "has_gt=True with PDF/JSONL corpus (or multi-corpus including "
+            "one) requires `questions_path` -- a JSONL with "
+            "{question, ground_truth, ...} per line."
+        )
+    else:
+        synthesised = synthesize_questions(
+            all_chunks,
+            n=cfg.n_questions,
+            llm_callable=runtime.llm_callable,
+            chunks_per_question=2,
+        )
+        records = [
+            DatasetRecord(question=q.question, ground_truth=None, contexts=[])
+            for q in synthesised
+        ]
+        synth_meta = [
+            {"question": q.question, "source_chunk_ids": q.source_chunk_ids}
+            for q in synthesised
+        ]
+        # Stash on the first PDF source (single-corpus compat) when there
+        # is exactly one PDF, otherwise emit at the top-level source meta.
+        if len(sources) == 1 and pdf_chunks_used:
+            sources[0]["synthesized_meta"] = synth_meta
+        else:
+            # multi-corpus: attach to the umbrella source_meta below
+            pass
+
+    if len(sources) == 1:
+        source_meta = sources[0]
+    else:
+        source_meta = {
+            "kind": "multi",
+            "corpus": [str(i) for i in items],
+            "corpus_chunks": len(all_chunks),
+            "records": len(records),
+            "sources": sources,
+        }
+        # If we just synthesized for multi-corpus, attach the synth meta
+        # at the top level too.
+        if not cfg.questions_path and hf_records is None and not cfg.has_gt:
+            synth_meta = [
+                {"question": r.question, "source_chunk_ids": []}
+                for r in records
+            ]
+            source_meta["synthesized_meta"] = synth_meta
+
+    return all_chunks, records, source_meta
 
 
 # =====================================================================
@@ -634,13 +694,21 @@ def _run_bayes_search(
             # Re-chunk the master corpus to this size/overlap. For HF / jsonl
             # sources we already have one fixed chunk list, but BO still wants
             # to vary -- we re-split the joined text. For PDF we re-load.
-            if isinstance(cfg.corpus, (str, Path)) and Path(cfg.corpus).exists() and Path(cfg.corpus).suffix.lower() == ".pdf":
-                loader = load_pdf_chunks(
-                    Path(cfg.corpus),
-                    chunk_size=params["chunk_size"],
-                    chunk_overlap=params["chunk_overlap"],
-                )
-                chunks = loader.chunks
+            # Multi-corpus: re-chunk every PDF item and concatenate.
+            pdf_items = [
+                Path(i)
+                for i in _normalize_corpus(cfg.corpus)
+                if isinstance(i, (str, Path)) and Path(i).exists()
+                and Path(i).suffix.lower() == ".pdf"
+            ]
+            if pdf_items:
+                chunks = []
+                for pdf_path in pdf_items:
+                    chunks.extend(load_pdf_chunks(
+                        pdf_path,
+                        chunk_size=params["chunk_size"],
+                        chunk_overlap=params["chunk_overlap"],
+                    ).chunks)
             else:
                 # For non-PDF sources just use the master chunks as-is (chunk_size
                 # variation is only meaningful when we can re-split the raw text).
@@ -670,6 +738,19 @@ def _run_bayes_search(
         comp_eval = objective.evaluate(scores)
         bo.report(params, comp_eval["score"])
 
+        # Persist full per-question records (question / GT / contexts /
+        # answer) so the dashboard can build a Q+A+GT inspector without
+        # re-running the LLM. Bundle size grows linearly in trials * n_q,
+        # which is fine at typical experiment scales (~MB).
+        trial_records = [
+            {
+                "question": a.question,
+                "ground_truth": a.ground_truth,
+                "contexts": list(a.contexts or []),
+                "answer": a.answer or "",
+            }
+            for a in answered
+        ]
         trials_out.append(
             {
                 "trial_index": len(bo.trials) - 1,
@@ -680,6 +761,9 @@ def _run_bayes_search(
                 "feasible": comp_eval["feasible"],
                 "violations": comp_eval["violations"],
                 "answers_preview": [a.answer[:200] for a in answered],
+                # Full per-record outputs (question, GT, contexts, answer).
+                # Used by the dashboard's trial inspector.
+                "records": trial_records,
                 "elapsed_seconds": round(time.time() - t_start, 2),
             }
         )
@@ -776,6 +860,18 @@ def _dspy_before_after(
         m: (optimised_scores.get(m, float("nan")) - baseline_scores.get(m, float("nan")))
         for m in sorted(set(baseline_scores) | set(optimised_scores))
     }
+    # Pair each baseline answer with its optimized counterpart (records
+    # share the same question/GT/contexts; only the answer differs). The
+    # dashboard renders these side-by-side with the GT.
+    records_pairs = []
+    for b, o in zip(baseline_answered, optimised_answered, strict=False):
+        records_pairs.append({
+            "question": b.question,
+            "ground_truth": b.ground_truth,
+            "contexts": list(b.contexts or []),
+            "baseline_answer": b.answer or "",
+            "optimized_answer": o.answer or "",
+        })
     return {
         "baseline_scores": baseline_scores,
         "optimized_scores": optimised_scores,
@@ -788,6 +884,10 @@ def _dspy_before_after(
         },
         "baseline_sample_answers": [a.answer for a in baseline_answered],
         "optimized_sample_answers": [a.answer for a in optimised_answered],
+        # Full per-record before/after for the dashboard. Question / GT /
+        # contexts are shared; ``baseline_answer`` is the default-program
+        # output and ``optimized_answer`` is the MIPROv2-tuned program's.
+        "records": records_pairs,
         "instructions": dict(opt_result["instructions"]),
         "demos": {n: [dict(d) for d in demos] for n, demos in opt_result["demos"].items()},
         "trial_scores": list(capture.scores_so_far),
@@ -816,12 +916,20 @@ def _run_one_mode(
 
     # Build records pre-retrieved at the BO winner's top_k + chunk size.
     best_params = bo_result["best_params"] or {}
-    if isinstance(cfg.corpus, (str, Path)) and Path(str(cfg.corpus)).exists() and Path(str(cfg.corpus)).suffix.lower() == ".pdf":
-        chunks_for_dspy = load_pdf_chunks(
-            Path(cfg.corpus),
-            chunk_size=best_params.get("chunk_size", 512),
-            chunk_overlap=best_params.get("chunk_overlap", 50),
-        ).chunks
+    pdf_items_for_dspy = [
+        Path(i)
+        for i in _normalize_corpus(cfg.corpus)
+        if isinstance(i, (str, Path)) and Path(i).exists()
+        and Path(i).suffix.lower() == ".pdf"
+    ]
+    if pdf_items_for_dspy:
+        chunks_for_dspy: list[str] = []
+        for pdf_path in pdf_items_for_dspy:
+            chunks_for_dspy.extend(load_pdf_chunks(
+                pdf_path,
+                chunk_size=best_params.get("chunk_size", 512),
+                chunk_overlap=best_params.get("chunk_overlap", 50),
+            ).chunks)
     else:
         chunks_for_dspy = chunks_master
     vstore = _build_vstore(chunks_for_dspy, runtime.embeddings)
@@ -906,6 +1014,18 @@ def _build_unified_bundle(
             "has_gt": cfg.has_gt,
             "detected_gt_mode": detected,
             "source": source_clean,
+            # Reproducibility: persist the LLM endpoint call-management
+            # knobs used for this run so the dashboard can display them
+            # and ``ragdx experiment ... --llm-max-concurrent N`` can be
+            # reconstructed from the bundle alone.
+            "run_config": {
+                "llm_max_concurrent": cfg.llm_max_concurrent,
+                "llm_max_retries": cfg.llm_max_retries,
+                "n_bo_trials": cfg.n_bo_trials,
+                "n_bo_init": cfg.n_bo_init,
+                "n_questions": cfg.n_questions,
+                "seed": cfg.seed,
+            },
         },
         "questions": [
             {"question": r.question, "ground_truth": r.ground_truth}
@@ -1084,7 +1204,7 @@ def migrate_legacy_bundle(bundle: dict) -> dict:
 # =====================================================================
 def run_experiment(
     *,
-    corpus: str | Path,
+    corpus: str | Path | list[str | Path],
     has_gt: bool,
     mode: ExperimentMode = "auto",
     questions_path: str | Path | None = None,
@@ -1109,12 +1229,18 @@ def run_experiment(
     Parameters
     ----------
     corpus:
-        Document source. One of:
+        Document source(s). One of:
 
         * ``"<org>/<dataset>"`` — a HuggingFace dataset name (auto-loads
           questions and corpus chunks together, e.g. ``"explodinggradients/amnesty_qa"``).
         * Path to a ``.pdf`` — loaded via :func:`ragdx.loaders.load_pdf_chunks`.
         * Path to a ``.jsonl`` containing ``{text, source?}`` per line.
+        * **A list of any combination of the above** for multi-corpus
+          runs. Chunks are concatenated into one pool; records come
+          from (in precedence order) ``questions_path``, then the
+          first HuggingFace item, then synthesis from the merged pool.
+          From the CLI, pass comma-separated paths:
+          ``ragdx experiment "a.pdf,b.pdf" --no-gt``.
     has_gt:
         Whether the input carries ground-truth answers. When ``True`` and
         the corpus is a PDF or JSONL, supply ``questions_path`` so we

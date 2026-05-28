@@ -142,14 +142,19 @@ def test_default_objective_no_gt_excludes_recall():
     assert obj.metrics["faithfulness"] >= 1.0
 
 
-def test_default_objective_has_hallucination_ceiling():
-    """Production defaults include a hard hallucination ceiling on both modes."""
+def test_default_objective_has_groundedness_floor():
+    """Production defaults include a hard floor on faithfulness (the
+    safety gate against hallucination). We use faithfulness rather than
+    a separate ``hallucination`` constraint because ragas' default
+    metric set produces the former, not the latter -- they are
+    functional inverses. Override if your evaluator emits a real
+    hallucination score."""
     for mode in ("with_gt", "no_gt"):
         obj = default_objective(mode)
-        assert "hallucination" in obj.constraints
-        direction, threshold = obj.constraints["hallucination"]
-        assert direction == "max"
-        assert 0.0 < threshold <= 0.3  # 15% default, < 30% sanity ceiling
+        assert "faithfulness" in obj.constraints
+        direction, threshold = obj.constraints["faithfulness"]
+        assert direction == "min"
+        assert 0.5 <= threshold < 1.0  # sane safety floor
 
 
 def test_default_objective_faithfulness_outranks_efficiency():

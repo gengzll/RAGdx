@@ -19,6 +19,7 @@ from ragdx.experiments import (
     ExperimentResult,
     _load_jsonl_questions,
     _looks_like_hf_dataset,
+    _normalize_corpus,
     migrate_legacy_bundle,
     run_experiment,
 )
@@ -88,6 +89,36 @@ def test_config_llm_throttle_overrides():
     )
     assert cfg.llm_max_concurrent == 16
     assert cfg.llm_max_retries == 10
+
+
+# ------------------------------------------------------- corpus normalization
+def test_normalize_corpus_single_string():
+    assert _normalize_corpus("foo.pdf") == ["foo.pdf"]
+
+
+def test_normalize_corpus_single_path(tmp_path: Path):
+    p = tmp_path / "a.pdf"
+    assert _normalize_corpus(p) == [p]
+
+
+def test_normalize_corpus_list_passthrough():
+    assert _normalize_corpus(["a.pdf", "b.pdf"]) == ["a.pdf", "b.pdf"]
+
+
+def test_normalize_corpus_comma_separated_string():
+    """CLI passes multi-corpus as a single comma-joined string."""
+    assert _normalize_corpus("a.pdf,b.pdf") == ["a.pdf", "b.pdf"]
+    assert _normalize_corpus(" a.pdf ,  b.pdf ") == ["a.pdf", "b.pdf"]
+
+
+def test_normalize_corpus_comma_with_empty_items():
+    assert _normalize_corpus("a.pdf,,b.pdf,") == ["a.pdf", "b.pdf"]
+
+
+def test_config_accepts_corpus_list():
+    """ExperimentConfig must accept a list without rejecting it."""
+    cfg = ExperimentConfig(corpus=["a.pdf", "b.pdf"], has_gt=False, api_key="k")
+    assert cfg.corpus == ["a.pdf", "b.pdf"]
 
 
 # ------------------------------------------------------- HF dataset sniff

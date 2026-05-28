@@ -215,10 +215,15 @@ class CompositeObjective:
 # * ``context_precision=0.3`` -- low weight on retrieval efficiency.
 #   Important for cost / latency but not directly user-visible; we
 #   accept a slightly noisy retrieval if it boosts recall.
-# * ``hallucination max=0.15`` -- hard ceiling. Industry rule of thumb:
-#   keep claim hallucination under 15-20% for general-purpose RAG;
-#   stricter (5-10%) for medical / legal verticals where you should
-#   tighten this in ``with_overrides``.
+# * ``faithfulness min=0.85`` -- hard floor (rendered in the default
+#   spec as a safety gate). Industry rule of thumb: keep claim
+#   groundedness above 0.80-0.85 for general-purpose RAG; stricter
+#   (0.95+) for medical / legal verticals where you should tighten
+#   this in ``with_overrides``. We use faithfulness here instead of
+#   a separate ``hallucination`` constraint because ragas' default
+#   metric set produces the former but not the latter -- they are
+#   functional inverses ("how grounded the answer is" vs "how often
+#   it invents things").
 def default_objective(mode: GTMode) -> CompositeObjective:
     """Production-realistic default objective per GT mode.
 
@@ -240,6 +245,14 @@ def default_objective(mode: GTMode) -> CompositeObjective:
             metrics={"context_precision": 1.0},
         )
     """
+    # Constraint note: we use ``faithfulness >= 0.85`` as the safety
+    # gate instead of ``hallucination <= 0.15`` because ragas' default
+    # metric set computes the former, not the latter. The two are
+    # functional inverses ("how grounded is the answer in the context"
+    # vs "how often does it invent things"). If your evaluator does
+    # produce a real ``hallucination`` score, override with
+    # ``default_objective(...).with_overrides(constraints=
+    # {"hallucination": ("max", 0.15)})``.
     if mode == "with_gt":
         return CompositeObjective(
             metrics={
@@ -250,7 +263,7 @@ def default_objective(mode: GTMode) -> CompositeObjective:
                 "context_precision": 0.3,
             },
             constraints={
-                "hallucination": ("max", 0.15),
+                "faithfulness": ("min", 0.85),
             },
             mode="weighted_sum",
         )
@@ -263,7 +276,7 @@ def default_objective(mode: GTMode) -> CompositeObjective:
             "context_precision": 0.3,
         },
         constraints={
-            "hallucination": ("max", 0.15),
+            "faithfulness": ("min", 0.85),
         },
         mode="weighted_sum",
     )
