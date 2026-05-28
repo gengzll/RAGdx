@@ -133,6 +133,9 @@ dmypy.json
 # Project specific
 .ragdx/
 .ragdx_*/
+# Local end-to-end verification output dirs (e.g. `ragdx experiment
+# --output-dir new_demoN`). Real LLM run artifacts, not source.
+new_demo*/
 .ruff_cache/
 .claude/
 result/

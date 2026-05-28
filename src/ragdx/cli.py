@@ -536,6 +536,17 @@ def experiment(
         help="LiteLLM model identifier.",
     ),
     seed: int = typer.Option(7, "--seed"),
+    llm_max_concurrent: int = typer.Option(
+        2, "--llm-max-concurrent",
+        help="Max in-flight LLM calls per evaluation batch. Default 2 for "
+        "strict rate-limited endpoints (GLM-4-Flash); bump to 8-16 for "
+        "OpenAI / Anthropic. Propagates to ragas + DSPy worker pools.",
+    ),
+    llm_max_retries: int = typer.Option(
+        5, "--llm-max-retries",
+        help="Per-call transport-layer retry budget. Propagates to the "
+        "openai client (ragas judge) and litellm (BO generation, DSPy).",
+    ),
     save_run: bool = typer.Option(
         False, "--save-run",
         help="Also persist the experiment as a Run in the local RunStore "
@@ -587,6 +598,8 @@ def experiment(
             api_base=api_base,
             model=model,
             seed=seed,
+            llm_max_concurrent=llm_max_concurrent,
+            llm_max_retries=llm_max_retries,
             save=not no_save,
         )
     except ValueError as exc:

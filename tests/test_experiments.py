@@ -71,6 +71,25 @@ def test_config_output_dir_becomes_path():
     assert isinstance(cfg.output_dir, Path)
 
 
+def test_config_llm_throttle_defaults():
+    """Defaults are tuned for GLM-4-Flash. Document them explicitly so
+    a future change can't silently re-introduce the NaN-on-rate-limit
+    bug we hit in May 2026."""
+    cfg = ExperimentConfig(corpus="org/data", has_gt=True, api_key="k")
+    assert cfg.llm_max_concurrent == 2
+    assert cfg.llm_max_retries == 5
+
+
+def test_config_llm_throttle_overrides():
+    """Custom values must flow through unchanged."""
+    cfg = ExperimentConfig(
+        corpus="org/data", has_gt=True, api_key="k",
+        llm_max_concurrent=16, llm_max_retries=10,
+    )
+    assert cfg.llm_max_concurrent == 16
+    assert cfg.llm_max_retries == 10
+
+
 # ------------------------------------------------------- HF dataset sniff
 def test_looks_like_hf_dataset_positive():
     assert _looks_like_hf_dataset("explodinggradients/amnesty_qa")

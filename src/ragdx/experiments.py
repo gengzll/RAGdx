@@ -92,6 +92,21 @@ class ExperimentConfig:
     api_base: str = "https://open.bigmodel.cn/api/paas/v4"
     model: str = "openai/glm-4-flash"
     seed: int = 7
+    # --- LLM endpoint call management (applies to every LLM-talking
+    # subsystem in the pipeline -- ragas judge, DSPy MIPROv2, BO
+    # generation). Two knobs, named for *what they control* (an LLM
+    # endpoint's rate budget) rather than which library consumes them.
+    llm_max_concurrent: int = 2
+    """Max in-flight LLM calls per evaluation batch. Default ``2`` is
+    tuned for strict rate-limited endpoints (e.g. GLM-4-Flash). Bump
+    to ``8-16`` for OpenAI / Anthropic to speed up trials. Propagates
+    to ragas ``RunConfig.max_workers`` and DSPy MIPROv2 ``num_threads``."""
+
+    llm_max_retries: int = 5
+    """Per-call transport-layer retry budget. Propagates to the openai
+    client (used by ragas judge) and ``litellm.completion`` (used by
+    BO generation and DSPy). Default ``5`` should survive most transient
+    rate-limit windows; raise if you see frequent ``NaN`` scores."""
 
     def __post_init__(self) -> None:
         # mode validation -- can't request with-GT runs when no GT exists.
@@ -170,18 +185,31 @@ class _Runtime:
     ragas_judge: Any
     ragas_embeddings: Any
     embeddings: Any  # langchain embeddings for FAISS
+    # Throttle knobs propagated from ExperimentConfig so downstream call
+    # sites don't need to re-thread cfg.
+    llm_max_concurrent: int = 2
+    llm_max_retries: int = 5
+    ragas_run_config: Any = None  # built from llm_max_concurrent (see _build_runtime)
 
 
 def _apply_litellm_temperature_clamp(min_temp: float = 0.01) -> None:
-    """GLM-4-Flash rejects temperature<0.01. DSPy / ragas occasionally send
-    1e-5; clamp once at runtime-build time so every downstream call is safe.
-    Idempotent (re-applying is a no-op)."""
-    import litellm
+    """GLM-4-Flash rejects temperature<0.01. DSPy / ragas internally
+    override the temperature to ~1e-8 for deterministic output; we
+    clamp at *every* upstream entry point so every downstream call is
+    safe regardless of which library makes it.
 
-    if getattr(litellm.completion, "_ragdx_clamped", False):
-        return
-    orig_completion = litellm.completion
-    orig_batch = litellm.batch_completion
+    Clamps three layers:
+
+    1. ``litellm.completion`` / ``batch_completion`` — used by DSPy and
+       our own ``llm_callable``.
+    2. ``openai.resources.chat.completions.Completions.create`` —
+       sync OpenAI client (covers ``langchain_openai.ChatOpenAI``'s
+       sync path).
+    3. ``openai.resources.chat.completions.AsyncCompletions.create`` —
+       async OpenAI client (ragas' judge calls hit this).
+
+    Idempotent on each layer."""
+    import litellm
 
     def _clamp(kw):
         t = kw.get("temperature")
@@ -189,15 +217,47 @@ def _apply_litellm_temperature_clamp(min_temp: float = 0.01) -> None:
             kw["temperature"] = min_temp
         return kw
 
-    def comp(*a, **kw):
-        return orig_completion(*a, **_clamp(kw))
+    # ---- litellm layer
+    if not getattr(litellm.completion, "_ragdx_clamped", False):
+        orig_completion = litellm.completion
+        orig_batch = litellm.batch_completion
 
-    def batch(*a, **kw):
-        return orig_batch(*a, **_clamp(kw))
+        def comp(*a, **kw):
+            return orig_completion(*a, **_clamp(kw))
 
-    comp._ragdx_clamped = True  # type: ignore[attr-defined]
-    litellm.completion = comp
-    litellm.batch_completion = batch
+        def batch(*a, **kw):
+            return orig_batch(*a, **_clamp(kw))
+
+        comp._ragdx_clamped = True  # type: ignore[attr-defined]
+        litellm.completion = comp
+        litellm.batch_completion = batch
+
+    # ---- openai client layer (covers ChatOpenAI -> ragas judge)
+    try:
+        from openai.resources.chat.completions import (
+            AsyncCompletions,
+            Completions,
+        )
+    except ImportError:  # pragma: no cover - openai pinning floor
+        return
+
+    if not getattr(Completions.create, "_ragdx_clamped", False):
+        _orig_sync = Completions.create
+
+        def _sync_create(self, *a, **kw):
+            return _orig_sync(self, *a, **_clamp(kw))
+
+        _sync_create._ragdx_clamped = True  # type: ignore[attr-defined]
+        Completions.create = _sync_create  # type: ignore[method-assign]
+
+    if not getattr(AsyncCompletions.create, "_ragdx_clamped", False):
+        _orig_async = AsyncCompletions.create
+
+        async def _async_create(self, *a, **kw):
+            return await _orig_async(self, *a, **_clamp(kw))
+
+        _async_create._ragdx_clamped = True  # type: ignore[attr-defined]
+        AsyncCompletions.create = _async_create  # type: ignore[method-assign]
 
 
 def _build_runtime(cfg: ExperimentConfig) -> _Runtime:
@@ -221,6 +281,7 @@ def _build_runtime(cfg: ExperimentConfig) -> _Runtime:
             temperature=0.01,
             max_tokens=350,
             timeout=60,
+            num_retries=cfg.llm_max_retries,
         )
         return resp.choices[0].message.content or ""
 
@@ -255,9 +316,27 @@ def _build_runtime(cfg: ExperimentConfig) -> _Runtime:
             base_url=cfg.api_base,
             temperature=0.01,
             timeout=60,
-            max_retries=2,
+            max_retries=cfg.llm_max_retries,
         )
     )
+
+    # ragas RunConfig: only ``max_workers`` is user-tunable (via the
+    # ``llm_max_concurrent`` knob). The other fields (max_retries /
+    # max_wait / timeout) are sensible internal defaults -- they're
+    # ragas-loop-specific knobs, distinct from the transport-layer
+    # retry budget (``llm_max_retries`` above) that actually matters
+    # for production tuning.
+    ragas_run_config = None
+    try:
+        from ragas.run_config import RunConfig as _RagasRunConfig
+        ragas_run_config = _RagasRunConfig(
+            max_workers=cfg.llm_max_concurrent,
+            max_retries=8,
+            max_wait=30,
+            timeout=180,
+        )
+    except ImportError:
+        pass
 
     return _Runtime(
         llm_callable=llm_callable,
@@ -265,6 +344,9 @@ def _build_runtime(cfg: ExperimentConfig) -> _Runtime:
         ragas_judge=ragas_judge,
         ragas_embeddings=ragas_embeddings,
         embeddings=hf_embeddings,
+        llm_max_concurrent=cfg.llm_max_concurrent,
+        llm_max_retries=cfg.llm_max_retries,
+        ragas_run_config=ragas_run_config,
     )
 
 
@@ -281,27 +363,50 @@ def _looks_like_hf_dataset(s: str) -> bool:
 
 
 def _load_amnesty_style_hf(name: str, n_records: int) -> tuple[list[str], list[DatasetRecord]]:
-    """Load a HuggingFace dataset that follows the amnesty_qa shape:
-    {user_input, reference, retrieved_contexts}."""
+    """Load a HuggingFace QA-style dataset (amnesty_qa-shaped).
+
+    Tries amnesty_qa's known config/split combos in order
+    (``english_v3`` → ``v2`` → ``v1``) and reads the most likely
+    column names for question / GT / contexts. Different config
+    versions use different column names — see code for the mapping.
+    Falls back to a no-config ``train`` split for HF datasets that
+    don't follow the amnesty_qa convention at all.
+    """
     from datasets import load_dataset
 
-    # amnesty_qa convention: subset name + eval split
-    try:
-        ds = load_dataset(name, "english_v3", split=f"eval[:{n_records}]")
-    except Exception:  # pragma: no cover - other HF datasets vary
+    ds = None
+    for cfg in ("english_v3", "english_v2", "english_v1"):
+        try:
+            ds = load_dataset(name, cfg, split=f"eval[:{n_records}]")
+            break
+        except Exception:  # pragma: no cover - schema drift across versions
+            continue
+    if ds is None:
         ds = load_dataset(name, split=f"train[:{n_records}]")
+
+    def _col(row: dict, *names: str) -> Any:
+        for n in names:
+            if n in row and row[n] is not None:
+                return row[n]
+        return None
 
     corpus_chunks: list[str] = []
     records: list[DatasetRecord] = []
     for row in ds:
-        for passage in row.get("retrieved_contexts") or []:
+        # v3 uses retrieved_contexts; v1/v2 use contexts.
+        for passage in _col(row, "retrieved_contexts", "contexts") or []:
             text = (passage or "").strip()
             if text:
                 corpus_chunks.append(text)
+        # v3 uses reference; v2 uses ground_truth (str); v1 uses ground_truths (list[str]).
+        gt = _col(row, "reference", "ground_truth")
+        if gt is None:
+            gt_list = _col(row, "ground_truths") or []
+            gt = gt_list[0] if gt_list else ""
         records.append(
             DatasetRecord(
-                question=row.get("user_input", row.get("question", "")),
-                ground_truth=row.get("reference") or "",
+                question=_col(row, "user_input", "question") or "",
+                ground_truth=gt or "",
                 contexts=[],
             )
         )
@@ -460,15 +565,33 @@ def _build_ragas_metrics_for_mode(mode: str) -> list:
 
 
 def _evaluate_with_ragas(
-    records: list[DatasetRecord], judge: Any, embeddings: Any, metrics: list
+    records: list[DatasetRecord],
+    judge: Any,
+    embeddings: Any,
+    metrics: list,
+    *,
+    run_config: Any = None,
 ) -> dict:
+    """Run ragas evaluation with an optional ``RunConfig`` throttle.
+
+    ``run_config`` is forwarded verbatim to ``ragas.evaluate``. Pass
+    the one built in :func:`_build_runtime` (which honours
+    :class:`ExperimentConfig`'s ``ragas_*`` knobs) to throttle
+    concurrency on strict rate-limit endpoints; pass ``None`` to let
+    ragas use its own defaults (``max_workers=16``).
+    """
     evaluator = UnifiedEvaluator()
     try:
+        ragas_kwargs: dict[str, Any] = {
+            "llm": judge, "embeddings": embeddings, "metrics": metrics,
+        }
+        if run_config is not None:
+            ragas_kwargs["run_config"] = run_config
         result = evaluator.evaluate(
             records,
             use_ragas=True, run_ragas=True,
             use_ragchecker=False, use_embedding=False,
-            ragas_kwargs={"llm": judge, "embeddings": embeddings, "metrics": metrics},
+            ragas_kwargs=ragas_kwargs,
         )
         return {
             "scores": {**result.retrieval, **result.generation, **result.e2e},
@@ -539,7 +662,10 @@ def _run_bayes_search(
                 )
             )
 
-        ev = _evaluate_with_ragas(answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics)
+        ev = _evaluate_with_ragas(
+            answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics,
+            run_config=runtime.ragas_run_config,
+        )
         scores = ev.get("scores", {})
         comp_eval = objective.evaluate(scores)
         bo.report(params, comp_eval["score"])
@@ -606,7 +732,8 @@ def _dspy_before_after(
     logger.info("[DSPy/%s] (a) baseline run", label)
     baseline_answered = _run_program(baseline_program)
     baseline_eval = _evaluate_with_ragas(
-        baseline_answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics
+        baseline_answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics,
+        run_config=runtime.ragas_run_config,
     )
 
     logger.info("[DSPy/%s] (b) MIPROv2 optimisation", label)
@@ -622,7 +749,13 @@ def _dspy_before_after(
             student_lm=runtime.dspy_lm,
             judge_lm=runtime.dspy_lm,
             optimizer="MIPROv2",
-            optimizer_kwargs={"auto": "light"},
+            optimizer_kwargs={
+                "auto": "light",
+                # Match the same in-flight budget ragas uses, so we don't
+                # accidentally fan out 16 DSPy threads against a strict
+                # endpoint after carefully throttling ragas to 2.
+                "num_threads": runtime.llm_max_concurrent,
+            },
         )
     finally:
         mipro_logger.removeHandler(capture)
@@ -631,7 +764,8 @@ def _dspy_before_after(
     logger.info("[DSPy/%s] (c) optimised re-run", label)
     optimised_answered = _run_program(opt_result["optimized_program"])
     opt_eval = _evaluate_with_ragas(
-        optimised_answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics
+        optimised_answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics,
+        run_config=runtime.ragas_run_config,
     )
 
     baseline_scores = baseline_eval.get("scores", {}) or {}
@@ -966,6 +1100,8 @@ def run_experiment(
     api_base: str = "https://open.bigmodel.cn/api/paas/v4",
     model: str = "openai/glm-4-flash",
     seed: int = 7,
+    llm_max_concurrent: int = 2,
+    llm_max_retries: int = 5,
     save: bool = True,
 ) -> ExperimentResult:
     """Run the complete demo pipeline once and return the bundle.
@@ -1013,6 +1149,15 @@ def run_experiment(
         Override defaults if you're using a different provider.
     seed:
         Deterministic seed for BO + question synthesis.
+    llm_max_concurrent:
+        Max in-flight LLM calls per evaluation batch. Default ``2`` is
+        tuned for strict rate-limited endpoints (e.g. GLM-4-Flash); bump
+        to ``8-16`` for OpenAI / Anthropic to speed up trials. Propagates
+        to ragas ``RunConfig.max_workers`` and DSPy MIPROv2 ``num_threads``.
+    llm_max_retries:
+        Per-call transport-layer retry budget. Propagates to the openai
+        client (used by the ragas judge) and ``litellm.completion`` (used
+        by BO generation and DSPy). Default ``5``.
     save:
         If True (default), write ``output_dir/result.json``.
 
@@ -1037,6 +1182,8 @@ def run_experiment(
         api_base=api_base,
         model=model,
         seed=seed,
+        llm_max_concurrent=llm_max_concurrent,
+        llm_max_retries=llm_max_retries,
     )
 
     runtime = _build_runtime(cfg)
