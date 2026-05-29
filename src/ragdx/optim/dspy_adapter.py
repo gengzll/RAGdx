@@ -262,8 +262,20 @@ class DSPyAdapter:
                 )
         return examples
 
-    def build_program(self, signature: Any | None = None, *, kind: str = "chain_of_thought") -> Any:
-        """Return a DSPy module wrapping the given (or default RAG) signature."""
+    def build_program(
+        self,
+        signature: Any | None = None,
+        *,
+        kind: str = "chain_of_thought",
+        instruction: str | None = None,
+    ) -> Any:
+        """Return a DSPy module wrapping the given (or default RAG) signature.
+
+        ``instruction`` overrides the default signature's docstring at
+        runtime via :py:meth:`dspy.Signature.with_instructions`. Has no
+        effect when an explicit ``signature`` is supplied -- the caller
+        is responsible for picking the right instruction in that case.
+        """
         try:
             import dspy  # type: ignore[import-not-found]
         except Exception as exc:  # pragma: no cover
@@ -282,6 +294,8 @@ class DSPyAdapter:
                 answer: str = dspy.OutputField()
 
             signature = DefaultRAGSignature
+            if instruction:
+                signature = signature.with_instructions(instruction)
 
         builder = {
             "chain_of_thought": dspy.ChainOfThought,

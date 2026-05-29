@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from ragdx.experiments import (
+    DEFAULT_SYSTEM_INSTRUCTION,
     SCHEMA_VERSION,
     ExperimentConfig,
     ExperimentMode,
@@ -89,6 +90,62 @@ def test_config_llm_throttle_overrides():
     )
     assert cfg.llm_max_concurrent == 16
     assert cfg.llm_max_retries == 10
+
+
+# ------------------------------------------------------------ system_instruction
+def test_default_system_instruction_is_documented_string():
+    """The default must be a non-empty string visible at the module top."""
+    assert isinstance(DEFAULT_SYSTEM_INSTRUCTION, str)
+    assert len(DEFAULT_SYSTEM_INSTRUCTION) > 0
+    assert "context" in DEFAULT_SYSTEM_INSTRUCTION.lower()
+
+
+def test_config_system_instruction_default_is_none():
+    """Field default stays None so a user passing ``None`` keeps using
+    the package default. Resolution to the actual string happens at
+    runtime-build time."""
+    cfg = ExperimentConfig(corpus="org/data", has_gt=True, api_key="k")
+    assert cfg.system_instruction is None
+
+
+def test_config_system_instruction_override_preserved():
+    """A custom system_instruction must flow through unchanged."""
+    custom = "You are a legal assistant. Cite statute sections."
+    cfg = ExperimentConfig(
+        corpus="org/data", has_gt=True, api_key="k", system_instruction=custom,
+    )
+    assert cfg.system_instruction == custom
+
+
+def test_generate_answer_uses_provided_system_instruction():
+    """``_generate_answer`` must embed the supplied instruction in the
+    rendered prompt (not the package default)."""
+    from ragdx.experiments import _generate_answer
+
+    captured = {}
+
+    def fake_lm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return "stub"
+
+    custom = "Special domain instruction xyz."
+    _generate_answer(
+        "Q?", ["ctx-a", "ctx-b"], fake_lm, system_instruction=custom,
+    )
+    assert custom in captured["prompt"]
+    # default should NOT have leaked in
+    assert DEFAULT_SYSTEM_INSTRUCTION not in captured["prompt"]
+
+
+def test_generate_answer_default_system_instruction():
+    """When system_instruction is omitted, the package default is used."""
+    from ragdx.experiments import _generate_answer
+
+    captured = {}
+    _generate_answer(
+        "Q?", ["ctx"], lambda p: captured.update({"prompt": p}) or "stub",
+    )
+    assert DEFAULT_SYSTEM_INSTRUCTION in captured["prompt"]
 
 
 # ------------------------------------------------------- corpus normalization

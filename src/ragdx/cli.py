@@ -550,6 +550,20 @@ def experiment(
         help="Per-call transport-layer retry budget. Propagates to the "
         "openai client (ragas judge) and litellm (BO generation, DSPy).",
     ),
+    system_instruction: str = typer.Option(
+        "", "--system-instruction",
+        help="RAG system prompt shared by BO generation and the DSPy "
+        "baseline. Defaults to ragdx's generic 'use only context, be "
+        "concise' prompt. Override for domain-specific guidance "
+        "(legal / medical / etc.). Mutually exclusive with "
+        "--system-instruction-file.",
+    ),
+    system_instruction_file: str = typer.Option(
+        "", "--system-instruction-file",
+        help="Path to a text file whose contents are used as the system "
+        "instruction. Useful for long / multi-line prompts. Mutually "
+        "exclusive with --system-instruction.",
+    ),
     save_run: bool = typer.Option(
         False, "--save-run",
         help="Also persist the experiment as a Run in the local RunStore "
@@ -584,6 +598,27 @@ def experiment(
     if mode not in {"with_gt", "no_gt", "both", "auto"}:
         raise typer.BadParameter("mode must be one of: with_gt, no_gt, both, auto")
 
+    # Resolve --system-instruction / --system-instruction-file (mutually
+    # exclusive, both optional; None falls back to ragdx's default).
+    if system_instruction and system_instruction_file:
+        raise typer.BadParameter(
+            "Use either --system-instruction OR --system-instruction-file, not both."
+        )
+    resolved_instruction: str | None = None
+    if system_instruction:
+        resolved_instruction = system_instruction
+    elif system_instruction_file:
+        sip = Path(system_instruction_file)
+        if not sip.exists():
+            raise typer.BadParameter(
+                f"--system-instruction-file path not found: {sip}"
+            )
+        resolved_instruction = sip.read_text(encoding="utf-8").strip()
+        if not resolved_instruction:
+            raise typer.BadParameter(
+                f"--system-instruction-file {sip} is empty after stripping whitespace."
+            )
+
     # Import lazily so `ragdx --help` doesn't pull in dspy / langchain.
     from ragdx.experiments import run_experiment
 
@@ -603,6 +638,7 @@ def experiment(
             seed=seed,
             llm_max_concurrent=llm_max_concurrent,
             llm_max_retries=llm_max_retries,
+            system_instruction=resolved_instruction,
             save=not no_save,
         )
     except ValueError as exc:

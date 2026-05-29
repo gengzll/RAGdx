@@ -66,6 +66,29 @@ logger = logging.getLogger(__name__)
 
 
 # =====================================================================
+# Default system instruction (single source of truth)
+# =====================================================================
+DEFAULT_SYSTEM_INSTRUCTION = (
+    "Answer the question using only the retrieved context.\n"
+    "Be concise. Do not invent facts that are not in the context."
+)
+"""Default RAG system instruction.
+
+Used by **both** the BO trial generation path (raw prompt assembled in
+:func:`_generate_answer`) and the DSPy baseline signature
+(:class:`DSPyAdapter.build_program` falls back to this when no
+``instruction`` is supplied). Keeping the two paths on the same default
+makes the BO-stage scores and the DSPy-baseline scores directly
+comparable -- they're scored against the same prompt.
+
+Override per-run via :attr:`ExperimentConfig.system_instruction` (Python
+API) or the ``--system-instruction`` / ``--system-instruction-file`` CLI
+flags. The actually-used instruction is recorded in
+``bundle.meta.run_config.system_instruction`` for reproducibility.
+"""
+
+
+# =====================================================================
 # Public dataclasses
 # =====================================================================
 @dataclass
@@ -107,6 +130,19 @@ class ExperimentConfig:
     client (used by ragas judge) and ``litellm.completion`` (used by
     BO generation and DSPy). Default ``5`` should survive most transient
     rate-limit windows; raise if you see frequent ``NaN`` scores."""
+
+    system_instruction: str | None = None
+    """RAG system instruction shared by BO generation and DSPy baseline.
+
+    None resolves to :data:`DEFAULT_SYSTEM_INSTRUCTION` at runtime-build
+    time. Override to inject domain-specific guidance (legal / medical /
+    finance / etc.) -- both the BO trial generator and the DSPy baseline
+    program will use this string, keeping their scores comparable.
+    The DSPy MIPROv2 optimizer may then evolve this further on top.
+
+    The resolved value is recorded in ``bundle.meta.run_config`` so the
+    dashboard can display it and you can reproduce the run from the
+    bundle alone."""
 
     def __post_init__(self) -> None:
         # mode validation -- can't request with-GT runs when no GT exists.
@@ -190,6 +226,9 @@ class _Runtime:
     llm_max_concurrent: int = 2
     llm_max_retries: int = 5
     ragas_run_config: Any = None  # built from llm_max_concurrent (see _build_runtime)
+    # System instruction shared by BO generation and DSPy baseline; never
+    # None here -- resolved from cfg.system_instruction or the default.
+    system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION
 
 
 def _apply_litellm_temperature_clamp(min_temp: float = 0.01) -> None:
@@ -347,6 +386,7 @@ def _build_runtime(cfg: ExperimentConfig) -> _Runtime:
         llm_max_concurrent=cfg.llm_max_concurrent,
         llm_max_retries=cfg.llm_max_retries,
         ragas_run_config=ragas_run_config,
+        system_instruction=cfg.system_instruction or DEFAULT_SYSTEM_INSTRUCTION,
     )
 
 
@@ -598,11 +638,25 @@ def _retrieve(vstore: Any, question: str, top_k: int) -> list[str]:
     return [d.page_content for d in vstore.similarity_search(question, k=top_k)]
 
 
-def _generate_answer(question: str, contexts: list[str], lm: Callable[[str], str]) -> str:
+def _generate_answer(
+    question: str,
+    contexts: list[str],
+    lm: Callable[[str], str],
+    *,
+    system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION,
+) -> str:
+    """Build a RAG prompt and call ``lm``.
+
+    The instruction header is the user-supplied
+    :attr:`ExperimentConfig.system_instruction` (or the package default).
+    Same string is used as the DSPy baseline signature instruction so
+    the BO-stage and DSPy-baseline scores are scored against the same
+    underlying prompt -- only the structural delivery differs (raw
+    string here, DSPy ChainOfThought there).
+    """
     ctx_str = "\n---\n".join(contexts) if contexts else "(no context)"
     prompt = (
-        "Answer the question using only the provided context.\n"
-        "Be concise. Do not invent facts not in the context.\n\n"
+        f"{system_instruction}\n\n"
         f"Context:\n{ctx_str}\n\nQuestion: {question}\n\nAnswer:"
     )
     try:
@@ -720,7 +774,10 @@ def _run_bayes_search(
         answered = []
         for r in records:
             ctxs = _retrieve(vstore, r.question, params["top_k"])
-            ans = _generate_answer(r.question, ctxs, runtime.llm_callable)
+            ans = _generate_answer(
+                r.question, ctxs, runtime.llm_callable,
+                system_instruction=runtime.system_instruction,
+            )
             answered.append(
                 DatasetRecord(
                     question=r.question,
@@ -791,7 +848,32 @@ def _dspy_before_after(
 
     dspy.configure(lm=runtime.dspy_lm)
     adapter = DSPyAdapter()
-    baseline_program = adapter.build_program()
+    # Hand the same system instruction to the DSPy baseline so its
+    # before/after comparison shares the exact prompt the BO stage used.
+    baseline_program = adapter.build_program(instruction=runtime.system_instruction)
+
+    # Capture the baseline program's signature instructions + demos BEFORE
+    # any optimization. These are what DSPy's default signature carries
+    # (just the field descriptors, no MIPROv2-tuned content) -- recording
+    # them lets the dashboard show a real before-vs-after diff instead of
+    # the optimized side in isolation.
+    def _extract_instructions_demos(program) -> tuple[dict[str, str], dict[str, list]]:
+        instructions: dict[str, str] = {}
+        demos: dict[str, list] = {}
+        try:
+            for name, predictor in program.named_predictors():
+                sig = getattr(predictor, "signature", None)
+                if sig is not None and hasattr(sig, "instructions"):
+                    instructions[name] = sig.instructions or ""
+                if hasattr(predictor, "demos"):
+                    demos[name] = [dict(d) for d in predictor.demos]
+        except Exception:  # pragma: no cover - DSPy API surface drift
+            pass
+        return instructions, demos
+
+    baseline_instructions, baseline_demos = _extract_instructions_demos(
+        baseline_program
+    )
 
     def _run_program(program):
         out = []
@@ -830,6 +912,14 @@ def _dspy_before_after(
     try:
         opt_result = adapter.optimize(
             records_with_ctxs,
+            # Seed MIPROv2 with the SAME program the baseline used so
+            # the user's ``system_instruction`` is what MIPROv2 starts
+            # from (Instruction 0 in its candidate set). Without this
+            # the optimizer silently rebuilds a default-signature
+            # program and any system_instruction override is lost --
+            # MIPROv2's "optimized winner" would then never be compared
+            # against the user's prompt.
+            program=baseline_program,
             student_lm=runtime.dspy_lm,
             judge_lm=runtime.dspy_lm,
             optimizer="MIPROv2",
@@ -888,6 +978,12 @@ def _dspy_before_after(
         # contexts are shared; ``baseline_answer`` is the default-program
         # output and ``optimized_answer`` is the MIPROv2-tuned program's.
         "records": records_pairs,
+        # Prompts before optimization: the default DSPy signature's
+        # ``instructions`` (usually a short field-description string)
+        # and empty demo list. The dashboard renders these side-by-side
+        # with the MIPROv2 outputs so users see what actually changed.
+        "baseline_instructions": baseline_instructions,
+        "baseline_demos": baseline_demos,
         "instructions": dict(opt_result["instructions"]),
         "demos": {n: [dict(d) for d in demos] for n, demos in opt_result["demos"].items()},
         "trial_scores": list(capture.scores_so_far),
@@ -1025,6 +1121,13 @@ def _build_unified_bundle(
                 "n_bo_init": cfg.n_bo_init,
                 "n_questions": cfg.n_questions,
                 "seed": cfg.seed,
+                # Resolved system instruction (cfg.system_instruction or
+                # DEFAULT). Recording the resolved value -- not None --
+                # so reproducibility doesn't depend on the package
+                # default staying stable across versions.
+                "system_instruction": (
+                    cfg.system_instruction or DEFAULT_SYSTEM_INSTRUCTION
+                ),
             },
         },
         "questions": [
@@ -1222,6 +1325,7 @@ def run_experiment(
     seed: int = 7,
     llm_max_concurrent: int = 2,
     llm_max_retries: int = 5,
+    system_instruction: str | None = None,
     save: bool = True,
 ) -> ExperimentResult:
     """Run the complete demo pipeline once and return the bundle.
@@ -1284,6 +1388,14 @@ def run_experiment(
         Per-call transport-layer retry budget. Propagates to the openai
         client (used by the ragas judge) and ``litellm.completion`` (used
         by BO generation and DSPy). Default ``5``.
+    system_instruction:
+        RAG system prompt shared by BO generation and the DSPy baseline.
+        ``None`` falls back to :data:`DEFAULT_SYSTEM_INSTRUCTION`
+        (``"Answer the question using only the retrieved context. Be
+        concise. Do not invent facts that are not in the context."``).
+        Override per-domain (legal / medical / finance) to steer both
+        the BO trial generator and the DSPy baseline with the same
+        instruction -- MIPROv2 may then evolve it further on top.
     save:
         If True (default), write ``output_dir/result.json``.
 
@@ -1310,6 +1422,7 @@ def run_experiment(
         seed=seed,
         llm_max_concurrent=llm_max_concurrent,
         llm_max_retries=llm_max_retries,
+        system_instruction=system_instruction,
     )
 
     runtime = _build_runtime(cfg)

@@ -510,24 +510,44 @@ def render_dspy_a_b(bundle: dict) -> None:
                     "non-decreasing convergence curve."
                 )
 
-            # MIPROv2-optimized prompt instructions. The "baseline prompt"
-            # in our pipeline is just the default DSPy signature (no
-            # bespoke prompt, only field types) -- so we show the
-            # optimized side only and label that explicitly.
-            instructions = payload.get("instructions") or {}
-            if instructions:
-                st.markdown("##### Optimized prompt(s) (MIPROv2 output)")
+            # Side-by-side prompt comparison. baseline_instructions are
+            # the default DSPy signature's instructions (captured before
+            # MIPROv2 ran); instructions are MIPROv2's output. Showing
+            # both makes the "what did the optimizer actually change?"
+            # answer concrete instead of taking it on faith.
+            base_instr = payload.get("baseline_instructions") or {}
+            opt_instr = payload.get("instructions") or {}
+            base_demos = payload.get("baseline_demos") or {}
+            opt_demos = payload.get("demos") or {}
+            if base_instr or opt_instr:
+                st.markdown("##### Prompts: baseline vs MIPROv2-optimized")
                 st.caption(
-                    "Baseline is the default DSPy signature "
-                    "(no hand-written prompt — just field types). "
-                    "Below are the instructions MIPROv2 discovered for "
-                    "the optimized program."
+                    "**Baseline** = the default DSPy signature's "
+                    "instruction string (no MIPROv2 tuning). "
+                    "**Optimized** = what MIPROv2 discovered after "
+                    "exploring instruction candidates and few-shot demos. "
+                    "Empty baseline instruction = DSPy fell back to just "
+                    "the field-type contract."
                 )
-                for predictor_name, instr in instructions.items():
+                predictor_names = sorted(set(base_instr) | set(opt_instr))
+                for name in predictor_names:
                     with st.expander(
-                        f"Instruction for `{predictor_name}`", expanded=False
+                        f"Predictor `{name}`", expanded=(len(predictor_names) == 1)
                     ):
-                        st.write(instr or "_(empty)_")
+                        cols = st.columns(2)
+                        cols[0].markdown("**Baseline instruction**")
+                        cols[0].code(base_instr.get(name) or "(empty — default signature)", language="markdown")
+                        cols[1].markdown("**Optimized instruction**")
+                        cols[1].code(opt_instr.get(name) or "(empty)", language="markdown")
+                        # Demo counts give a quick before/after at a glance.
+                        n_base = len(base_demos.get(name) or [])
+                        n_opt = len(opt_demos.get(name) or [])
+                        st.caption(
+                            f"Few-shot demos: baseline = {n_base} · optimized = {n_opt}"
+                        )
+                        if n_opt:
+                            with st.expander(f"Show {n_opt} optimized demos", expanded=False):
+                                st.json(opt_demos.get(name) or [])
 
             # Q+A inspector (records-based: question / GT / baseline_answer /
             # optimized_answer per record, with the same first-3 + dropdown UX
