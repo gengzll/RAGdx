@@ -445,6 +445,44 @@ def experiment_dashboard(
     subprocess.run(cmd, check=False)
 
 
+@app.command("experiment-report")
+def experiment_report(
+    bundle: str = typer.Argument(
+        ..., help="Path to a ragdx experiment bundle (result.json).",
+    ),
+    output: str = typer.Option(
+        "experiment_report.html", "--output", "-o",
+        help="HTML output path. Open in a browser; Ctrl-P → Save as PDF "
+        "for a PDF copy.",
+    ),
+    title: str = typer.Option(
+        "", "--title",
+        help="Optional custom report title (default: derived from "
+        "model + modes_run).",
+    ),
+):
+    """Render an experiment bundle as a self-contained HTML report.
+
+    Produces a single static HTML file with embedded Plotly charts --
+    no streamlit runtime required to view it. Mirrors the content of
+    ``ragdx experiment-dashboard`` but as a deliverable artifact
+    (shareable, version-controllable, PDF-exportable via the browser).
+    """
+    from ragdx.ui.experiment_report import render_report
+
+    bundle_path = Path(bundle)
+    if not bundle_path.exists():
+        raise typer.BadParameter(f"Bundle not found: {bundle_path}")
+    data = json.loads(bundle_path.read_text(encoding="utf-8"))
+    html = render_report(data, title=title or None)
+    out_path = Path(output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(html, encoding="utf-8")
+    print(f"[green]Wrote report to[/green] {out_path}")
+    print(f"  Open in a browser: file:///{out_path.resolve().as_posix()}")
+    print("  PDF export: Ctrl-P in the browser, choose 'Save as PDF'.")
+
+
 @app.command("monitor-session")
 def monitor_session(
     session_id: str = typer.Argument(..., help="Optimization session id."),
