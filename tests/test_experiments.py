@@ -117,10 +117,17 @@ def test_config_system_instruction_override_preserved():
     assert cfg.system_instruction == custom
 
 
-def test_generate_answer_uses_provided_system_instruction():
-    """``_generate_answer`` must embed the supplied instruction in the
-    rendered prompt (not the package default)."""
-    from ragdx.experiments import _generate_answer
+def test_pipeline_generate_uses_per_call_system_instruction():
+    """Per-call override on :meth:`RAGPipeline.generate` must reach
+    the rendered prompt verbatim, beating both the config's
+    ``GeneratorSpec.system_instruction`` and the package default."""
+    from ragdx.runtime.pipeline import (
+        DEFAULT_SYSTEM_INSTRUCTION as RT_DEFAULT,
+    )
+    from ragdx.runtime.pipeline import (
+        RAGPipeline,
+    )
+    from ragdx.schemas.rag_config import GeneratorSpec, RAGConfig
 
     captured = {}
 
@@ -128,24 +135,49 @@ def test_generate_answer_uses_provided_system_instruction():
         captured["prompt"] = prompt
         return "stub"
 
-    custom = "Special domain instruction xyz."
-    _generate_answer(
-        "Q?", ["ctx-a", "ctx-b"], fake_lm, system_instruction=custom,
+    pipe = RAGPipeline(
+        config=RAGConfig(generator=GeneratorSpec(system_instruction="config-level")),
+        vstore=object(),
+        llm_callable=fake_lm,
+        n_chunks=0,
     )
+    custom = "Special domain instruction xyz."
+    pipe.generate("Q?", ["ctx-a", "ctx-b"], system_instruction=custom)
     assert custom in captured["prompt"]
-    # default should NOT have leaked in
-    assert DEFAULT_SYSTEM_INSTRUCTION not in captured["prompt"]
+    assert "config-level" not in captured["prompt"]
+    assert RT_DEFAULT not in captured["prompt"]
 
 
-def test_generate_answer_default_system_instruction():
-    """When system_instruction is omitted, the package default is used."""
-    from ragdx.experiments import _generate_answer
+def test_pipeline_generate_falls_back_to_config_then_default():
+    """Resolution order is: per-call > config > package default."""
+    from ragdx.runtime.pipeline import (
+        DEFAULT_SYSTEM_INSTRUCTION as RT_DEFAULT,
+    )
+    from ragdx.runtime.pipeline import (
+        RAGPipeline,
+    )
+    from ragdx.schemas.rag_config import GeneratorSpec, RAGConfig
 
     captured = {}
-    _generate_answer(
-        "Q?", ["ctx"], lambda p: captured.update({"prompt": p}) or "stub",
+
+    def lm_cfg(p):
+        captured["prompt"] = p
+        return "stub"
+
+    pipe_with_cfg = RAGPipeline(
+        config=RAGConfig(generator=GeneratorSpec(system_instruction="from-cfg")),
+        vstore=object(), llm_callable=lm_cfg, n_chunks=0,
     )
-    assert DEFAULT_SYSTEM_INSTRUCTION in captured["prompt"]
+    pipe_with_cfg.generate("Q?", ["ctx"])
+    assert "from-cfg" in captured["prompt"]
+
+    captured.clear()
+    pipe_default = RAGPipeline(
+        config=RAGConfig(),  # GeneratorSpec.system_instruction is None
+        vstore=object(), llm_callable=lm_cfg, n_chunks=0,
+    )
+    pipe_default.generate("Q?", ["ctx"])
+    assert RT_DEFAULT in captured["prompt"]
 
 
 # ------------------------------------------------------- corpus normalization

@@ -59,7 +59,17 @@ from ragdx.optim._gt_helpers import gt_mode as detect_gt_mode
 from ragdx.optim.bayes_search import BayesianSearch
 from ragdx.optim.dspy_adapter import DSPyAdapter
 from ragdx.optim.objectives import CompositeObjective, default_objective
+from ragdx.runtime.pipeline import RAGPipeline
 from ragdx.schemas.models import DatasetRecord
+from ragdx.schemas.rag_config import (
+    ChunkerSpec,
+    CorpusSpec,
+    EmbedderSpec,
+    GeneratorSpec,
+    JudgeSpec,
+    RAGConfig,
+    RetrieverSpec,
+)
 
 ExperimentMode = Literal["with_gt", "no_gt", "both", "auto"]
 logger = logging.getLogger(__name__)
@@ -626,43 +636,61 @@ def _load_corpus_and_records(
 
 
 # =====================================================================
-# RAG primitives (mirrors what the demos do)
+# RAG primitives -- delegated to ragdx.runtime.pipeline.RAGPipeline
 # =====================================================================
-def _build_vstore(chunks: list[str], embeddings: Any) -> Any:
-    from langchain_community.vectorstores import FAISS
+def _make_rag_config(cfg: ExperimentConfig, runtime: _Runtime) -> RAGConfig:
+    """Build the base :class:`RAGConfig` reflecting the experiment cfg.
 
-    return FAISS.from_texts(chunks, embeddings)
+    This is the "starting point" config for the BO loop; the loop then
+    derives per-trial configs via ``base.with_override(chunker=..., retriever=...)``.
+    Mapping is mechanical:
 
+    * Corpus / chunker / retriever defaults reflect what BO starts with
+      (first item of each search-space axis).
+    * Generator inherits ``cfg.model`` / ``cfg.api_base`` /
+      ``runtime.system_instruction``.
+    * Judge mirrors the generator for now (PR2 will let users pin a
+      stronger judge).
 
-def _retrieve(vstore: Any, question: str, top_k: int) -> list[str]:
-    return [d.page_content for d in vstore.similarity_search(question, k=top_k)]
-
-
-def _generate_answer(
-    question: str,
-    contexts: list[str],
-    lm: Callable[[str], str],
-    *,
-    system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION,
-) -> str:
-    """Build a RAG prompt and call ``lm``.
-
-    The instruction header is the user-supplied
-    :attr:`ExperimentConfig.system_instruction` (or the package default).
-    Same string is used as the DSPy baseline signature instruction so
-    the BO-stage and DSPy-baseline scores are scored against the same
-    underlying prompt -- only the structural delivery differs (raw
-    string here, DSPy ChainOfThought there).
+    The returned object is mostly a documentation device in PR1 -- BO
+    still drives parameters via :class:`BayesianSearch`. PR3 will move
+    search-space definitions onto the spec classes themselves.
     """
-    ctx_str = "\n---\n".join(contexts) if contexts else "(no context)"
-    prompt = (
-        f"{system_instruction}\n\n"
-        f"Context:\n{ctx_str}\n\nQuestion: {question}\n\nAnswer:"
+    corpus = CorpusSpec(
+        kind="multi" if isinstance(cfg.corpus, list) else "pdf",
+        path=str(cfg.corpus) if not isinstance(cfg.corpus, list) else None,
     )
-    try:
-        return lm(prompt)
-    except Exception as e:  # pragma: no cover - live LLM
-        return f"<generation error: {e}>"
+    return RAGConfig(
+        corpus=corpus,
+        chunker=ChunkerSpec(
+            strategy="recursive",
+            chunk_size=cfg.chunk_sizes[0] if cfg.chunk_sizes else 512,
+            chunk_overlap=cfg.chunk_overlaps[0] if cfg.chunk_overlaps else 50,
+        ),
+        embedder=EmbedderSpec(
+            kind="huggingface",
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            normalize=True,
+        ),
+        retriever=RetrieverSpec(
+            vectorstore="faiss",
+            search_type="similarity",
+            top_k=cfg.top_ks[0] if cfg.top_ks else 5,
+            reranker="none",
+        ),
+        generator=GeneratorSpec(
+            provider="litellm",
+            model=cfg.model,
+            api_base=cfg.api_base,
+            api_key=cfg.api_key,
+            system_instruction=runtime.system_instruction,
+        ),
+        judge=JudgeSpec(
+            model=None,  # = use generator's model
+            llm_max_concurrent=cfg.llm_max_concurrent,
+            llm_max_retries=cfg.llm_max_retries,
+        ),
+    )
 
 
 def _build_ragas_metrics_for_mode(mode: str) -> list:
@@ -736,7 +764,11 @@ def _run_bayes_search(
         search_space, n_init=cfg.n_bo_init, max_trials=cfg.n_bo_trials, seed=cfg.seed,
     )
 
-    vstore_cache: dict[tuple, tuple[int, Any]] = {}
+    base_rag_config = _make_rag_config(cfg, runtime)
+    # Cache pipelines by (chunk_size, chunk_overlap) -- top_k is a per-call
+    # override on retrieve() so the same pipeline serves multiple top_k
+    # values without rebuilding the vstore.
+    pipeline_cache: dict[tuple, RAGPipeline] = {}
     trials_out: list[dict] = []
     while bo.has_next():
         params = bo.next_params()
@@ -744,7 +776,7 @@ def _run_bayes_search(
         logger.info("[BO/%s] trial %d %s", label, len(bo.trials) + 1, params)
 
         cache_key = (params["chunk_size"], params["chunk_overlap"])
-        if cache_key not in vstore_cache:
+        if cache_key not in pipeline_cache:
             # Re-chunk the master corpus to this size/overlap. For HF / jsonl
             # sources we already have one fixed chunk list, but BO still wants
             # to vary -- we re-split the joined text. For PDF we re-load.
@@ -767,17 +799,26 @@ def _run_bayes_search(
                 # For non-PDF sources just use the master chunks as-is (chunk_size
                 # variation is only meaningful when we can re-split the raw text).
                 chunks = chunks_master
-            vstore = _build_vstore(chunks, runtime.embeddings)
-            vstore_cache[cache_key] = (len(chunks), vstore)
-        n_chunks, vstore = vstore_cache[cache_key]
+            trial_config = base_rag_config.with_override(
+                chunker=ChunkerSpec(
+                    strategy=base_rag_config.chunker.strategy,
+                    chunk_size=params["chunk_size"],
+                    chunk_overlap=params["chunk_overlap"],
+                ),
+            )
+            pipeline_cache[cache_key] = RAGPipeline.build(
+                trial_config,
+                chunks,
+                embedder=runtime.embeddings,
+                llm_callable=runtime.llm_callable,
+            )
+        pipeline = pipeline_cache[cache_key]
+        n_chunks = pipeline.n_chunks
 
         answered = []
         for r in records:
-            ctxs = _retrieve(vstore, r.question, params["top_k"])
-            ans = _generate_answer(
-                r.question, ctxs, runtime.llm_callable,
-                system_instruction=runtime.system_instruction,
-            )
+            ctxs = pipeline.retrieve(r.question, top_k=params["top_k"])
+            ans = pipeline.generate(r.question, ctxs)
             answered.append(
                 DatasetRecord(
                     question=r.question,
@@ -1028,13 +1069,35 @@ def _run_one_mode(
             ).chunks)
     else:
         chunks_for_dspy = chunks_master
-    vstore = _build_vstore(chunks_for_dspy, runtime.embeddings)
+
+    # Build the BO-winner pipeline so DSPy A/B uses the exact same
+    # retriever config the BO trial that won was scored against.
+    base_rag_config = _make_rag_config(cfg, runtime)
+    winner_config = base_rag_config.with_override(
+        chunker=ChunkerSpec(
+            strategy=base_rag_config.chunker.strategy,
+            chunk_size=best_params.get("chunk_size", 512),
+            chunk_overlap=best_params.get("chunk_overlap", 50),
+        ),
+        retriever=RetrieverSpec(
+            vectorstore=base_rag_config.retriever.vectorstore,
+            search_type=base_rag_config.retriever.search_type,
+            top_k=best_params.get("top_k", 3),
+            reranker=base_rag_config.retriever.reranker,
+        ),
+    )
+    winner_pipeline = RAGPipeline.build(
+        winner_config,
+        chunks_for_dspy,
+        embedder=runtime.embeddings,
+        llm_callable=runtime.llm_callable,
+    )
 
     records_dspy = [
         DatasetRecord(
             question=r.question,
             ground_truth=r.ground_truth,
-            contexts=_retrieve(vstore, r.question, best_params.get("top_k", 3)),
+            contexts=winner_pipeline.retrieve(r.question),
         )
         for r in records
     ]
