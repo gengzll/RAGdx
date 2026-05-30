@@ -79,6 +79,56 @@ def test_yaml_roundtrip_is_lossless(tmp_path: Path):
     assert cfg2 == cfg
 
 
+def test_scrubbed_for_commit_clears_api_keys():
+    """A config produced by ``ragdx tune --write-optimized-config`` must
+    not contain credentials -- otherwise users would leak API keys by
+    committing the YAML. Locks in the security fix for the bug found
+    in the e2e test on 2026-05-30."""
+    cfg = RAGConfig(
+        generator=GeneratorSpec(
+            model="openai/glm-4-flash",
+            api_base="https://example.com/v1",
+            api_key="super-secret-generator-key",
+            system_instruction="domain prompt",
+        ),
+        judge=JudgeSpec(
+            model="openai/gpt-4o-mini",
+            api_base="https://example.com/judge",
+            api_key="super-secret-judge-key",
+            llm_max_concurrent=4,
+        ),
+    )
+    safe = cfg.scrubbed_for_commit()
+
+    # Credentials gone.
+    assert safe.generator.api_key is None
+    assert safe.judge.api_key is None
+    # The original is NOT mutated -- the caller may still need to use it.
+    assert cfg.generator.api_key == "super-secret-generator-key"
+    assert cfg.judge.api_key == "super-secret-judge-key"
+    # Everything non-credential is preserved.
+    assert safe.generator.model == "openai/glm-4-flash"
+    assert safe.generator.api_base == "https://example.com/v1"
+    assert safe.generator.system_instruction == "domain prompt"
+    assert safe.judge.model == "openai/gpt-4o-mini"
+    assert safe.judge.api_base == "https://example.com/judge"
+    assert safe.judge.llm_max_concurrent == 4
+
+
+def test_scrubbed_for_commit_yaml_round_trip_is_safe(tmp_path: Path):
+    """End-to-end check: scrubbed config written to YAML produces an
+    api_key-free file. Catches future refactors where someone forgets
+    to scrub before serialising."""
+    cfg = RAGConfig(
+        generator=GeneratorSpec(api_key="LEAK-ME-IF-YOU-CAN"),
+    )
+    target = tmp_path / "post_tune_config.yaml"
+    cfg.scrubbed_for_commit().to_yaml(target)
+    raw = target.read_text(encoding="utf-8")
+    assert "LEAK-ME-IF-YOU-CAN" not in raw
+    assert "api_key: null" in raw
+
+
 def test_with_override_swaps_one_stage_without_mutating_original():
     """The stage-swap helper that the future ``StageOptimizer`` family
     depends on. The override must not touch the source config."""

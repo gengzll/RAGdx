@@ -259,8 +259,15 @@ def tune(
     if write_optimized_config and result.best_config is not None:
         opt_path = Path(write_optimized_config)
         opt_path.parent.mkdir(parents=True, exist_ok=True)
-        result.best_config.to_yaml(opt_path)
-        print(f"[green]Wrote optimized config[/green] {opt_path}")
+        # Scrub credentials before writing -- otherwise the env-resolved
+        # api_key (which we set on ``rag_config.generator.api_key`` above)
+        # would persist into the YAML, leaking the key if the user
+        # commits the file. Discovered in the PR4 e2e test (2026-05-30).
+        result.best_config.scrubbed_for_commit().to_yaml(opt_path)
+        print(
+            f"[green]Wrote optimized config[/green] {opt_path} "
+            "[dim](credentials scrubbed)[/dim]"
+        )
 
     if result.best_composite is not None:
         print(f"[bold]Best composite:[/bold] {result.best_composite:.3f}")

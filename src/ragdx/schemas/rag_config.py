@@ -239,6 +239,29 @@ class RAGConfig(BaseModel):
             )
         return cls.model_validate(raw)
 
+    def scrubbed_for_commit(self) -> RAGConfig:
+        """Return a copy with every credential field cleared.
+
+        Concrete fields nulled (all of ``generator.api_key``,
+        ``judge.api_key``). Callers that intend to write this config
+        to a file the user might commit to version control should
+        ALWAYS go through this method first.
+
+        ``api_base`` is preserved -- endpoint URLs are typically
+        public (e.g. ``https://open.bigmodel.cn/api/paas/v4``). If
+        you treat your endpoint as a secret, scrub it manually.
+
+        Found via E2E test on 2026-05-30: ``ragdx tune
+        --write-optimized-config`` previously serialized the
+        env-resolved API key, leaking it into the written YAML.
+        """
+        scrubbed_generator = self.generator.model_copy(update={"api_key": None})
+        scrubbed_judge = self.judge.model_copy(update={"api_key": None})
+        return self.model_copy(update={
+            "generator": scrubbed_generator,
+            "judge": scrubbed_judge,
+        })
+
     def with_override(self, **stage_overrides: BaseModel) -> RAGConfig:
         """Return a copy of this config with one or more ``*Spec``s
         replaced. Used by stage-targeted optimizers to vary a single
