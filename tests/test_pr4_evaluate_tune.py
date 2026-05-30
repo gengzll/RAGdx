@@ -70,7 +70,7 @@ def test_experiments_runtime_alias_still_imports():
 def test_select_metrics_with_gt_returns_four():
     """Reference-based metrics (``context_recall``) must be included
     only when at least one record carries ground truth."""
-    import ragas.metrics as rm
+    rm = pytest.importorskip("ragas.metrics")
 
     records = [
         DatasetRecord(question="Q", ground_truth="A reference answer"),
@@ -83,7 +83,7 @@ def test_select_metrics_with_gt_returns_four():
 
 def test_select_metrics_no_gt_returns_three():
     """No-GT eval drops ``context_recall``."""
-    import ragas.metrics as rm
+    rm = pytest.importorskip("ragas.metrics")
 
     records = [DatasetRecord(question="Q", ground_truth=None)]
     metrics = _select_metrics(records)
@@ -94,6 +94,7 @@ def test_select_metrics_no_gt_returns_three():
 def test_select_metrics_empty_gt_string_treated_as_no_gt():
     """Whitespace-only ground_truth is the same as missing -- the
     composite scorer would otherwise crash on empty strings."""
+    pytest.importorskip("ragas.metrics")
     records = [DatasetRecord(question="Q", ground_truth="   ")]
     metrics = _select_metrics(records)
     assert len(metrics) == 3  # no_gt path
@@ -243,6 +244,10 @@ def test_evaluate_uses_judge_model_fallback_to_generator():
     """When ``JudgeSpec.model`` is None, the judge must use the
     generator's model. This avoids a config footgun where users
     fill in the generator but forget the judge."""
+    # build_ragas_judge wraps a ChatOpenAI with a LangchainLLMWrapper.
+    # We stub langchain_openai inline below, but ragas.llms is also
+    # imported -- skip the test when ragas isn't installed.
+    pytest.importorskip("ragas.llms")
     from ragdx.runtime.factories import build_ragas_judge
 
     gen = GeneratorSpec(model="openai/gpt-4o-mini")
@@ -291,7 +296,7 @@ def test_apply_temperature_clamp_is_idempotent():
     """The clamp must be re-callable without double-wrapping (sentinel
     attribute pattern). Verifying this prevents a real bug where each
     experiment call would add a layer of indirection."""
-    import litellm
+    litellm = pytest.importorskip("litellm")
 
     from ragdx.runtime.factories import apply_litellm_temperature_clamp
     apply_litellm_temperature_clamp()

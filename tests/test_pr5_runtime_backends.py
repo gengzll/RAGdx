@@ -30,6 +30,13 @@ from ragdx.runtime.pipeline import (
 )
 from ragdx.schemas.rag_config import GeneratorSpec, RAGConfig, RetrieverSpec
 
+# Most of this file exercises ``llama-index-core``. The pure-pydantic
+# / pure-dispatch tests below still run without it (they don't import
+# llama_index at all); everything that calls ``_build_impl`` or
+# ``_build_llamaindex_embedder`` is guarded with a per-test
+# ``pytest.importorskip("llama_index")`` so CI without the
+# ``ragdx[llamaindex]`` extra installed skips cleanly instead of erroring.
+
 
 class _StubEmbedder:
     """Deterministic 4-d embedder: each text gets a hash-based vector.
@@ -110,8 +117,21 @@ def test_build_returns_langchain_pipeline_by_default():
     assert LangChainRAGPipeline is RAGPipeline
 
 
+def _require_llama_index() -> None:
+    """Skip the calling test when ``llama-index-core`` isn't installed.
+
+    Centralised so CI without the ``ragdx[llamaindex]`` extra skips
+    cleanly; users running locally with the extra get full coverage.
+    """
+    pytest.importorskip(
+        "llama_index",
+        reason="ragdx[llamaindex] extra not installed",
+    )
+
+
 def test_build_dispatches_to_llamaindex_when_runtime_set():
     """``RAGConfig.runtime == "llamaindex"`` -> the LlamaIndex backend."""
+    _require_llama_index()
     cfg = RAGConfig(runtime="llamaindex")
     lm, _captured = _stub_lm_capture()
     pipe = RAGPipeline.build(
@@ -141,6 +161,7 @@ def test_llamaindex_build_creates_index_with_expected_n_chunks():
     """``VectorStoreIndex.from_documents`` must produce an index whose
     ``n_chunks`` matches the input. Catches off-by-one regressions
     when Document construction silently drops empties."""
+    _require_llama_index()
     cfg = RAGConfig(runtime="llamaindex")
     pipe = LlamaIndexRAGPipeline._build_impl(
         cfg,
@@ -155,6 +176,7 @@ def test_llamaindex_build_creates_index_with_expected_n_chunks():
 
 def test_llamaindex_retrieve_respects_config_top_k():
     """No per-call ``top_k`` -> use ``RetrieverSpec.top_k``."""
+    _require_llama_index()
     cfg = RAGConfig(
         runtime="llamaindex", retriever=RetrieverSpec(top_k=2),
     )
@@ -172,6 +194,7 @@ def test_llamaindex_retrieve_respects_config_top_k():
 def test_llamaindex_retrieve_per_call_top_k_overrides_config():
     """Per-call top_k overrides RetrieverSpec.top_k -- the contract
     Joint/Retrieval optimizers rely on."""
+    _require_llama_index()
     cfg = RAGConfig(
         runtime="llamaindex", retriever=RetrieverSpec(top_k=1),
     )
@@ -190,6 +213,7 @@ def test_llamaindex_generate_uses_shared_prompt_template():
     prompt (so backend choice doesn't change the LLM's input). The
     only thing that varies between backends is retrieval, not
     generation."""
+    _require_llama_index()
     cfg = RAGConfig(runtime="llamaindex")
     lm, captured = _stub_lm_capture()
     pipe = LlamaIndexRAGPipeline._build_impl(
@@ -206,6 +230,7 @@ def test_llamaindex_generate_uses_shared_prompt_template():
 def test_llamaindex_generate_per_call_system_instruction_overrides():
     """Per-call instruction beats config instruction beats default --
     same resolution order as LangChain backend."""
+    _require_llama_index()
     cfg = RAGConfig(
         runtime="llamaindex",
         generator=GeneratorSpec(system_instruction="from-config"),
@@ -224,6 +249,7 @@ def test_llamaindex_generate_per_call_system_instruction_overrides():
 def test_llamaindex_answer_composes_retrieve_and_generate():
     """``answer`` is a thin wrapper that must produce a
     :class:`RAGAnswer` with retrieved contexts + the LM's output."""
+    _require_llama_index()
     cfg = RAGConfig(runtime="llamaindex")
     pipe = LlamaIndexRAGPipeline._build_impl(
         cfg, chunks=["alpha", "beta"],
@@ -241,6 +267,7 @@ def test_llamaindex_answer_composes_retrieve_and_generate():
 def test_langchain_embedding_adapter_is_a_real_base_embedding():
     """LlamaIndex enforces ``isinstance(embed_model, BaseEmbedding)``
     at index-build time; the adapter must pass that check."""
+    _require_llama_index()
     from llama_index.core.embeddings import BaseEmbedding
 
     a = _build_llamaindex_embedder(_StubEmbedder())
@@ -249,6 +276,7 @@ def test_langchain_embedding_adapter_is_a_real_base_embedding():
 
 def test_langchain_embedding_adapter_query_delegates_to_langchain():
     """Query embeddings come from ``lc_embedder.embed_query``."""
+    _require_llama_index()
     a = _build_llamaindex_embedder(_StubEmbedder())
     v = a._get_query_embedding("hello")
     assert v == _StubEmbedder().embed_query("hello")
@@ -256,6 +284,7 @@ def test_langchain_embedding_adapter_query_delegates_to_langchain():
 
 def test_langchain_embedding_adapter_text_delegates_to_langchain():
     """Text embeddings come from ``lc_embedder.embed_documents([text])[0]``."""
+    _require_llama_index()
     a = _build_llamaindex_embedder(_StubEmbedder())
     v = a._get_text_embedding("hello")
     assert v == _StubEmbedder().embed_documents(["hello"])[0]
@@ -264,6 +293,7 @@ def test_langchain_embedding_adapter_text_delegates_to_langchain():
 def test_langchain_embedding_adapter_batch_uses_one_langchain_call():
     """``_get_text_embeddings`` must call ``embed_documents`` once
     (not per-text) to preserve langchain-side batching."""
+    _require_llama_index()
 
     class _CountingEmbedder(_StubEmbedder):
         def __init__(self):
