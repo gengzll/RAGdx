@@ -78,9 +78,11 @@ from ragdx.cli import (  # noqa: E402, I001
     config as _config_mod,
     dashboard as _dashboard_mod,
     diagnose as _diagnose_mod,
+    evaluate as _evaluate_mod,
     experiment as _experiment_mod,
     optimize as _optimize_mod,
     runs as _runs_mod,
+    tune as _tune_mod,
 )
 
 # ---------------------------------------------------------------- backward-compat re-exports
@@ -109,6 +111,10 @@ experiment_report = _experiment_mod.experiment_report
 
 dashboard = _dashboard_mod.dashboard
 
+evaluate = _evaluate_mod.evaluate
+
+tune = _tune_mod.tune
+
 show_config = _config_mod.show_config
 normalize_tools = _config_mod.normalize_tools
 
@@ -136,6 +142,7 @@ __all__ = [
     "compare",
     "dashboard",
     "diagnose",
+    "evaluate",
     "experiment",
     "experiment_dashboard",
     "experiment_report",
@@ -152,4 +159,5 @@ __all__ = [
     "sessions",
     "show_config",
     "show_runner_templates",
+    "tune",
 ]

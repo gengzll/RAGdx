@@ -61,6 +61,11 @@ from ragdx.optim.stages import (
     JointOptimizer,
     StageContext,
 )
+from ragdx.runtime.factories import (
+    RagdxRuntime,
+    apply_litellm_temperature_clamp,
+    build_runtime,
+)
 from ragdx.runtime.pipeline import RAGPipeline
 from ragdx.schemas.models import DatasetRecord
 from ragdx.schemas.rag_config import (
@@ -222,183 +227,71 @@ class _MIPROTrialScoreCapture(logging.Handler):
 
 
 # =====================================================================
-# Runtime helpers (LLM, judge, embeddings) -- one place per provider
+# Runtime helpers -- delegated to ragdx.runtime.factories
 # =====================================================================
-@dataclass
-class _Runtime:
-    """Holds the live LLM clients shared across all experiment stages."""
-
-    llm_callable: Callable[[str], str]
-    dspy_lm: Any
-    ragas_judge: Any
-    ragas_embeddings: Any
-    embeddings: Any  # langchain embeddings for FAISS
-    # Throttle knobs propagated from ExperimentConfig so downstream call
-    # sites don't need to re-thread cfg.
-    llm_max_concurrent: int = 2
-    llm_max_retries: int = 5
-    ragas_run_config: Any = None  # built from llm_max_concurrent (see _build_runtime)
-    # System instruction shared by BO generation and DSPy baseline; never
-    # None here -- resolved from cfg.system_instruction or the default.
-    system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION
+# Backward-compat alias: pre-PR4 code referenced ``ragdx.experiments._Runtime``
+# and ``_apply_litellm_temperature_clamp``. PR4 hoisted them to
+# :mod:`ragdx.runtime.factories` so non-experiment callers (workflows /
+# CLI tune) can reach the same factories. The aliases below keep
+# internal imports working.
+_Runtime = RagdxRuntime
+_apply_litellm_temperature_clamp = apply_litellm_temperature_clamp
 
 
-def _apply_litellm_temperature_clamp(min_temp: float = 0.01) -> None:
-    """GLM-4-Flash rejects temperature<0.01. DSPy / ragas internally
-    override the temperature to ~1e-8 for deterministic output; we
-    clamp at *every* upstream entry point so every downstream call is
-    safe regardless of which library makes it.
+def _build_runtime(cfg: ExperimentConfig) -> RagdxRuntime:
+    """Build the runtime for an ``ExperimentConfig``.
 
-    Clamps three layers:
-
-    1. ``litellm.completion`` / ``batch_completion`` — used by DSPy and
-       our own ``llm_callable``.
-    2. ``openai.resources.chat.completions.Completions.create`` —
-       sync OpenAI client (covers ``langchain_openai.ChatOpenAI``'s
-       sync path).
-    3. ``openai.resources.chat.completions.AsyncCompletions.create`` —
-       async OpenAI client (ragas' judge calls hit this).
-
-    Idempotent on each layer."""
-    import litellm
-
-    def _clamp(kw):
-        t = kw.get("temperature")
-        if t is not None and 0 < t < min_temp:
-            kw["temperature"] = min_temp
-        return kw
-
-    # ---- litellm layer
-    if not getattr(litellm.completion, "_ragdx_clamped", False):
-        orig_completion = litellm.completion
-        orig_batch = litellm.batch_completion
-
-        def comp(*a, **kw):
-            return orig_completion(*a, **_clamp(kw))
-
-        def batch(*a, **kw):
-            return orig_batch(*a, **_clamp(kw))
-
-        comp._ragdx_clamped = True  # type: ignore[attr-defined]
-        litellm.completion = comp
-        litellm.batch_completion = batch
-
-    # ---- openai client layer (covers ChatOpenAI -> ragas judge)
-    try:
-        from openai.resources.chat.completions import (
-            AsyncCompletions,
-            Completions,
-        )
-    except ImportError:  # pragma: no cover - openai pinning floor
-        return
-
-    if not getattr(Completions.create, "_ragdx_clamped", False):
-        _orig_sync = Completions.create
-
-        def _sync_create(self, *a, **kw):
-            return _orig_sync(self, *a, **_clamp(kw))
-
-        _sync_create._ragdx_clamped = True  # type: ignore[attr-defined]
-        Completions.create = _sync_create  # type: ignore[method-assign]
-
-    if not getattr(AsyncCompletions.create, "_ragdx_clamped", False):
-        _orig_async = AsyncCompletions.create
-
-        async def _async_create(self, *a, **kw):
-            return await _orig_async(self, *a, **_clamp(kw))
-
-        _async_create._ragdx_clamped = True  # type: ignore[attr-defined]
-        AsyncCompletions.create = _async_create  # type: ignore[method-assign]
+    Delegates to :func:`ragdx.runtime.factories.build_runtime` via the
+    ``ExperimentConfig`` -> ``RAGConfig`` mapping in
+    :func:`_make_rag_config_from_experiment_config` -- giving the
+    experiment workflow the same end state as ``ragdx evaluate`` /
+    ``ragdx tune`` would produce. Byte-identical pre/post PR4.
+    """
+    rag_config = _make_rag_config_from_experiment_config(cfg)
+    return build_runtime(rag_config)
 
 
-def _build_runtime(cfg: ExperimentConfig) -> _Runtime:
-    """Construct every piece of LLM infrastructure once."""
-    # Ensure env vars for downstream libs that read them directly.
-    os.environ["OPENAI_API_KEY"] = cfg.api_key  # type: ignore[assignment]
-    os.environ["OPENAI_API_BASE"] = cfg.api_base
-    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+def _make_rag_config_from_experiment_config(cfg: ExperimentConfig) -> RAGConfig:
+    """Translate the experiment-flavoured config into a
+    :class:`RAGConfig` so the runtime factory sees the same fields a
+    user would put in their ``rag_config.yaml``.
 
-    _apply_litellm_temperature_clamp()
-
-    import litellm
-
-    def llm_callable(prompt: str) -> str:
-        resp = litellm.completion(
+    Distinct from :func:`_make_rag_config` (which takes a ``runtime``)
+    because we need to build the config *before* the runtime exists.
+    """
+    return RAGConfig(
+        corpus=CorpusSpec(
+            kind="multi" if isinstance(cfg.corpus, list) else "pdf",
+            path=str(cfg.corpus) if not isinstance(cfg.corpus, list) else None,
+        ),
+        chunker=ChunkerSpec(
+            strategy="recursive",
+            chunk_size=cfg.chunk_sizes[0] if cfg.chunk_sizes else 512,
+            chunk_overlap=cfg.chunk_overlaps[0] if cfg.chunk_overlaps else 50,
+        ),
+        embedder=EmbedderSpec(
+            kind="huggingface",
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            normalize=True,
+        ),
+        retriever=RetrieverSpec(
+            vectorstore="faiss",
+            search_type="similarity",
+            top_k=cfg.top_ks[0] if cfg.top_ks else 5,
+            reranker="none",
+        ),
+        generator=GeneratorSpec(
+            provider="litellm",
             model=cfg.model,
-            messages=[{"role": "user", "content": prompt}],
-            api_key=cfg.api_key,
             api_base=cfg.api_base,
-            temperature=0.01,
-            max_tokens=350,
-            timeout=60,
-            num_retries=cfg.llm_max_retries,
-        )
-        return resp.choices[0].message.content or ""
-
-    import dspy
-
-    dspy_lm = dspy.LM(
-        cfg.model,
-        api_key=cfg.api_key,
-        api_base=cfg.api_base,
-        temperature=0.01,
-        max_tokens=400,
-        cache=False,
-    )
-
-    from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain_openai import ChatOpenAI
-    from ragas.embeddings import LangchainEmbeddingsWrapper
-    from ragas.llms import LangchainLLMWrapper
-
-    hf_embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        encode_kwargs={"normalize_embeddings": True},
-    )
-    ragas_embeddings = LangchainEmbeddingsWrapper(hf_embeddings)
-
-    # Strip "openai/" prefix that LiteLLM uses for ChatOpenAI's model arg.
-    chat_model = cfg.model.split("/", 1)[-1] if "/" in cfg.model else cfg.model
-    ragas_judge = LangchainLLMWrapper(
-        ChatOpenAI(
-            model=chat_model,
             api_key=cfg.api_key,
-            base_url=cfg.api_base,
-            temperature=0.01,
-            timeout=60,
-            max_retries=cfg.llm_max_retries,
-        )
-    )
-
-    # ragas RunConfig: only ``max_workers`` is user-tunable (via the
-    # ``llm_max_concurrent`` knob). The other fields (max_retries /
-    # max_wait / timeout) are sensible internal defaults -- they're
-    # ragas-loop-specific knobs, distinct from the transport-layer
-    # retry budget (``llm_max_retries`` above) that actually matters
-    # for production tuning.
-    ragas_run_config = None
-    try:
-        from ragas.run_config import RunConfig as _RagasRunConfig
-        ragas_run_config = _RagasRunConfig(
-            max_workers=cfg.llm_max_concurrent,
-            max_retries=8,
-            max_wait=30,
-            timeout=180,
-        )
-    except ImportError:
-        pass
-
-    return _Runtime(
-        llm_callable=llm_callable,
-        dspy_lm=dspy_lm,
-        ragas_judge=ragas_judge,
-        ragas_embeddings=ragas_embeddings,
-        embeddings=hf_embeddings,
-        llm_max_concurrent=cfg.llm_max_concurrent,
-        llm_max_retries=cfg.llm_max_retries,
-        ragas_run_config=ragas_run_config,
-        system_instruction=cfg.system_instruction or DEFAULT_SYSTEM_INSTRUCTION,
+            system_instruction=cfg.system_instruction,
+        ),
+        judge=JudgeSpec(
+            model=None,  # = use generator's model
+            llm_max_concurrent=cfg.llm_max_concurrent,
+            llm_max_retries=cfg.llm_max_retries,
+        ),
     )
 
 
