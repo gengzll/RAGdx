@@ -1,3 +1,20 @@
+"""LlamaIndex spec renderer (NOT a runtime).
+
+This adapter belongs to the legacy ``OptimizationExecutor`` /
+``RAGDX_LLAMAINDEX_RUNNER_CMD`` workflow: it renders a YAML-ish
+config dict describing what a LlamaIndex pipeline should look like
+and hands it to a user-written runner script via subprocess. It does
+**not** invoke LlamaIndex itself.
+
+The actually-executing LlamaIndex backend ragdx ships lives in
+:class:`ragdx.runtime.pipeline.LlamaIndexRAGPipeline` (PR5+). Set
+``RAGConfig.runtime = "llamaindex"`` and the ``ragdx experiment`` /
+``ragdx evaluate`` / ``ragdx tune`` paths will route through there.
+
+This module stays for backward compatibility with the
+``ragdx optimize --mode execute`` subprocess flow.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -6,6 +23,14 @@ from ragdx.schemas.models import OptimizationExperiment, ToolRunResult
 
 
 class LlamaIndexAdapter:
+    """Renders a LlamaIndex-flavoured config dict.
+
+    .. important::
+       This adapter does *not* execute LlamaIndex. For real runtime
+       execution use :class:`ragdx.runtime.pipeline.LlamaIndexRAGPipeline`
+       by setting ``RAGConfig.runtime = "llamaindex"``.
+    """
+
     def build_runner_spec(self, experiment: OptimizationExperiment, parameters: dict[str, Any]) -> dict[str, Any]:
         return {
             "framework": "llamaindex",

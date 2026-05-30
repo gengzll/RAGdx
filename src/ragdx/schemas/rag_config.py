@@ -195,6 +195,21 @@ class RAGConfig(BaseModel):
     name: str | None = None
     """Optional human-readable label (shown in dashboards / reports)."""
 
+    runtime: Literal["langchain", "llamaindex"] = "langchain"
+    """Which RAG runtime executes this config.
+
+    * ``"langchain"`` (default) -- FAISS index + LangChain similarity
+      search. The path ragdx has used end-to-end since PR1.
+    * ``"llamaindex"`` -- LlamaIndex's ``VectorStoreIndex`` +
+      ``as_retriever``. Implemented in PR5; requires the
+      ``ragdx[llamaindex]`` extra. Same ``EmbedderSpec`` /
+      ``GeneratorSpec`` -- the embedding model and LLM endpoint are
+      reused, only the index + retriever change.
+
+    Adding new backends (e.g. ``"autorag"``, ``"haystack"``) means
+    extending this Literal and registering a new
+    :class:`RAGPipeline` subclass."""
+
     corpus: CorpusSpec = Field(default_factory=CorpusSpec)
     chunker: ChunkerSpec = Field(default_factory=ChunkerSpec)
     embedder: EmbedderSpec = Field(default_factory=EmbedderSpec)

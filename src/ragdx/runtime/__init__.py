@@ -6,6 +6,16 @@ optimizers in ``ragdx.optim.stages``) compose these primitives but
 never reimplement them.
 """
 
-from ragdx.runtime.pipeline import RAGAnswer, RAGPipeline
+from ragdx.runtime.pipeline import (
+    LangChainRAGPipeline,
+    LlamaIndexRAGPipeline,
+    RAGAnswer,
+    RAGPipeline,
+)
 
-__all__ = ["RAGAnswer", "RAGPipeline"]
+__all__ = [
+    "LangChainRAGPipeline",
+    "LlamaIndexRAGPipeline",
+    "RAGAnswer",
+    "RAGPipeline",
+]

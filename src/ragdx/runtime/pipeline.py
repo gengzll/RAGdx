@@ -83,7 +83,7 @@ class RAGPipeline:
         self.n_chunks = n_chunks
 
     # ------------------------------------------------------------------
-    # Construction
+    # Construction (PR5: dispatches on ``config.runtime``)
     # ------------------------------------------------------------------
     @classmethod
     def build(
@@ -96,27 +96,48 @@ class RAGPipeline:
     ) -> RAGPipeline:
         """Construct a pipeline from a config + pre-chunked content.
 
+        Dispatches on :attr:`RAGConfig.runtime`:
+
+        * ``"langchain"`` -- this class's :meth:`_build_langchain`
+          (FAISS / Chroma + langchain similarity search).
+        * ``"llamaindex"`` -- :class:`LlamaIndexRAGPipeline`
+          (VectorStoreIndex + ``as_retriever``).
+
+        Both backends share the same prompt template and
+        ``generate`` logic; only the index + retrieval differ.
+
         Parameters
         ----------
         config:
-            Stage specs determining the vstore kind and retrieval /
-            generation behaviour.
+            Pipeline configuration. ``config.runtime`` decides which
+            backend implements the pipeline.
         chunks:
             Already-split text. Chunking strategy is recorded in
             ``config.chunker`` for reproducibility but the actual
             chunking has happened externally.
         embedder:
             A LangChain-compatible embeddings object (e.g.
-            ``HuggingFaceEmbeddings``). PR2 will derive this from
-            ``config.embedder`` automatically.
+            ``HuggingFaceEmbeddings``). The LlamaIndex backend wraps
+            this transparently via :class:`_LangchainEmbeddingAdapter`
+            so the same embedder serves both runtimes.
         llm_callable:
             A ``(prompt: str) -> str`` callable wrapping whatever LLM
-            ``config.generator`` describes. PR2 will derive this from
-            ``config.generator`` automatically.
+            ``config.generator`` describes.
         """
         if not chunks:
             raise ValueError("RAGPipeline.build requires at least one chunk")
 
+        runtime = config.runtime
+        if runtime == "llamaindex":
+            return LlamaIndexRAGPipeline._build_impl(
+                config, chunks, embedder=embedder, llm_callable=llm_callable,
+            )
+        if runtime != "langchain":  # pragma: no cover - Literal guards this
+            raise ValueError(
+                f"Unsupported runtime: {runtime!r}. "
+                "Supported: 'langchain', 'llamaindex'."
+            )
+        # Default langchain backend.
         vstore = cls._build_vstore(config, chunks, embedder)
         return cls(
             config=config,
@@ -213,4 +234,182 @@ class RAGPipeline:
         return RAGAnswer(question=question, contexts=contexts, answer=ans)
 
 
-__all__ = ["DEFAULT_SYSTEM_INSTRUCTION", "RAGAnswer", "RAGPipeline"]
+# =====================================================================
+# Explicit alias for the default (LangChain) backend
+# =====================================================================
+# Provides a name PR4+ code can use to be explicit about which backend
+# it's constructing. ``RAGPipeline`` itself remains the LangChain
+# implementation for backward compat (existing tests + stage
+# optimizers construct it directly).
+LangChainRAGPipeline = RAGPipeline
+
+
+# =====================================================================
+# LlamaIndex backend
+# =====================================================================
+class LlamaIndexRAGPipeline:
+    """RAG runtime backed by LlamaIndex's ``VectorStoreIndex``.
+
+    Selected when ``RAGConfig.runtime == "llamaindex"``. Reuses the
+    same embedder + LLM callable the LangChain backend gets -- only
+    the index + retrieval differ. The prompt template and
+    ``generate`` / ``answer`` semantics match
+    :class:`RAGPipeline.generate` byte-for-byte so the experiment
+    workflow's BO / DSPy stages behave identically across backends.
+
+    Requires ``llama-index-core`` (declared in the ``ragdx[llamaindex]``
+    extra). Heavy import lives inside :meth:`_build_impl` so consumers
+    of :mod:`ragdx.runtime.pipeline` who never select the LlamaIndex
+    backend don't pay the cost.
+    """
+
+    def __init__(
+        self,
+        config: RAGConfig,
+        index: Any,
+        llm_callable: Callable[[str], str],
+        n_chunks: int,
+    ) -> None:
+        self.config = config
+        self.index = index
+        self.llm_callable = llm_callable
+        self.n_chunks = n_chunks
+
+    @classmethod
+    def _build_impl(
+        cls,
+        config: RAGConfig,
+        chunks: list[str],
+        *,
+        embedder: Any,
+        llm_callable: Callable[[str], str],
+    ) -> LlamaIndexRAGPipeline:
+        try:
+            from llama_index.core import Document, VectorStoreIndex
+        except ImportError as exc:  # pragma: no cover - extra check
+            raise ImportError(
+                "LlamaIndex backend requires the ``ragdx[llamaindex]`` "
+                "extra. Install with: pip install 'llama-index-core>=0.12,<1'."
+            ) from exc
+
+        embed_model = _build_llamaindex_embedder(embedder)
+        docs = [Document(text=c) for c in chunks]
+        # Don't pass through Settings (global state); thread the embed
+        # model explicitly so multiple pipelines can coexist.
+        index = VectorStoreIndex.from_documents(docs, embed_model=embed_model)
+        return cls(
+            config=config,
+            index=index,
+            llm_callable=llm_callable,
+            n_chunks=len(chunks),
+        )
+
+    def retrieve(
+        self,
+        question: str,
+        *,
+        top_k: int | None = None,
+    ) -> list[str]:
+        """``index.as_retriever(similarity_top_k=k).retrieve(question)``."""
+        k = top_k if top_k is not None else self.config.retriever.top_k
+        retriever = self.index.as_retriever(similarity_top_k=k)
+        nodes = retriever.retrieve(question)
+        return [n.node.get_content() for n in nodes]
+
+    def generate(
+        self,
+        question: str,
+        contexts: list[str],
+        *,
+        system_instruction: str | None = None,
+    ) -> str:
+        """Identical to :meth:`RAGPipeline.generate` -- shared prompt
+        template + same ``llm_callable``. The two backends produce
+        comparable answers given the same retrieved contexts."""
+        instr = (
+            system_instruction
+            or self.config.generator.system_instruction
+            or DEFAULT_SYSTEM_INSTRUCTION
+        )
+        ctx_str = "\n---\n".join(contexts) if contexts else "(no context)"
+        prompt = (
+            f"{instr}\n\n"
+            f"Context:\n{ctx_str}\n\nQuestion: {question}\n\nAnswer:"
+        )
+        try:
+            return self.llm_callable(prompt)
+        except Exception as e:  # pragma: no cover - live LLM
+            return f"<generation error: {e}>"
+
+    def answer(
+        self,
+        question: str,
+        *,
+        top_k: int | None = None,
+        system_instruction: str | None = None,
+    ) -> RAGAnswer:
+        contexts = self.retrieve(question, top_k=top_k)
+        ans = self.generate(question, contexts, system_instruction=system_instruction)
+        return RAGAnswer(question=question, contexts=contexts, answer=ans)
+
+
+def _build_llamaindex_embedder(lc_embedder: Any) -> Any:
+    """Wrap a LangChain embeddings object as a LlamaIndex
+    :class:`BaseEmbedding`.
+
+    LlamaIndex enforces ``isinstance(embed_model, BaseEmbedding)`` --
+    duck typing is rejected at index-build time. The adapter class is
+    defined inside this function (rather than at module level) so
+    :mod:`ragdx.runtime.pipeline` stays importable without
+    ``llama-index-core`` installed: callers who never set
+    ``RAGConfig.runtime = "llamaindex"`` pay zero cost.
+
+    Field mapping:
+
+    * LangChain ``embed_query(text)`` -> LlamaIndex ``_get_query_embedding``.
+    * LangChain ``embed_documents([text])[0]`` -> LlamaIndex ``_get_text_embedding``.
+    * Async variants delegate to sync (LangChain's HF embedder is sync
+      under the hood anyway).
+    """
+    from llama_index.core.embeddings import BaseEmbedding
+    from pydantic import PrivateAttr
+
+    class _Adapter(BaseEmbedding):
+        # Private attr keeps the langchain object out of pydantic's
+        # validated field set (it doesn't have a usable schema).
+        _lc: Any = PrivateAttr()
+
+        def __init__(self, lc: Any, **kw: Any) -> None:
+            super().__init__(**kw)
+            self._lc = lc
+
+        def _get_query_embedding(self, query: str) -> list[float]:
+            return self._lc.embed_query(query)
+
+        def _get_text_embedding(self, text: str) -> list[float]:
+            return self._lc.embed_documents([text])[0]
+
+        def _get_text_embeddings(self, texts: list[str]) -> list[list[float]]:
+            # One batched langchain call instead of N -- preserves
+            # whatever batching ``HuggingFaceEmbeddings`` does internally.
+            return self._lc.embed_documents(texts)
+
+        async def _aget_query_embedding(self, query: str) -> list[float]:
+            return self._get_query_embedding(query)
+
+        async def _aget_text_embedding(self, text: str) -> list[float]:
+            return self._get_text_embedding(text)
+
+        async def aget_query_embedding(self, query: str) -> list[float]:
+            return self._get_query_embedding(query)
+
+    return _Adapter(lc_embedder)
+
+
+__all__ = [
+    "DEFAULT_SYSTEM_INSTRUCTION",
+    "LangChainRAGPipeline",
+    "LlamaIndexRAGPipeline",
+    "RAGAnswer",
+    "RAGPipeline",
+]
