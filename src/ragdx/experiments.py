@@ -46,7 +46,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -56,9 +55,12 @@ from ragdx.core.evaluator import UnifiedEvaluator
 from ragdx.datasets import synthesize_questions
 from ragdx.loaders import load_pdf_chunks
 from ragdx.optim._gt_helpers import gt_mode as detect_gt_mode
-from ragdx.optim.bayes_search import BayesianSearch
-from ragdx.optim.dspy_adapter import DSPyAdapter
 from ragdx.optim.objectives import CompositeObjective, default_objective
+from ragdx.optim.stages import (
+    GenerationOptimizer,
+    JointOptimizer,
+    StageContext,
+)
 from ragdx.runtime.pipeline import RAGPipeline
 from ragdx.schemas.models import DatasetRecord
 from ragdx.schemas.rag_config import (
@@ -744,300 +746,40 @@ def _evaluate_with_ragas(
 
 
 # =====================================================================
-# AutoRAG BO + DSPy A/B (one helper each, called once per GT mode)
-# =====================================================================
-def _run_bayes_search(
-    cfg: ExperimentConfig,
-    runtime: _Runtime,
-    chunks_master: list[str],
-    records: list[DatasetRecord],
-    objective: CompositeObjective,
-    metrics: list,
-    label: str,
-) -> dict:
-    search_space = {
-        "chunk_size": list(cfg.chunk_sizes),
-        "chunk_overlap": list(cfg.chunk_overlaps),
-        "top_k": list(cfg.top_ks),
-    }
-    bo = BayesianSearch(
-        search_space, n_init=cfg.n_bo_init, max_trials=cfg.n_bo_trials, seed=cfg.seed,
-    )
-
-    base_rag_config = _make_rag_config(cfg, runtime)
-    # Cache pipelines by (chunk_size, chunk_overlap) -- top_k is a per-call
-    # override on retrieve() so the same pipeline serves multiple top_k
-    # values without rebuilding the vstore.
-    pipeline_cache: dict[tuple, RAGPipeline] = {}
-    trials_out: list[dict] = []
-    while bo.has_next():
-        params = bo.next_params()
-        t_start = time.time()
-        logger.info("[BO/%s] trial %d %s", label, len(bo.trials) + 1, params)
-
-        cache_key = (params["chunk_size"], params["chunk_overlap"])
-        if cache_key not in pipeline_cache:
-            # Re-chunk the master corpus to this size/overlap. For HF / jsonl
-            # sources we already have one fixed chunk list, but BO still wants
-            # to vary -- we re-split the joined text. For PDF we re-load.
-            # Multi-corpus: re-chunk every PDF item and concatenate.
-            pdf_items = [
-                Path(i)
-                for i in _normalize_corpus(cfg.corpus)
-                if isinstance(i, (str, Path)) and Path(i).exists()
-                and Path(i).suffix.lower() == ".pdf"
-            ]
-            if pdf_items:
-                chunks = []
-                for pdf_path in pdf_items:
-                    chunks.extend(load_pdf_chunks(
-                        pdf_path,
-                        chunk_size=params["chunk_size"],
-                        chunk_overlap=params["chunk_overlap"],
-                    ).chunks)
-            else:
-                # For non-PDF sources just use the master chunks as-is (chunk_size
-                # variation is only meaningful when we can re-split the raw text).
-                chunks = chunks_master
-            trial_config = base_rag_config.with_override(
-                chunker=ChunkerSpec(
-                    strategy=base_rag_config.chunker.strategy,
-                    chunk_size=params["chunk_size"],
-                    chunk_overlap=params["chunk_overlap"],
-                ),
-            )
-            pipeline_cache[cache_key] = RAGPipeline.build(
-                trial_config,
-                chunks,
-                embedder=runtime.embeddings,
-                llm_callable=runtime.llm_callable,
-            )
-        pipeline = pipeline_cache[cache_key]
-        n_chunks = pipeline.n_chunks
-
-        answered = []
-        for r in records:
-            ctxs = pipeline.retrieve(r.question, top_k=params["top_k"])
-            ans = pipeline.generate(r.question, ctxs)
-            answered.append(
-                DatasetRecord(
-                    question=r.question,
-                    ground_truth=r.ground_truth,
-                    contexts=ctxs,
-                    answer=ans,
-                )
-            )
-
-        ev = _evaluate_with_ragas(
-            answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics,
-            run_config=runtime.ragas_run_config,
-        )
-        scores = ev.get("scores", {})
-        comp_eval = objective.evaluate(scores)
-        bo.report(params, comp_eval["score"])
-
-        # Persist full per-question records (question / GT / contexts /
-        # answer) so the dashboard can build a Q+A+GT inspector without
-        # re-running the LLM. Bundle size grows linearly in trials * n_q,
-        # which is fine at typical experiment scales (~MB).
-        trial_records = [
-            {
-                "question": a.question,
-                "ground_truth": a.ground_truth,
-                "contexts": list(a.contexts or []),
-                "answer": a.answer or "",
-            }
-            for a in answered
-        ]
-        trials_out.append(
-            {
-                "trial_index": len(bo.trials) - 1,
-                "params": params,
-                "n_chunks": n_chunks,
-                "scores": scores,
-                "composite_score": comp_eval["score"],
-                "feasible": comp_eval["feasible"],
-                "violations": comp_eval["violations"],
-                "answers_preview": [a.answer[:200] for a in answered],
-                # Full per-record outputs (question, GT, contexts, answer).
-                # Used by the dashboard's trial inspector.
-                "records": trial_records,
-                "elapsed_seconds": round(time.time() - t_start, 2),
-            }
-        )
-
-    best = bo.best_trial
-    return {
-        "search_space": search_space,
-        "n_init": cfg.n_bo_init,
-        "max_trials": cfg.n_bo_trials,
-        "objective_spec": objective.to_dict(),
-        "trials": trials_out,
-        "best_params": best.params if best else None,
-        "best_composite": best.score if best else None,
-    }
-
-
-def _dspy_before_after(
-    runtime: _Runtime,
-    records_with_ctxs: list[DatasetRecord],
-    objective: CompositeObjective,
-    metrics: list,
-    label: str,
-) -> dict:
-    import dspy
-
-    dspy.configure(lm=runtime.dspy_lm)
-    adapter = DSPyAdapter()
-    # Hand the same system instruction to the DSPy baseline so its
-    # before/after comparison shares the exact prompt the BO stage used.
-    baseline_program = adapter.build_program(instruction=runtime.system_instruction)
-
-    # Capture the baseline program's signature instructions + demos BEFORE
-    # any optimization. These are what DSPy's default signature carries
-    # (just the field descriptors, no MIPROv2-tuned content) -- recording
-    # them lets the dashboard show a real before-vs-after diff instead of
-    # the optimized side in isolation.
-    def _extract_instructions_demos(program) -> tuple[dict[str, str], dict[str, list]]:
-        instructions: dict[str, str] = {}
-        demos: dict[str, list] = {}
-        try:
-            for name, predictor in program.named_predictors():
-                sig = getattr(predictor, "signature", None)
-                if sig is not None and hasattr(sig, "instructions"):
-                    instructions[name] = sig.instructions or ""
-                if hasattr(predictor, "demos"):
-                    demos[name] = [dict(d) for d in predictor.demos]
-        except Exception:  # pragma: no cover - DSPy API surface drift
-            pass
-        return instructions, demos
-
-    baseline_instructions, baseline_demos = _extract_instructions_demos(
-        baseline_program
-    )
-
-    def _run_program(program):
-        out = []
-        for r in records_with_ctxs:
-            ctx_str = "\n".join(r.contexts) if r.contexts else ""
-            try:
-                with dspy.context(lm=runtime.dspy_lm):
-                    pred = program(question=r.question, context=ctx_str)
-                ans = str(getattr(pred, "answer", "") or "")
-            except Exception as e:  # pragma: no cover - live LLM
-                ans = f"<error: {e}>"
-            out.append(
-                DatasetRecord(
-                    question=r.question,
-                    ground_truth=r.ground_truth,
-                    contexts=r.contexts,
-                    answer=ans,
-                )
-            )
-        return out
-
-    logger.info("[DSPy/%s] (a) baseline run", label)
-    baseline_answered = _run_program(baseline_program)
-    baseline_eval = _evaluate_with_ragas(
-        baseline_answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics,
-        run_config=runtime.ragas_run_config,
-    )
-
-    logger.info("[DSPy/%s] (b) MIPROv2 optimisation", label)
-    capture = _MIPROTrialScoreCapture()
-    capture.setLevel(logging.INFO)
-    mipro_logger = logging.getLogger("dspy.teleprompt.mipro_optimizer_v2")
-    mipro_logger.addHandler(capture)
-    prior = mipro_logger.level
-    mipro_logger.setLevel(logging.INFO)
-    try:
-        opt_result = adapter.optimize(
-            records_with_ctxs,
-            # Seed MIPROv2 with the SAME program the baseline used so
-            # the user's ``system_instruction`` is what MIPROv2 starts
-            # from (Instruction 0 in its candidate set). Without this
-            # the optimizer silently rebuilds a default-signature
-            # program and any system_instruction override is lost --
-            # MIPROv2's "optimized winner" would then never be compared
-            # against the user's prompt.
-            program=baseline_program,
-            student_lm=runtime.dspy_lm,
-            judge_lm=runtime.dspy_lm,
-            optimizer="MIPROv2",
-            optimizer_kwargs={
-                "auto": "light",
-                # Match the same in-flight budget ragas uses, so we don't
-                # accidentally fan out 16 DSPy threads against a strict
-                # endpoint after carefully throttling ragas to 2.
-                "num_threads": runtime.llm_max_concurrent,
-            },
-        )
-    finally:
-        mipro_logger.removeHandler(capture)
-        mipro_logger.setLevel(prior)
-
-    logger.info("[DSPy/%s] (c) optimised re-run", label)
-    optimised_answered = _run_program(opt_result["optimized_program"])
-    opt_eval = _evaluate_with_ragas(
-        optimised_answered, runtime.ragas_judge, runtime.ragas_embeddings, metrics,
-        run_config=runtime.ragas_run_config,
-    )
-
-    baseline_scores = baseline_eval.get("scores", {}) or {}
-    optimised_scores = opt_eval.get("scores", {}) or {}
-    composite_baseline = objective.evaluate(baseline_scores)
-    composite_optimized = objective.evaluate(optimised_scores)
-    delta = {
-        m: (optimised_scores.get(m, float("nan")) - baseline_scores.get(m, float("nan")))
-        for m in sorted(set(baseline_scores) | set(optimised_scores))
-    }
-    # Pair each baseline answer with its optimized counterpart (records
-    # share the same question/GT/contexts; only the answer differs). The
-    # dashboard renders these side-by-side with the GT.
-    records_pairs = []
-    for b, o in zip(baseline_answered, optimised_answered, strict=False):
-        records_pairs.append({
-            "question": b.question,
-            "ground_truth": b.ground_truth,
-            "contexts": list(b.contexts or []),
-            "baseline_answer": b.answer or "",
-            "optimized_answer": o.answer or "",
-        })
-    return {
-        "baseline_scores": baseline_scores,
-        "optimized_scores": optimised_scores,
-        "delta": delta,
-        "composite": {
-            "objective_spec": objective.to_dict(),
-            "baseline": composite_baseline,
-            "optimized": composite_optimized,
-            "delta": composite_optimized["score"] - composite_baseline["score"],
-        },
-        "baseline_sample_answers": [a.answer for a in baseline_answered],
-        "optimized_sample_answers": [a.answer for a in optimised_answered],
-        # Full per-record before/after for the dashboard. Question / GT /
-        # contexts are shared; ``baseline_answer`` is the default-program
-        # output and ``optimized_answer`` is the MIPROv2-tuned program's.
-        "records": records_pairs,
-        # Prompts before optimization: the default DSPy signature's
-        # ``instructions`` (usually a short field-description string)
-        # and empty demo list. The dashboard renders these side-by-side
-        # with the MIPROv2 outputs so users see what actually changed.
-        "baseline_instructions": baseline_instructions,
-        "baseline_demos": baseline_demos,
-        "instructions": dict(opt_result["instructions"]),
-        "demos": {n: [dict(d) for d in demos] for n, demos in opt_result["demos"].items()},
-        "trial_scores": list(capture.scores_so_far),
-        "best_score_progression": list(capture.best_scores),
-        "gt_mode": opt_result["gt_mode"],
-        "optimizer": opt_result["optimizer"],
-        "trainset_size": opt_result["trainset_size"],
-    }
-
-
-# =====================================================================
 # Per-mode orchestration
 # =====================================================================
+def _make_pdf_re_chunk_fn(
+    cfg: ExperimentConfig, chunks_master: list[str]
+) -> Callable[[ChunkerSpec], list[str]] | None:
+    """For PDF corpora, return a callable that re-chunks every PDF item
+    at the requested ``ChunkerSpec`` and pools the chunks. ``None`` for
+    HF / JSONL where re-chunking the master pool isn't meaningful.
+
+    Used as ``StageContext.re_chunk_fn`` by stages that vary the
+    chunker (Joint, Chunking).
+    """
+    pdf_paths = [
+        Path(i)
+        for i in _normalize_corpus(cfg.corpus)
+        if isinstance(i, (str, Path)) and Path(i).exists()
+        and Path(i).suffix.lower() == ".pdf"
+    ]
+    if not pdf_paths:
+        # No PDFs in the corpus -- return None so stages fall back to
+        # ``chunks_master`` (consistent with pre-PR3 behaviour).
+        return None
+
+    def _re_chunk(chunker: ChunkerSpec) -> list[str]:
+        out: list[str] = []
+        for p in pdf_paths:
+            out.extend(load_pdf_chunks(
+                p, chunk_size=chunker.chunk_size, chunk_overlap=chunker.chunk_overlap,
+            ).chunks)
+        return out
+
+    return _re_chunk
+
+
 def _run_one_mode(
     cfg: ExperimentConfig,
     runtime: _Runtime,
@@ -1045,67 +787,84 @@ def _run_one_mode(
     records: list[DatasetRecord],
     mode: str,
 ) -> dict:
-    """Drive one GT mode through AutoRAG BO + DSPy A/B."""
+    """Drive one GT mode through Joint (BO) + Generation (DSPy MIPROv2).
+
+    Post-PR3 this is a thin composition of two
+    :class:`StageOptimizer` instances. The bundle's ``bayes_search``
+    section comes from ``JointOptimizer``; the ``dspy_a_b`` section
+    comes from ``GenerationOptimizer``'s extras. Both produce the
+    exact same shape they did pre-PR3 (locked in by the
+    ``new_demo1`` / ``new_demo2`` snapshot tests).
+    """
     objective = (cfg.objective_overrides or {}).get(mode) or default_objective(mode)
     metrics = _build_ragas_metrics_for_mode(mode)
-
-    bo_result = _run_bayes_search(cfg, runtime, chunks_master, records, objective, metrics, mode)
-
-    # Build records pre-retrieved at the BO winner's top_k + chunk size.
-    best_params = bo_result["best_params"] or {}
-    pdf_items_for_dspy = [
-        Path(i)
-        for i in _normalize_corpus(cfg.corpus)
-        if isinstance(i, (str, Path)) and Path(i).exists()
-        and Path(i).suffix.lower() == ".pdf"
-    ]
-    if pdf_items_for_dspy:
-        chunks_for_dspy: list[str] = []
-        for pdf_path in pdf_items_for_dspy:
-            chunks_for_dspy.extend(load_pdf_chunks(
-                pdf_path,
-                chunk_size=best_params.get("chunk_size", 512),
-                chunk_overlap=best_params.get("chunk_overlap", 50),
-            ).chunks)
-    else:
-        chunks_for_dspy = chunks_master
-
-    # Build the BO-winner pipeline so DSPy A/B uses the exact same
-    # retriever config the BO trial that won was scored against.
     base_rag_config = _make_rag_config(cfg, runtime)
-    winner_config = base_rag_config.with_override(
-        chunker=ChunkerSpec(
-            strategy=base_rag_config.chunker.strategy,
-            chunk_size=best_params.get("chunk_size", 512),
-            chunk_overlap=best_params.get("chunk_overlap", 50),
-        ),
-        retriever=RetrieverSpec(
-            vectorstore=base_rag_config.retriever.vectorstore,
-            search_type=base_rag_config.retriever.search_type,
-            top_k=best_params.get("top_k", 3),
-            reranker=base_rag_config.retriever.reranker,
-        ),
+    re_chunk_fn = _make_pdf_re_chunk_fn(cfg, chunks_master)
+
+    # --- Stage 1: Joint BO over (chunk_size, chunk_overlap, top_k) ----
+    joint_ctx = StageContext(
+        base_config=base_rag_config,
+        chunks_master=chunks_master,
+        records=records,
+        objective=objective,
+        metrics=metrics,
+        runtime=runtime,
+        n_bo_trials=cfg.n_bo_trials,
+        n_bo_init=cfg.n_bo_init,
+        seed=cfg.seed,
+        re_chunk_fn=re_chunk_fn,
+        label=mode,
+        chunk_sizes=cfg.chunk_sizes,
+        chunk_overlaps=cfg.chunk_overlaps,
+        top_ks=cfg.top_ks,
+    )
+    joint_result = JointOptimizer().optimize(joint_ctx)
+
+    # --- Build the BO winner's pipeline + pre-retrieve records --------
+    # GenerationOptimizer operates on records that already carry
+    # contexts (it only varies the prompt). Retrieve at the BO winner
+    # exactly the way pre-PR3 ``_dspy_before_after`` did.
+    best_params = joint_result.best_params or {}
+    winner_config = joint_result.best_config or base_rag_config
+    winner_chunks = (
+        re_chunk_fn(winner_config.chunker) if re_chunk_fn else chunks_master
     )
     winner_pipeline = RAGPipeline.build(
         winner_config,
-        chunks_for_dspy,
+        winner_chunks,
         embedder=runtime.embeddings,
         llm_callable=runtime.llm_callable,
     )
-
-    records_dspy = [
+    records_for_generation = [
         DatasetRecord(
             question=r.question,
             ground_truth=r.ground_truth,
-            contexts=winner_pipeline.retrieve(r.question),
+            contexts=winner_pipeline.retrieve(
+                r.question, top_k=best_params.get("top_k"),
+            ),
         )
         for r in records
     ]
-    dspy_result = _dspy_before_after(runtime, records_dspy, objective, metrics, mode)
+
+    # --- Stage 2: Generation (DSPy MIPROv2 prompt optimization) -------
+    gen_ctx = StageContext(
+        base_config=winner_config,
+        chunks_master=winner_chunks,
+        records=records_for_generation,
+        objective=objective,
+        metrics=metrics,
+        runtime=runtime,
+        label=mode,
+    )
+    gen_result = GenerationOptimizer().optimize(gen_ctx)
 
     return {
-        "bayes_search": bo_result,
-        "dspy_a_b": dspy_result,
+        "bayes_search": joint_result.to_bayes_search_bundle(),
+        # GenerationOptimizer parks the dashboard-shaped payload in
+        # ``extras`` (the StageResult.trials shape doesn't fit
+        # MIPROv2's outputs cleanly). Same content as pre-PR3
+        # ``_dspy_before_after``.
+        "dspy_a_b": gen_result.extras,
         "objective_spec": objective.to_dict(),
     }
 
