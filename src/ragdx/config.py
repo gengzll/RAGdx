@@ -9,6 +9,12 @@ Environment variables recognised
 
 Storage
 - ``RAGDX_ROOT``: persistence root directory (default ``.ragdx`` in cwd).
+  Wins over ``RAGDX_PROJECT`` when both are set (RAGDX_ROOT is the
+  fully-qualified path; RAGDX_PROJECT is the per-project shorthand).
+- ``RAGDX_PROJECT``: per-project namespace. When set (and ``RAGDX_ROOT``
+  is unset), the storage root becomes ``.ragdx/projects/<project>/`` so
+  every project's runs / sessions / feedback / causal priors live in
+  their own folder. Also surfaced as the ``--project`` root CLI flag.
 
 LLM
 - ``RAGDX_LLM_PROVIDER``: ``openai`` | ``anthropic`` | ``azure`` | ``ollama``.
@@ -158,13 +164,33 @@ class ExecutionSettings:
 
 @dataclass(frozen=True)
 class StorageSettings:
-    """Storage paths configuration."""
+    """Storage paths configuration.
+
+    Two env vars feed this:
+
+    * ``RAGDX_ROOT``: fully-qualified root directory (wins when set).
+    * ``RAGDX_PROJECT``: per-project shorthand. Resolved as
+      ``.ragdx/projects/<name>/`` so each project keeps its own
+      RunStore / OptimizationSessions / feedback / causal priors.
+
+    ``project`` is also exposed as a field so callers can read which
+    namespace was in effect (handy for logs and error messages).
+    """
 
     root: Path = Path(".ragdx")
+    project: str | None = None
 
     @classmethod
     def from_env(cls) -> StorageSettings:
-        return cls(root=env_path("RAGDX_ROOT", ".ragdx"))
+        # RAGDX_ROOT is the explicit override: if the user set a full
+        # path, respect it verbatim and don't append a project segment.
+        explicit_root = os.environ.get("RAGDX_ROOT")
+        project = (os.environ.get("RAGDX_PROJECT") or "").strip() or None
+        if explicit_root:
+            return cls(root=Path(explicit_root), project=project)
+        if project:
+            return cls(root=Path(".ragdx") / "projects" / project, project=project)
+        return cls(root=Path(".ragdx"), project=None)
 
 
 @dataclass(frozen=True)

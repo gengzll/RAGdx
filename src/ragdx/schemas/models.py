@@ -37,6 +37,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, NonNegativeFloat, NonNegativeInt, field_validator, model_validator
 
+# Forward-reference target for ``SavedRun.rag_config``. rag_config.py is
+# a leaf module (it doesn't import from this one) so there's no cycle.
+from ragdx.schemas.rag_config import RAGConfig
+
 # Metrics that are bounded to [0, 1] across ragdx; anything outside is a sign
 # of an evaluator misconfiguration and is clipped with a logged warning.
 _BOUNDED_METRICS = {
@@ -360,3 +364,9 @@ class SavedRun(BaseModel):
     evaluation: EvaluationResult
     diagnosis: DiagnosisReport
     optimization_plan: OptimizationPlan
+    rag_config: RAGConfig | None = None
+    """The RAGConfig that produced ``evaluation``, stored as a
+    scrubbed copy (``scrubbed_for_commit``) so ``ragdx tune
+    --from-run <id>`` can inherit it without an explicit
+    ``--base-config`` flag. Optional / default ``None`` for
+    backward-compatibility with pre-PR6 SavedRun files."""

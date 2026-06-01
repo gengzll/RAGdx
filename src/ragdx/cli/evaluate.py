@@ -237,6 +237,10 @@ def evaluate(
             result, report, opt_plan,
             name=name or None,
             baseline_run_id=baseline_run_id or None,
+            # Persist the (scrubbed) RAGConfig so ``ragdx tune --from-run
+            # <id>`` can inherit it. RunStore.save_run defensively scrubs
+            # again, but we pass the scrubbed copy explicitly for clarity.
+            rag_config=rag_config.scrubbed_for_commit(),
         )
         print(f"[green]Saved run:[/green] {run.run_id}")
         print(

@@ -302,6 +302,125 @@ comment or Slack.
 
 ---
 
+## Scenario F — Per-project storage + `tune --from-run` (PR6+)
+
+**When to use it:** real production use. Each project gets its own
+`.ragdx/` namespace; tune inherits everything from the previous
+evaluate run — no more re-passing `--base-config` / `--questions` /
+`--stage` / `--budget` / `--baseline-run-id` by hand.
+
+### F1 — `evaluate --save` under `--project demo3-pr6`
+
+```bash
+PYTHONPATH=src python -m ragdx.cli --project demo3-pr6 evaluate \
+    --config new_demo3/rag_config.yaml \
+    --questions new_demo3/questions.jsonl \
+    --corpus e0522-asmptesgreport.pdf \
+    --output new_demo3/F1_baseline.json \
+    --save --name "demo3-pr6-baseline"
+```
+
+Output (full log in [`F1_console.log`](F1_console.log)):
+
+```text
+Saved run: d95411ebb60f
+```
+
+This run lands in **`.ragdx/projects/demo3-pr6/runs/d95411ebb60f.json`**
+(not the default `.ragdx/runs/`). Verify with:
+
+```bash
+ragdx --project demo3-pr6 runs    # → 1 run: demo3-pr6-baseline
+ragdx runs                          # → still shows the older A-E runs only
+```
+
+The saved JSON now carries the production `RAGConfig` itself
+(scrubbed of credentials) and the auto-generated `OptimizationPlan`
+recommending 3 experiments. Inspecting:
+
+```text
+plan experiments: 3
+  corpus-chunking-search: stage=corpus, max_trials=3
+  retrieval-pipeline-search: stage=retrieval, max_trials=4,
+      search_space top_k=[4, 6, 8, 10]
+  generator-prompt-optimization: stage=generation, max_trials=4
+```
+
+### F2 — `tune --from-run` (one command, zero re-typed args)
+
+```bash
+PYTHONPATH=src python -m ragdx.cli --project demo3-pr6 tune \
+    --from-run d95411ebb60f \
+    --experiment retrieval-pipeline-search \
+    --output new_demo3/F2_tune.json \
+    --write-optimized-config new_demo3/rag_config.f.optimized.yaml \
+    --save --name "demo3-pr6-tune-retrieval"
+```
+
+Output (full log in [`F2_console.log`](F2_console.log)):
+
+```text
+Inheriting from run d95411ebb60f: experiment=retrieval-pipeline-search,
+  stage=retrieval, max_trials=4, search_space={'top_k': [4, 6, 8, 10], ...}
+Running retrieval optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 4)...
+[4 BO trials over top_k ∈ {4, 6, 8, 10}]
+Wrote new_demo3\F2_tune.json
+Wrote optimized config new_demo3\rag_config.f.optimized.yaml (credentials scrubbed)
+Best composite: 1.675
+Best params: {'top_k': 4}
+Saved run: 275934a3280d (name: demo3-pr6-tune-retrieval)
+```
+
+What got auto-inherited (none of these passed as flags):
+
+| From the SavedRun | Used as |
+|---|---|
+| `rag_config` | `--base-config` |
+| `evaluation.metadata.questions_path` | `--questions` |
+| `evaluation.metadata.corpus` | `--corpus` |
+| `optimization_plan.experiments[retrieval-pipeline-search].stage` | `--stage retrieval` |
+| `optimization_plan.experiments[…].max_trials` | `--budget 4` |
+| `optimization_plan.experiments[…].search_space.top_k` | `ctx.top_ks=[4,6,8,10]` |
+| The `--from-run` value itself | `--baseline-run-id d95411ebb60f` |
+
+The tune bundle ([`F2_tune.json`](F2_tune.json)) stamps an
+`inherited` section recording what was carried over, so the choice
+is auditable.
+
+**Result:** best `top_k=4`, composite **1.675** — slightly better
+than Scenarios B/C/D's baseline (composite 1.667 with `top_k=3`).
+The plan-recommended sweep range
+(`[4, 6, 8, 10]`) found an actual improvement, which the manually
+configured Scenario C didn't search because it used the hardcoded
+default `[1, 3, 5, 7]`. **This is the practical payoff of letting
+the plan drive tune.**
+
+### F3 — Confirm per-project isolation
+
+```bash
+PYTHONPATH=src python -m ragdx.cli --project demo3-pr6 runs
+```
+
+Output ([`F3_runs.log`](F3_runs.log)):
+
+```text
++-----------------------------------------------------------------------------+
+| Run ID    | Name                       | Baseline    | Feedback             |
+|-----------+----------------------------+-------------+----------------------|
+| 275934a3… | demo3-pr6-tune-retrieval  | d95411eb…   | 0                    |
+| d95411eb… | demo3-pr6-baseline         |             | 0                    |
++-----------------------------------------------------------------------------+
+```
+
+Compared to the un-projected `ragdx runs` (which still shows
+Scenarios B/C/D from the global `.ragdx/runs/`), the two stores stay
+independent. Add a second project (`--project legal`) and its runs
+land in `.ragdx/projects/legal/` — never colliding with ESG runs.
+
+Explicit overrides still work; passing `--stage joint --budget 8`
+along with `--from-run` overrides the inherited values (the explicit
+flag wins). See `tests/test_pr4_evaluate_tune.py::test_tune_from_run_explicit_flags_override_plan`.
+
 ## File map
 
 | File | Origin | Purpose |
@@ -321,6 +440,12 @@ comment or Slack.
 | `E_runs.log` | Scenario E `ragdx runs` | RunStore listing. |
 | `E_export.log` | Scenario E export confirmation | `Wrote ...` line. |
 | `E_report.md` | Scenario E `ragdx export-report` | Markdown report of run `5fe0a5837a23`. |
+| `F1_baseline.json` | Scenario F1 `--output` | EvaluationResult under `--project demo3-pr6`, persisted to `.ragdx/projects/demo3-pr6/runs/d95411ebb60f.json`. |
+| `F1_console.log` | Scenario F1 stdout/stderr | Reference log. |
+| `F2_tune.json` | Scenario F2 `--output` | Tune bundle from `tune --from-run`. The `inherited` section records what was auto-pulled from the SavedRun + plan. |
+| `rag_config.f.optimized.yaml` | Scenario F2 `--write-optimized-config` | Winning config (top_k=4), credentials scrubbed. |
+| `F2_console.log` | Scenario F2 stdout/stderr | Reference log. |
+| `F3_runs.log` | Scenario F3 `ragdx --project demo3-pr6 runs` | Per-project run list. |
 
 ## Wall-clock budget
 
@@ -343,13 +468,15 @@ and `--budget 2`. If you want a more realistic budget, push to
 | You want to… | Run this |
 |---|---|
 | Score a YAML quickly, no side effects | **A** |
-| Score + diagnose + persist for review | **B** |
+| Score + diagnose + persist for review | **B** (or **F1** with `--project`) |
 | Improve `top_k` on an already-decent config | **C** with `--stage retrieval` |
 | Sweep chunker (slower, vstore rebuilt per trial) | **C** with `--stage chunking` |
 | Sweep all three knobs jointly (matches `ragdx experiment`) | **C** with `--stage joint` |
 | Optimize the system prompt via DSPy MIPROv2 | **C** with `--stage generation` |
+| **Let the plan choose the stage + search axes** | **F2** (`tune --from-run <id>`) |
 | Compare two configs without persisting | **A** twice → `compare` |
 | Compare two runs that are already in the RunStore | dashboard (the Compare tab) |
+| Keep multiple production projects' results isolated | `--project <name>` (Scenario F) |
 
 ## Reproducing this demo
 

@@ -285,7 +285,110 @@ runs, and verified by
 | "I want the README's six-step loop." | `evaluate --save` → `tune --save --baseline-run-id` → `evaluate --save` → `compare` |
 | "I want full end-to-end BO + DSPy across all stages on a corpus." | `ragdx experiment` (the demo path; see docs/04 §5) |
 
-## 8. Related docs
+## 8. Per-project storage (`--project`)
+
+By default every saved run lands in `.ragdx/runs/<id>.json`, every
+session in `.ragdx/optimization/sessions/`, and so on. If you work on
+multiple production RAGs from the same repo (ESG analyst, legal docs,
+internal search...) the global namespace forces you to rely on
+the `name` field to keep them apart.
+
+Pass `--project <name>` as a root flag to isolate one project's
+artifacts:
+
+```bash
+ragdx --project esg evaluate --config esg.yaml -q esg_eval.jsonl --save --name baseline
+# Storage root for this command: .ragdx/projects/esg/
+
+ragdx --project esg runs                # only shows esg runs
+ragdx --project esg dashboard           # only shows esg's data
+ragdx runs                              # shows only the default-project runs (the old shape)
+```
+
+Resolution order (highest precedence wins):
+
+1. `RAGDX_ROOT` env var (fully-qualified path) — ignores `--project`.
+2. `--project <name>` (root flag) → `.ragdx/projects/<name>/`.
+3. `RAGDX_PROJECT` env var → same as above.
+4. Default → `.ragdx/`.
+
+The resolved storage path is shown by `ragdx show-config`:
+
+```json
+{
+  "storage": {
+    "root": ".ragdx/projects/esg",
+    "project": "esg"
+  },
+  ...
+}
+```
+
+Per-project isolation covers **everything** under the storage root:
+runs, optimization sessions, feedback events, causal priors. Two
+projects can have colliding run names without overwriting each
+other's data.
+
+## 9. `tune --from-run`: let the plan drive the optimizer
+
+`evaluate --save` produces a `SavedRun` carrying three things:
+
+1. The `EvaluationResult` (ragas scores).
+2. A `DiagnosisReport` + `OptimizationPlan` (which experiments to run
+   next, with planned `stage`, `search_space`, `max_trials`).
+3. A **scrubbed copy of the `RAGConfig` that produced the eval**
+   (new in PR6, persisted automatically).
+
+Before PR6, `ragdx tune` ignored every bit of (1)–(3) and asked the
+user to re-pass `--base-config`, `--questions`, `--corpus`,
+`--stage`, `--budget`, and `--baseline-run-id`. With PR6 you can just
+hand it the run id:
+
+```bash
+ragdx --project esg tune --from-run <baseline_run_id> \
+    --save --name retrieval-sweep
+# That's it.
+```
+
+What gets auto-inherited:
+
+| From the SavedRun | Used as | Override |
+|---|---|---|
+| `rag_config` (PR6+ saves it scrubbed) | `--base-config` | `--base-config <path>` |
+| `evaluation.metadata.questions_path` | `--questions` | `--questions <path>` |
+| `evaluation.metadata.corpus` | `--corpus` | `--corpus <path>` |
+| `optimization_plan.experiments[0].stage` | `--stage` | `--stage <name>` (or `auto`) |
+| `optimization_plan.experiments[0].max_trials` | `--budget` | `--budget <N>` |
+| `optimization_plan.experiments[0].search_space` | `StageContext.{top_ks, chunk_sizes, chunk_overlaps}` | `--stage` axis defaults |
+| The `--from-run` value itself | `--baseline-run-id` | `--baseline-run-id <id>` |
+
+When the plan has multiple experiments (it usually does — corpus +
+retrieval + generation), pick which one to inherit from:
+
+```bash
+ragdx tune --from-run <id> --experiment retrieval-pipeline-search ...
+```
+
+Default is the first experiment (plans are pre-sorted by priority).
+
+### What it requires
+
+- A SavedRun produced by `ragdx evaluate --save` on **PR6+**. Older
+  runs don't have `rag_config` populated — pre-PR6 SavedRuns fail
+  with a pointer to the fix.
+- A valid `api_key` at runtime. Stored `rag_config` is scrubbed by
+  design; pass `--api-key` or set `ZHIPU_API_KEY` / `OPENAI_API_KEY`.
+
+### Why this matters
+
+The Scenario C tune in `new_demo3/` (manually configured) swept
+`top_k ∈ [1, 3, 5, 7]` (the hardcoded default) and found `top_k=3`.
+Scenario F2 (`tune --from-run`) inherited the plan's recommended
+range `top_k ∈ [4, 6, 8, 10]` and found `top_k=4`, which scored
+**better** (1.675 vs 1.667). The plan's search space was the
+informed choice; the manual default was the lazy one.
+
+## 10. Related docs
 
 - `docs/03-data-models.md` — `EvaluationResult` / `SavedRun` / `OptimizationPlan` shapes.
 - `docs/04-workflows.md` — the offline-evaluation-first workflows (normalize → diagnose → plan).

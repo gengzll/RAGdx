@@ -61,12 +61,30 @@ def _root_options(
         "--log-file",
         help="Optional log file path. Overrides RAGDX_LOG_FILE for this invocation.",
     ),
+    project: str | None = typer.Option(
+        None,
+        "--project",
+        help="Per-project namespace for RunStore / sessions / feedback / "
+        "causal priors. When set, storage root becomes "
+        "``.ragdx/projects/<name>/`` for this invocation, isolating one "
+        "project's runs from another's. Overrides RAGDX_PROJECT. Use "
+        "``ragdx show-config`` to see the resolved storage root. "
+        "Ignored when RAGDX_ROOT is set explicitly (RAGDX_ROOT is the "
+        "fully-qualified override).",
+    ),
 ) -> None:
     """Global flags applied to every subcommand."""
     if log_level:
         os.environ["RAGDX_LOG_LEVEL"] = log_level.upper()
     if log_file:
         os.environ["RAGDX_LOG_FILE"] = log_file
+    if project:
+        # Setting the env var (rather than a module-level singleton) means
+        # every helper that calls ``get_settings()`` -- including library
+        # callers that ragdx delegates to (DSPy, ragas) -- sees the same
+        # storage root, without us having to thread the value through
+        # every API.
+        os.environ["RAGDX_PROJECT"] = project
     configure_logging(force=True)
 
 

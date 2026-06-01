@@ -63,6 +63,7 @@ def show_config():
     payload = {
         "storage": {
             "root": str(settings.storage.root),
+            "project": settings.storage.project,
         },
         "llm": {
             "provider": settings.llm.provider,

@@ -33,6 +33,7 @@ from ragdx.schemas.models import (
     OptimizationSession,
     SavedRun,
 )
+from ragdx.schemas.rag_config import RAGConfig
 from ragdx.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -150,8 +151,15 @@ class RunStore:
         notes: str = "",
         baseline_run_id: str | None = None,
         latest_session_id: str | None = None,
+        rag_config: RAGConfig | None = None,
     ) -> SavedRun:
         ts = datetime.now(timezone.utc).isoformat()
+        # ``rag_config`` is the production RAG description that produced
+        # ``evaluation``. Storing it lets ``ragdx tune --from-run <id>``
+        # inherit the base config + plan without an explicit
+        # ``--base-config`` flag. Defensive scrub: even if the caller
+        # forgot ``scrubbed_for_commit()``, we never persist credentials.
+        safe_config = rag_config.scrubbed_for_commit() if rag_config is not None else None
         run = SavedRun(
             run_id=uuid4().hex[:12],
             created_at=ts,
@@ -163,6 +171,7 @@ class RunStore:
             evaluation=evaluation,
             diagnosis=diagnosis,
             optimization_plan=plan,
+            rag_config=safe_config,
         )
         self._write_json(self._run_path(run.run_id), run.model_dump_json(indent=2))
         logger.info("Saved run %s name=%s", run.run_id, run.name, extra={"run_id": run.run_id})

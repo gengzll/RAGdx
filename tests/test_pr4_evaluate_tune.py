@@ -15,6 +15,7 @@ covered by the end-to-end demo bundles under ``new_demo1`` /
 from __future__ import annotations
 
 import inspect
+from pathlib import Path
 
 import pytest
 
@@ -287,6 +288,444 @@ def test_tune_bundle_base_config_is_scrubbed():
         "cli/tune.py bundle JSON must serialize base_config via "
         "scrubbed_for_commit() to prevent api_key leakage."
     )
+
+
+# ============================================================ --project flag
+def test_storage_resolves_per_project_root(monkeypatch, tmp_path):
+    """``--project esg`` (or RAGDX_PROJECT=esg) must isolate the storage
+    root to ``.ragdx/projects/esg/`` so different projects don't collide
+    on run IDs or causal priors. RAGDX_ROOT, when set, wins (explicit
+    full path beats project shorthand)."""
+    from ragdx.config import StorageSettings
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("RAGDX_ROOT", raising=False)
+    monkeypatch.delenv("RAGDX_PROJECT", raising=False)
+    # Default: cwd-relative .ragdx
+    s = StorageSettings.from_env()
+    assert s.root == Path(".ragdx") and s.project is None
+    # RAGDX_PROJECT: namespaced
+    monkeypatch.setenv("RAGDX_PROJECT", "esg")
+    s = StorageSettings.from_env()
+    assert s.project == "esg"
+    assert s.root.parts[-2:] == ("projects", "esg")
+    # RAGDX_ROOT wins over RAGDX_PROJECT (full-path override)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / "custom"))
+    s = StorageSettings.from_env()
+    assert s.root == tmp_path / "custom"
+    assert s.project == "esg"  # surfaced for log/UI, but not used in root
+
+
+def test_run_store_writes_to_project_subdir(monkeypatch, tmp_path):
+    """End-to-end: when RAGDX_PROJECT is set, RunStore.save_run writes
+    into the per-project subdir. Two projects' runs never collide."""
+    from ragdx.config import get_settings
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        EvaluationResult,
+        OptimizationPlan,
+    )
+    from ragdx.storage.run_store import RunStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("RAGDX_ROOT", raising=False)
+    monkeypatch.setenv("RAGDX_PROJECT", "esg")
+
+    settings = get_settings()
+    store = RunStore(root=str(settings.storage.root))
+    run = store.save_run(
+        EvaluationResult(retrieval={"context_precision": 0.5}),
+        DiagnosisReport(summary="stub"),
+        OptimizationPlan(objective_metric="context_precision"),
+        name="esg-baseline",
+    )
+    # The file landed under the project-namespaced root.
+    project_root = tmp_path / ".ragdx" / "projects" / "esg"
+    assert (project_root / "runs" / f"{run.run_id}.json").exists()
+    # Two different projects: ensure isolation.
+    monkeypatch.setenv("RAGDX_PROJECT", "legal")
+    settings2 = get_settings()
+    store2 = RunStore(root=str(settings2.storage.root))
+    assert store2.load_run.__self__.runs_dir != store.runs_dir
+
+
+# ============================================================ SavedRun.rag_config
+def test_saved_run_carries_rag_config_round_trip():
+    """SavedRun.rag_config must round-trip through JSON so ``ragdx tune
+    --from-run`` can reload it. Defaulting to None preserves
+    backward-compatibility with pre-PR6 SavedRun files."""
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        EvaluationResult,
+        OptimizationPlan,
+        SavedRun,
+    )
+
+    sr = SavedRun(
+        run_id="abc123",
+        created_at="2026-06-01T00:00:00Z",
+        name="t",
+        evaluation=EvaluationResult(retrieval={"context_precision": 0.5}),
+        diagnosis=DiagnosisReport(summary="stub"),
+        optimization_plan=OptimizationPlan(objective_metric="context_precision"),
+        rag_config=RAGConfig(name="prod-rag"),
+    )
+    sr2 = SavedRun.model_validate_json(sr.model_dump_json())
+    assert sr2.rag_config is not None
+    assert sr2.rag_config.name == "prod-rag"
+
+
+def test_saved_run_pre_pr6_files_load_without_rag_config():
+    """A SavedRun JSON without the ``rag_config`` field (the shape used
+    before PR6) must still load -- the field is optional/default None."""
+    import json as _json
+
+    from ragdx.schemas.models import SavedRun
+    pre_pr6_payload = {
+        "schema_version": 1,
+        "run_id": "deadbeef0001",
+        "created_at": "2026-05-01T00:00:00Z",
+        "name": "legacy",
+        "evaluation": {"retrieval": {}, "generation": {}, "e2e": {}, "metadata": {}},
+        "diagnosis": {"summary": "stub"},
+        "optimization_plan": {"objective_metric": "context_precision"},
+    }
+    sr = SavedRun.model_validate_json(_json.dumps(pre_pr6_payload))
+    assert sr.rag_config is None
+
+
+def test_run_store_save_run_scrubs_rag_config_defensively():
+    """Even if a caller forgets ``scrubbed_for_commit()``, ``save_run``
+    must never persist credentials to disk. Catches the same security
+    bug class as commit 73ee990 / e15d9b8 (YAML + JSON tune output)
+    for the SavedRun path."""
+    import tempfile
+
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        EvaluationResult,
+        OptimizationPlan,
+    )
+    from ragdx.schemas.rag_config import GeneratorSpec
+    from ragdx.storage.run_store import RunStore
+
+    with tempfile.TemporaryDirectory() as td:
+        store = RunStore(root=td)
+        # Pass a config WITH api_key set -- save_run should null it.
+        leaky_cfg = RAGConfig(
+            generator=GeneratorSpec(api_key="SUPER-SECRET-KEY"),
+        )
+        run = store.save_run(
+            EvaluationResult(retrieval={"context_precision": 0.5}),
+            DiagnosisReport(summary="stub"),
+            OptimizationPlan(objective_metric="context_precision"),
+            rag_config=leaky_cfg,
+        )
+        on_disk = (Path(td) / "runs" / f"{run.run_id}.json").read_text(encoding="utf-8")
+        assert "SUPER-SECRET-KEY" not in on_disk
+        # Confirm reload also has no key.
+        sr2 = store.load_run(run.run_id)
+        assert sr2.rag_config.generator.api_key is None
+        # Original in-memory config is NOT mutated.
+        assert leaky_cfg.generator.api_key == "SUPER-SECRET-KEY"
+
+
+# ============================================================ tune --from-run
+def test_tune_has_from_run_flags():
+    """``--from-run`` and ``--experiment`` close the evaluate->tune
+    config-shuttling gap. Without these, users have to re-pass
+    --base-config / --questions / --stage / --budget / --baseline-run-id
+    by hand, even though every value lives in the SavedRun + plan."""
+    params = set(inspect.signature(cli_tune).parameters)
+    assert "from_run" in params
+    assert "experiment_name" in params
+
+
+def test_tune_experiment_without_from_run_fails_early(tmp_path):
+    """``--experiment`` is only meaningful with ``--from-run``."""
+    import typer
+    cfg_path = tmp_path / "rag.yaml"
+    q_path = tmp_path / "q.jsonl"
+    cfg_path.write_text("name: stub\n", encoding="utf-8")
+    q_path.write_text('{"question": "Q"}\n', encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match=r"--experiment.*only.*--from-run"):
+        cli_tune(
+            base_config=str(cfg_path), questions=str(q_path), stage="joint",
+            corpus="", budget=4, bo_init=2, seed=0,
+            output=str(tmp_path / "o.json"),
+            write_optimized_config="", api_key="stub",
+            save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=False,
+            from_run="", experiment_name="ignored",
+        )
+
+
+def test_tune_stage_auto_is_accepted_in_validation():
+    """The 'auto' sentinel for --stage must not be rejected by the
+    early _STAGE_CHOICES guard (it gets resolved later from --from-run
+    or to 'joint')."""
+    import inspect as _inspect
+    src = _inspect.getsource(cli_tune)
+    # Belt-and-braces: confirm the guard exempts "auto".
+    assert "stage != \"auto\"" in src or "stage != 'auto'" in src
+
+
+def test_tune_from_run_inherits_stage_budget_and_search_space(tmp_path, monkeypatch):
+    """Locks down the core --from-run contract: a SavedRun whose plan
+    has ``experiments[0].stage='retrieval'`` + ``max_trials=12`` +
+    ``search_space={'top_k': [2, 4, 6]}`` should cause tune to:
+      * pick RetrievalOptimizer
+      * set ctx.n_bo_trials=12
+      * set ctx.top_ks=[2, 4, 6]
+    even though the user passed no --stage / --budget.
+
+    We mock out the heavy bits (corpus loading, runtime build, ragas
+    eval) and assert against the StageContext we synthesize."""
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    from ragdx.optim.stages import StageResult
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        EvaluationResult,
+        OptimizationExperiment,
+        OptimizationPlan,
+    )
+    from ragdx.schemas.rag_config import GeneratorSpec
+
+    # Isolate the RunStore in tmp_path so we can plant a fixture run.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("RAGDX_PROJECT", raising=False)
+    monkeypatch.delenv("RAGDX_ROOT", raising=False)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx"))
+
+    from ragdx.storage.run_store import RunStore
+    store = RunStore(root=str(tmp_path / ".ragdx"))
+    questions_path = tmp_path / "q.jsonl"
+    questions_path.write_text('{"question": "Q?"}\n', encoding="utf-8")
+    plan = OptimizationPlan(
+        objective_metric="context_precision",
+        experiments=[OptimizationExperiment(
+            name="retrieval-pipeline-search",
+            tool="manual",
+            target_component="retrieval",
+            description="planned retrieval sweep",
+            stage="retrieval",
+            max_trials=12,
+            search_space={"top_k": [2, 4, 6]},
+        )],
+    )
+    cfg = RAGConfig(
+        name="from-run-test",
+        generator=GeneratorSpec(api_key=None),
+    )
+    seed_run = store.save_run(
+        EvaluationResult(
+            retrieval={"context_precision": 0.5},
+            metadata={
+                "questions_path": str(questions_path),
+                "corpus": "/dev/null",  # don't load corpus in this test
+            },
+        ),
+        DiagnosisReport(summary="stub"),
+        plan,
+        name="seed",
+        rag_config=cfg,
+    )
+    # Patch the heavy bits before tune() runs.
+    captured: dict = {}
+
+    class _FakeOptimizer:
+        def __init__(self): pass
+        def optimize(self, ctx):
+            captured["ctx"] = ctx
+            return StageResult(
+                stage_name="retrieval",
+                search_space={"top_k": ctx.top_ks},
+                trials=[],
+                best_params={"top_k": ctx.top_ks[0]},
+                best_config=ctx.base_config,
+                best_composite=1.0,
+                objective_spec={},
+                n_init=ctx.n_bo_init,
+                max_trials=ctx.n_bo_trials,
+            )
+
+    fake_runtime = MagicMock()
+    fake_runtime.embeddings = None
+    fake_runtime.llm_callable = lambda p: "stub"
+    with patch.dict(sys.modules):
+        # The function does `from ragdx.optim.stages import RetrievalOptimizer`
+        # at runtime. We patch it via the package module.
+        from ragdx.optim import stages as stages_mod
+        monkeypatch.setattr(stages_mod, "RetrievalOptimizer", _FakeOptimizer)
+
+        from ragdx.runtime import factories
+        monkeypatch.setattr(factories, "build_runtime", lambda c: fake_runtime)
+
+        from ragdx import experiments as exp_mod
+        monkeypatch.setattr(
+            exp_mod, "_load_corpus_and_records",
+            lambda stub, runtime: (["chunk-a", "chunk-b"], [], {}),
+        )
+        monkeypatch.setattr(
+            exp_mod, "_build_ragas_metrics_for_mode", lambda mode: [],
+        )
+        monkeypatch.setattr(
+            exp_mod, "_make_pdf_re_chunk_fn", lambda stub, chunks: None,
+        )
+        # We need an api_key for the resolve check; set env.
+        monkeypatch.setenv("ZHIPU_API_KEY", "stub-key")
+
+        cli_tune(
+            base_config="", questions="",
+            from_run=seed_run.run_id, experiment_name="",
+            stage="auto", corpus="", budget=0,
+            bo_init=2, seed=0,
+            output=str(tmp_path / "tune_out.json"),
+            write_optimized_config="", api_key="",
+            save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=False,
+        )
+
+    ctx = captured["ctx"]
+    assert ctx.n_bo_trials == 12           # inherited max_trials
+    assert ctx.top_ks == [2, 4, 6]          # inherited search_space
+    assert ctx.base_config.name == "from-run-test"   # inherited rag_config
+
+
+def test_tune_from_run_explicit_flags_override_plan(tmp_path, monkeypatch):
+    """User-passed --stage / --budget must override what --from-run
+    would have inherited from the plan."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("RAGDX_PROJECT", raising=False)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx"))
+
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        EvaluationResult,
+        OptimizationExperiment,
+        OptimizationPlan,
+    )
+    from ragdx.storage.run_store import RunStore
+
+    store = RunStore(root=str(tmp_path / ".ragdx"))
+    q_path = tmp_path / "q.jsonl"
+    q_path.write_text('{"question": "Q?"}\n', encoding="utf-8")
+    plan = OptimizationPlan(
+        objective_metric="context_precision",
+        experiments=[OptimizationExperiment(
+            name="planned",
+            tool="manual",
+            target_component="retrieval",
+            description="planned",
+            stage="retrieval",
+            max_trials=12,
+        )],
+    )
+    seed_run = store.save_run(
+        EvaluationResult(
+            retrieval={"context_precision": 0.5},
+            metadata={"questions_path": str(q_path), "corpus": "/dev/null"},
+        ),
+        DiagnosisReport(summary="stub"),
+        plan,
+        name="seed",
+        rag_config=RAGConfig(name="t"),
+    )
+
+    captured: dict = {}
+
+    class _FakeOptimizer:
+        def __init__(self): pass
+        def optimize(self, ctx):
+            captured["ctx"] = ctx
+            from ragdx.optim.stages import StageResult
+            return StageResult(
+                stage_name="joint",
+                search_space={},
+                trials=[],
+                best_params={"chunk_size": 256, "chunk_overlap": 0, "top_k": 3},
+                best_config=ctx.base_config,
+                best_composite=1.0,
+                objective_spec={},
+                n_init=ctx.n_bo_init,
+                max_trials=ctx.n_bo_trials,
+            )
+
+    from unittest.mock import MagicMock
+    fake_runtime = MagicMock()
+    fake_runtime.embeddings = None
+    fake_runtime.llm_callable = lambda p: "stub"
+    from ragdx.optim import stages as stages_mod
+    monkeypatch.setattr(stages_mod, "JointOptimizer", _FakeOptimizer)
+
+    from ragdx.runtime import factories
+    monkeypatch.setattr(factories, "build_runtime", lambda c: fake_runtime)
+
+    from ragdx import experiments as exp_mod
+    monkeypatch.setattr(
+        exp_mod, "_load_corpus_and_records",
+        lambda stub, runtime: (["chunk-a"], [], {}),
+    )
+    monkeypatch.setattr(
+        exp_mod, "_build_ragas_metrics_for_mode", lambda mode: [],
+    )
+    monkeypatch.setattr(
+        exp_mod, "_make_pdf_re_chunk_fn", lambda stub, chunks: None,
+    )
+    monkeypatch.setenv("ZHIPU_API_KEY", "stub-key")
+
+    cli_tune(
+        base_config="", questions="",
+        from_run=seed_run.run_id, experiment_name="",
+        stage="joint",   # ← explicit override of plan's "retrieval"
+        corpus="",
+        budget=4,         # ← explicit override of plan's 12
+        bo_init=2, seed=0,
+        output=str(tmp_path / "tune_out.json"),
+        write_optimized_config="", api_key="",
+        save=False, name="", baseline_run_id="",
+        use_llm=False, use_both=False, use_llm_planner=False,
+    )
+
+    ctx = captured["ctx"]
+    assert ctx.n_bo_trials == 4   # explicit beat inherited 12
+
+
+def test_tune_from_run_rejects_pre_pr6_savedrun(tmp_path, monkeypatch):
+    """A SavedRun without rag_config must produce a clear error message
+    pointing the user at the fix (re-run evaluate --save on PR6+)."""
+    import typer
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("RAGDX_PROJECT", raising=False)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx"))
+
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        EvaluationResult,
+        OptimizationPlan,
+    )
+    from ragdx.storage.run_store import RunStore
+
+    store = RunStore(root=str(tmp_path / ".ragdx"))
+    seed_run = store.save_run(
+        EvaluationResult(retrieval={"context_precision": 0.5}),
+        DiagnosisReport(summary="stub"),
+        OptimizationPlan(objective_metric="context_precision"),
+        name="legacy",
+        # No rag_config -- simulates a pre-PR6 saved run.
+    )
+    with pytest.raises(typer.BadParameter, match="rag_config"):
+        cli_tune(
+            base_config="", questions="",
+            from_run=seed_run.run_id, experiment_name="",
+            stage="auto", corpus="", budget=0,
+            bo_init=2, seed=0,
+            output=str(tmp_path / "o.json"),
+            write_optimized_config="", api_key="",
+            save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=False,
+        )
 
 
 def test_tune_save_synthesizes_evaluation_result_from_best_trial(tmp_path):

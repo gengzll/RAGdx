@@ -35,30 +35,52 @@ _STAGE_CHOICES = ("chunking", "retrieval", "generation", "joint")
 @app.command("tune")
 def tune(
     base_config: str = typer.Option(
-        ..., "--base-config", "-c",
-        help="Path to the production RAGConfig YAML to optimize on top of.",
+        "", "--base-config", "-c",
+        help="Path to the production RAGConfig YAML to optimize on top of. "
+        "Required unless ``--from-run`` is set (which inherits the YAML "
+        "from the saved run's stored ``rag_config``). When both are set, "
+        "``--base-config`` overrides the inherited config.",
     ),
     questions: str = typer.Option(
-        ..., "--questions", "-q",
+        "", "--questions", "-q",
         help="Path to a JSONL eval suite ({question, ground_truth?, "
-        "contexts?} per line).",
+        "contexts?} per line). Required unless ``--from-run`` is set "
+        "and the saved run's metadata records a questions_path.",
+    ),
+    from_run: str = typer.Option(
+        "", "--from-run",
+        help="Inherit base config + plan + baseline link from a SavedRun. "
+        "When set: ``--base-config`` / ``--questions`` / ``--corpus`` / "
+        "``--stage`` / ``--budget`` / ``--baseline-run-id`` are pulled "
+        "from the run by default (explicit flags still win). Requires "
+        "the saved run was produced by ``ragdx evaluate --save`` on "
+        "PR6+ (so SavedRun.rag_config is populated).",
+    ),
+    experiment_name: str = typer.Option(
+        "", "--experiment",
+        help="When the inherited plan has multiple experiments, pick this "
+        "one by name. Default: first experiment (plan experiments are "
+        "pre-sorted by priority).",
     ),
     stage: str = typer.Option(
-        "joint", "--stage", "-s",
-        help=f"Which slice to optimize. One of: {', '.join(_STAGE_CHOICES)}. "
+        "auto", "--stage", "-s",
+        help=f"Which slice to optimize. One of: {', '.join(_STAGE_CHOICES)}, "
+        "or 'auto'. 'auto' resolves from ``--from-run``'s planned "
+        "experiment.stage; without ``--from-run`` it defaults to 'joint'. "
         "``chunking`` re-chunks per trial (slow), ``retrieval`` reuses "
         "the vstore (fast), ``generation`` runs DSPy MIPROv2 on the "
         "prompt, ``joint`` matches ``ragdx experiment``'s BO behaviour.",
     ),
     corpus: str = typer.Option(
         "", "--corpus",
-        help="Optional override of the corpus path declared in the YAML. "
-        "Falls back to ``base_config.corpus.path``.",
+        help="Override of the corpus path. Falls back to ``--from-run``'s "
+        "saved metadata, then ``base_config.corpus.path``.",
     ),
     budget: int = typer.Option(
-        8, "--budget", "-b",
-        help="BO trial budget for BO-driven stages (chunking / retrieval "
-        "/ joint). Ignored for generation (MIPROv2 has its own budget).",
+        0, "--budget", "-b",
+        help="BO trial budget for BO-driven stages. 0 means: inherit from "
+        "``--from-run``'s ``experiment.max_trials``, or default to 8 when "
+        "``--from-run`` is unset. Ignored for generation.",
     ),
     bo_init: int = typer.Option(
         3, "--bo-init",
@@ -132,10 +154,15 @@ def tune(
             --corpus docs/report.pdf --stage retrieval --budget 8 \\
             --save --name "retrieval-sweep-v3" \\
             --baseline-run-id <run_id_from_evaluate>
+
+        # Closed loop: inherit base_config + questions + corpus + stage +
+        # budget + baseline_run_id from a previously-saved evaluate run
+        # (PR6+). Just point tune at the run id.
+        ragdx tune --from-run <baseline_run_id> --save --name retrieval-sweep
     """
-    if stage not in _STAGE_CHOICES:
+    if stage != "auto" and stage not in _STAGE_CHOICES:
         raise typer.BadParameter(
-            f"--stage must be one of {_STAGE_CHOICES}, got {stage!r}."
+            f"--stage must be one of {_STAGE_CHOICES} or 'auto', got {stage!r}."
         )
     if use_llm and use_both:
         raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
@@ -144,6 +171,8 @@ def tune(
             "--use-llm / --use-both / --use-llm-planner / --baseline-run-id "
             "only apply when --save is set."
         )
+    if experiment_name and not from_run:
+        raise typer.BadParameter("--experiment is only meaningful with --from-run.")
 
     # Lazy imports keep `ragdx --help` light.
     import os
@@ -170,10 +199,97 @@ def tune(
     from ragdx.schemas.models import DatasetRecord
     from ragdx.schemas.rag_config import RAGConfig
 
-    base_path = Path(base_config)
-    if not base_path.exists():
-        raise typer.BadParameter(f"--base-config not found: {base_path}")
-    rag_config = RAGConfig.from_yaml(base_path)
+    # ------------------------------------------------------------------
+    # Inheritance from a SavedRun (--from-run).
+    # ------------------------------------------------------------------
+    inherited_experiment = None      # OptimizationExperiment | None
+    inherited_rag_config = None      # RAGConfig | None
+    inherited_questions = ""
+    inherited_corpus = ""
+    inherited_baseline_run_id = ""
+    if from_run:
+        saved = _store().load_run(from_run)
+        if saved.rag_config is None:
+            raise typer.BadParameter(
+                f"Run {from_run!r} has no stored rag_config (likely a "
+                "pre-PR6 SavedRun). Either pass --base-config explicitly, "
+                "or re-run `ragdx evaluate --save` on the latest ragdx "
+                "so the saved run carries its RAGConfig."
+            )
+        inherited_rag_config = saved.rag_config
+        experiments = list(saved.optimization_plan.experiments)
+        if not experiments:
+            raise typer.BadParameter(
+                f"Run {from_run!r}'s optimization_plan has zero "
+                "experiments -- nothing for tune to inherit. Pass "
+                "--stage / --budget explicitly, or re-diagnose to "
+                "populate experiments."
+            )
+        if experiment_name:
+            matching = [e for e in experiments if e.name == experiment_name]
+            if not matching:
+                available = ", ".join(e.name for e in experiments)
+                raise typer.BadParameter(
+                    f"No experiment named {experiment_name!r} in run "
+                    f"{from_run!r}. Available: {available}"
+                )
+            inherited_experiment = matching[0]
+        else:
+            inherited_experiment = experiments[0]
+        md = saved.evaluation.metadata or {}
+        inherited_questions = md.get("questions_path") or ""
+        inherited_corpus = md.get("corpus") or ""
+        inherited_baseline_run_id = from_run
+        print(
+            f"[bold]Inheriting from run[/bold] {from_run}: "
+            f"experiment=[cyan]{inherited_experiment.name}[/cyan], "
+            f"stage=[cyan]{inherited_experiment.stage}[/cyan], "
+            f"max_trials=[cyan]{inherited_experiment.max_trials}[/cyan], "
+            f"search_space=[dim]{inherited_experiment.search_space}[/dim]"
+        )
+
+    # ------------------------------------------------------------------
+    # Resolve effective values: explicit flag > inherited > hardcoded default.
+    # ------------------------------------------------------------------
+    eff_stage = stage if stage != "auto" else (
+        inherited_experiment.stage if inherited_experiment else "joint"
+    )
+    # The plan model's OptimizerStage allows "corpus" / "orchestration"
+    # which are not StageOptimizer choices yet. Map "corpus" → "chunking"
+    # (closest stage we have); fail loudly on anything else unmapped.
+    if eff_stage == "corpus":
+        print(
+            "[yellow]Note:[/yellow] plan stage 'corpus' mapped to 'chunking' "
+            "(the closest available StageOptimizer)."
+        )
+        eff_stage = "chunking"
+    if eff_stage not in _STAGE_CHOICES:
+        raise typer.BadParameter(
+            f"Resolved --stage={eff_stage!r} is not a StageOptimizer "
+            f"choice. Available: {_STAGE_CHOICES}. Pass --stage "
+            "explicitly to override."
+        )
+    eff_budget = budget if budget > 0 else (
+        inherited_experiment.max_trials if inherited_experiment else 8
+    )
+    eff_baseline_run_id = baseline_run_id or inherited_baseline_run_id
+
+    # ------------------------------------------------------------------
+    # Resolve RAGConfig: explicit --base-config beats inherited.
+    # ------------------------------------------------------------------
+    if base_config:
+        base_path = Path(base_config)
+        if not base_path.exists():
+            raise typer.BadParameter(f"--base-config not found: {base_path}")
+        rag_config = RAGConfig.from_yaml(base_path)
+        base_path_str = str(base_path.resolve())
+    elif inherited_rag_config is not None:
+        rag_config = inherited_rag_config.model_copy(deep=True)
+        base_path_str = f"<inherited from run {from_run}>"
+    else:
+        raise typer.BadParameter(
+            "--base-config is required when --from-run is not set."
+        )
 
     if api_key:
         rag_config.generator.api_key = api_key
@@ -185,18 +301,27 @@ def tune(
     if not rag_config.generator.api_key:
         raise typer.BadParameter(
             "No api_key resolved. Set --api-key, generator.api_key in YAML, "
-            "or the ZHIPU_API_KEY / OPENAI_API_KEY environment variable."
+            "or the ZHIPU_API_KEY / OPENAI_API_KEY environment variable. "
+            "(SavedRun.rag_config has api_key scrubbed by design.)"
         )
 
-    corpus_value = corpus or rag_config.corpus.path
+    corpus_value = corpus or inherited_corpus or rag_config.corpus.path
     if not corpus_value:
         raise typer.BadParameter(
-            "Corpus path required: pass --corpus or set corpus.path in the YAML."
+            "Corpus path required: pass --corpus, set corpus.path in the "
+            "YAML, or use --from-run pointing to a run whose metadata "
+            "recorded the corpus path."
         )
 
-    q_path = Path(questions)
+    eff_questions = questions or inherited_questions
+    if not eff_questions:
+        raise typer.BadParameter(
+            "--questions is required when --from-run is not set or the "
+            "saved run's metadata doesn't include a questions_path."
+        )
+    q_path = Path(eff_questions)
     if not q_path.exists():
-        raise typer.BadParameter(f"--questions not found: {q_path}")
+        raise typer.BadParameter(f"questions file not found: {q_path}")
     records = _load_jsonl_questions(q_path)
     if not records:
         raise typer.BadParameter(f"{q_path} contained zero records.")
@@ -215,7 +340,7 @@ def tune(
         api_key=rag_config.generator.api_key,
         api_base=rag_config.generator.api_base,
         model=rag_config.generator.model,
-        n_bo_trials=budget,
+        n_bo_trials=eff_budget,
         n_bo_init=bo_init,
         seed=seed,
         llm_max_concurrent=rag_config.judge.llm_max_concurrent,
@@ -235,7 +360,7 @@ def tune(
     # Dispatch to the requested StageOptimizer.
     # ------------------------------------------------------------------
     stage_records: list[DatasetRecord]
-    if stage == "generation":
+    if eff_stage == "generation":
         # Generation needs records pre-retrieved at the base config's
         # retriever -- otherwise MIPROv2 has nothing to chew on.
         pipeline = RAGPipeline.build(
@@ -253,31 +378,45 @@ def tune(
     else:
         stage_records = list(records)
 
-    ctx = StageContext(
+    ctx_kwargs: dict[str, Any] = dict(
         base_config=rag_config,
         chunks_master=chunks_master,
         records=stage_records,
         objective=objective,
         metrics=metrics,
         runtime=runtime,
-        n_bo_trials=budget,
+        n_bo_trials=eff_budget,
         n_bo_init=bo_init,
         seed=seed,
         re_chunk_fn=re_chunk_fn,
         label=mode_label,
     )
+    # When --from-run inherited a planned experiment, thread its
+    # search_space into the BO axes the StageContext exposes. The plan
+    # encodes the user-meaningful sweep ranges; defaults (256/512/1024
+    # for chunk_size, 1/3/5/7 for top_k) are only used when the plan
+    # didn't specify -- or when --from-run isn't used at all.
+    if inherited_experiment is not None:
+        space = inherited_experiment.search_space or {}
+        if space.get("top_k"):
+            ctx_kwargs["top_ks"] = [int(v) for v in space["top_k"]]
+        if space.get("chunk_size"):
+            ctx_kwargs["chunk_sizes"] = [int(v) for v in space["chunk_size"]]
+        if space.get("chunk_overlap"):
+            ctx_kwargs["chunk_overlaps"] = [int(v) for v in space["chunk_overlap"]]
+    ctx = StageContext(**ctx_kwargs)
 
     optimizer = {
         "chunking": ChunkingOptimizer,
         "retrieval": RetrievalOptimizer,
         "generation": GenerationOptimizer,
         "joint": JointOptimizer,
-    }[stage]()
+    }[eff_stage]()
 
     print(
-        f"[bold]Running[/bold] {stage} optimizer on "
+        f"[bold]Running[/bold] {eff_stage} optimizer on "
         f"{len(chunks_master)} chunks x {len(records)} records "
-        f"(GT mode: {mode_label}, budget: {budget})..."
+        f"(GT mode: {mode_label}, budget: {eff_budget})..."
     )
     result = optimizer.optimize(ctx)
 
@@ -290,14 +429,22 @@ def tune(
     # the on-disk bundle (same bug class as --write-optimized-config,
     # fixed for that path in commit 73ee990; this is the JSON sibling).
     bundle: dict[str, Any] = {
-        "stage": stage,
+        "stage": eff_stage,
         "gt_mode": mode_label,
         "base_config": rag_config.scrubbed_for_commit().model_dump(mode="json"),
         "best_params": result.best_params,
         "best_composite": result.best_composite,
         "objective_spec": result.objective_spec,
     }
-    if stage == "generation":
+    if from_run:
+        bundle["inherited"] = {
+            "from_run": from_run,
+            "experiment_name": inherited_experiment.name,
+            "experiment_stage": inherited_experiment.stage,
+            "experiment_max_trials": inherited_experiment.max_trials,
+            "experiment_search_space": inherited_experiment.search_space,
+        }
+    if eff_stage == "generation":
         bundle.update({"generation": result.extras})
     else:
         bundle.update({"bayes_search": result.to_bayes_search_bundle()})
@@ -332,7 +479,7 @@ def tune(
         # `ragdx evaluate --save` use.
         from ragdx.workflows.evaluate import _scores_to_evaluation_result
 
-        if stage == "generation":
+        if eff_stage == "generation":
             # Generation has no BO trials; the optimized program's ragas
             # scores live in extras.
             best_scores = dict(result.extras.get("optimized_scores", {}) or {})
@@ -359,17 +506,20 @@ def tune(
 
         synth_metadata: dict[str, Any] = {
             "source": "ragdx tune",
-            "tune_stage": stage,
+            "tune_stage": eff_stage,
             "gt_mode": mode_label,
             "best_params": result.best_params,
             "best_composite": result.best_composite,
-            "base_config_path": str(base_path.resolve()),
+            "base_config_path": base_path_str,
             "questions_path": str(q_path.resolve()),
             "corpus": str(corpus_value),
             "bundle_path": str(out_path.resolve()),
         }
         if name:
             synth_metadata["name"] = name
+        if from_run:
+            synth_metadata["from_run"] = from_run
+            synth_metadata["inherited_experiment"] = inherited_experiment.name
         if write_optimized_config:
             synth_metadata["optimized_config_path"] = str(
                 Path(write_optimized_config).resolve()
@@ -384,11 +534,14 @@ def tune(
             use_both=use_both,
             use_llm_planner=use_llm_planner,
         )
-        run_name = name or f"{rag_config.name or 'rag'}-tune-{stage}"
+        run_name = name or f"{rag_config.name or 'rag'}-tune-{eff_stage}"
         run = _store().save_run(
             eval_result, report, opt_plan,
             name=run_name,
-            baseline_run_id=baseline_run_id or None,
+            baseline_run_id=eff_baseline_run_id or None,
+            # Persist the tuned (scrubbed) config so a future
+            # `tune --from-run` can chain off this result too.
+            rag_config=rag_config.scrubbed_for_commit(),
         )
         print(f"[green]Saved run:[/green] {run.run_id} [dim](name: {run_name})[/dim]")
         print(

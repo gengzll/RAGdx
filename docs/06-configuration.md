@@ -149,7 +149,27 @@ Credentials in YAML are scrubbed by `RAGConfig.scrubbed_for_commit()`
 before `ragdx tune --write-optimized-config` writes the optimized
 config — the committed YAML is safe.
 
-## 11. Practical configuration guidance
+## 11. Per-project storage (`--project`)
+
+When the same repo hosts multiple production RAGs, isolate each
+project's RunStore so runs, sessions, feedback, and causal priors
+don't collide:
+
+```bash
+ragdx --project esg evaluate ...      # → .ragdx/projects/esg/
+ragdx --project legal evaluate ...    # → .ragdx/projects/legal/
+ragdx --project esg dashboard         # only the esg project's runs
+```
+
+Equivalent: `RAGDX_PROJECT=esg ragdx evaluate ...`
+
+`RAGDX_ROOT` (fully-qualified path) wins over `--project` when both
+are set. Run `ragdx show-config` to confirm the resolved root.
+
+See [12-evaluate-tune-workflow.md §8](12-evaluate-tune-workflow.md#8-per-project-storage---project)
+for the full design + worked example.
+
+## 12. Practical configuration guidance
 
 For local development:
 
