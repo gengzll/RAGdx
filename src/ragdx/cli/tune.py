@@ -78,6 +78,38 @@ def tune(
         "", "--api-key",
         help="Override the YAML's generator.api_key.",
     ),
+    save: bool = typer.Option(
+        False, "--save",
+        help="Persist the tuned best-config evaluation to the RunStore "
+        "as a SavedRun (visible via ``ragdx runs`` / ``ragdx "
+        "dashboard``). The synthesized EvaluationResult is built from "
+        "the best trial's ragas scores (for BO stages) or from the "
+        "MIPROv2 optimized run (for the generation stage).",
+    ),
+    name: str = typer.Option(
+        "", "--name",
+        help="Saved-run name when ``--save`` is set. Falls back to "
+        "``{base_config.name}-tune-{stage}`` if empty.",
+    ),
+    baseline_run_id: str = typer.Option(
+        "", "--baseline-run-id",
+        help="When ``--save`` is set, link this tuned run to an existing "
+        "baseline run so ``ragdx compare`` / dashboard render the delta.",
+    ),
+    use_llm: bool = typer.Option(
+        False, "--use-llm",
+        help="When ``--save`` is set, LLM-only diagnosis. Requires "
+        "ZHIPU_API_KEY / OPENAI_API_KEY env vars.",
+    ),
+    use_both: bool = typer.Option(
+        False, "--use-both",
+        help="When ``--save`` is set, rule + LLM diagnosis. Mutually "
+        "exclusive with ``--use-llm``.",
+    ),
+    use_llm_planner: bool = typer.Option(
+        False, "--use-llm-planner",
+        help="When ``--save`` is set, refine the optimization plan with an LLM.",
+    ),
 ):
     """Optimize a single stage of a production RAGConfig.
 
@@ -94,15 +126,29 @@ def tune(
         # Tune the prompt at the existing retrieval config (DSPy MIPROv2)
         ragdx tune --base-config rag.yaml --questions q.jsonl \\
             --corpus docs/report.pdf --stage generation
+
+        # Tune + persist to RunStore so the result shows up in the dashboard
+        ragdx tune --base-config rag.yaml --questions q.jsonl \\
+            --corpus docs/report.pdf --stage retrieval --budget 8 \\
+            --save --name "retrieval-sweep-v3" \\
+            --baseline-run-id <run_id_from_evaluate>
     """
     if stage not in _STAGE_CHOICES:
         raise typer.BadParameter(
             f"--stage must be one of {_STAGE_CHOICES}, got {stage!r}."
         )
+    if use_llm and use_both:
+        raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
+    if (use_llm or use_both or use_llm_planner or baseline_run_id) and not save:
+        raise typer.BadParameter(
+            "--use-llm / --use-both / --use-llm-planner / --baseline-run-id "
+            "only apply when --save is set."
+        )
 
     # Lazy imports keep `ragdx --help` light.
     import os
 
+    from ragdx.cli._shared import _diagnose_and_plan, _store
     from ragdx.experiments import (
         ExperimentConfig,
         _build_ragas_metrics_for_mode,
@@ -273,6 +319,77 @@ def tune(
         print(f"[bold]Best composite:[/bold] {result.best_composite:.3f}")
     if result.best_params:
         print(f"[bold]Best params:[/bold] {result.best_params}")
+
+    if save:
+        # Synthesize an EvaluationResult from the best trial's ragas
+        # scores so the tuned run plugs into the same RunStore /
+        # diagnose / dashboard path that `ragdx save` and
+        # `ragdx evaluate --save` use.
+        from ragdx.workflows.evaluate import _scores_to_evaluation_result
+
+        if stage == "generation":
+            # Generation has no BO trials; the optimized program's ragas
+            # scores live in extras.
+            best_scores = dict(result.extras.get("optimized_scores", {}) or {})
+        else:
+            # Find the trial whose params match best_params. Fall back to
+            # the highest-composite feasible trial if a match isn't found
+            # (defensive: a custom StageOptimizer could in theory drift).
+            matching = [
+                t for t in result.trials if t.params == result.best_params
+            ]
+            if matching:
+                best_scores = dict(matching[0].scores or {})
+            else:
+                feasible = [t for t in result.trials if t.feasible]
+                pool = feasible or list(result.trials)
+                best_trial = max(
+                    pool,
+                    key=lambda t: t.composite_score
+                    if t.composite_score is not None
+                    else float("-inf"),
+                    default=None,
+                )
+                best_scores = dict(best_trial.scores or {}) if best_trial else {}
+
+        synth_metadata: dict[str, Any] = {
+            "source": "ragdx tune",
+            "tune_stage": stage,
+            "gt_mode": mode_label,
+            "best_params": result.best_params,
+            "best_composite": result.best_composite,
+            "base_config_path": str(base_path.resolve()),
+            "questions_path": str(q_path.resolve()),
+            "corpus": str(corpus_value),
+            "bundle_path": str(out_path.resolve()),
+        }
+        if name:
+            synth_metadata["name"] = name
+        if write_optimized_config:
+            synth_metadata["optimized_config_path"] = str(
+                Path(write_optimized_config).resolve()
+            )
+
+        eval_result = _scores_to_evaluation_result(
+            best_scores, metadata=synth_metadata,
+        )
+        report, opt_plan = _diagnose_and_plan(
+            eval_result,
+            use_llm=use_llm,
+            use_both=use_both,
+            use_llm_planner=use_llm_planner,
+        )
+        run_name = name or f"{rag_config.name or 'rag'}-tune-{stage}"
+        run = _store().save_run(
+            eval_result, report, opt_plan,
+            name=run_name,
+            baseline_run_id=baseline_run_id or None,
+        )
+        print(f"[green]Saved run:[/green] {run.run_id} [dim](name: {run_name})[/dim]")
+        print(
+            f"[dim]Next: `ragdx runs` / `ragdx dashboard` / "
+            f"`ragdx export-report {run.run_id} report.md`.[/dim]"
+        )
 
 
 __all__ = ["tune"]

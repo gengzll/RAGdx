@@ -13,6 +13,55 @@ The Streamlit dashboard entrypoint is:
 
 ## 2. CLI commands
 
+### `evaluate`
+
+Purpose:
+
+- score a `RAGConfig` YAML against a JSONL eval suite
+- emit a normalized `EvaluationResult` JSON
+- optionally diagnose + plan + persist to the RunStore in one call
+
+Main options:
+
+- `--config` / `-c` (RAGConfig YAML path)
+- `--questions` / `-q` (JSONL eval suite)
+- `--corpus` (override YAML's corpus path)
+- `--output` / `-o`
+- `--api-key`
+- `--name`
+- `--save` (persist to RunStore via `RunStore.save_run`)
+- `--baseline-run-id` (link this run as a delta of another)
+- `--use-llm` / `--use-both` / `--use-llm-planner` (only with `--save`)
+
+See [12-evaluate-tune-workflow.md](12-evaluate-tune-workflow.md) for the
+full closed-loop workflow.
+
+### `tune`
+
+Purpose:
+
+- optimize one slice of a `RAGConfig` against a JSONL eval suite
+- four stages: `joint` (all knobs), `chunking`, `retrieval` (fastest — single pipeline), `generation` (DSPy MIPROv2 over the prompt)
+- optionally write the winning config as YAML (credentials scrubbed)
+- optionally persist to the RunStore
+
+Main options:
+
+- `--base-config` / `-c`
+- `--questions` / `-q`
+- `--corpus`
+- `--stage` / `-s` (one of `joint` / `chunking` / `retrieval` / `generation`)
+- `--budget` / `-b` (BO trial count for BO stages)
+- `--bo-init`
+- `--seed`
+- `--output` / `-o`
+- `--write-optimized-config` (winning RAGConfig YAML; credentials scrubbed before write)
+- `--api-key`
+- `--save` (persist synthesized EvaluationResult to RunStore)
+- `--name`
+- `--baseline-run-id`
+- `--use-llm` / `--use-both` / `--use-llm-planner` (only with `--save`)
+
 ### `diagnose`
 
 Purpose:

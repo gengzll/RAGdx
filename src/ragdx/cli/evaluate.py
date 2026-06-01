@@ -5,6 +5,11 @@ ragdx's control plane (``diagnose`` / ``plan`` / ``compare`` /
 ``save``) already consumes. This is the bridge that closes the loop:
 describe your production RAG in YAML, score it against your own eval
 suite, then drive ragdx's optimization machinery against the result.
+
+When ``--save`` is passed, ``evaluate`` also diagnoses + plans the
+result and persists everything to the :class:`RunStore`. The saved
+run shows up in ``ragdx runs`` / ``ragdx dashboard`` without the
+caller having to chain ``ragdx save`` manually.
 """
 
 from __future__ import annotations
@@ -50,8 +55,37 @@ def evaluate(
     ),
     name: str = typer.Option(
         "", "--name",
-        help="Optional run name to stamp on the result's metadata "
-        "(useful when comparing multiple configs).",
+        help="Optional run name. Stamped on result metadata and reused "
+        "as the saved-run name when ``--save`` is set.",
+    ),
+    save: bool = typer.Option(
+        False, "--save",
+        help="Diagnose + plan the result and persist it to the RunStore "
+        "(visible via ``ragdx runs`` / ``ragdx dashboard``). Without "
+        "this flag, ``evaluate`` only writes the EvaluationResult JSON.",
+    ),
+    baseline_run_id: str = typer.Option(
+        "", "--baseline-run-id",
+        help="When ``--save`` is set, link this evaluation to an existing "
+        "run as its baseline (used by ``ragdx compare`` / dashboard "
+        "delta views).",
+    ),
+    use_llm: bool = typer.Option(
+        False, "--use-llm",
+        help="When ``--save`` is set, run LLM-only diagnosis instead of "
+        "the rule-based default. Requires ZHIPU_API_KEY / OPENAI_API_KEY "
+        "to be exported (the diagnosis LLM is built from package "
+        "settings, not from ``--api-key``).",
+    ),
+    use_both: bool = typer.Option(
+        False, "--use-both",
+        help="When ``--save`` is set, run rule + LLM diagnosis and "
+        "synthesize. Mutually exclusive with ``--use-llm``.",
+    ),
+    use_llm_planner: bool = typer.Option(
+        False, "--use-llm-planner",
+        help="When ``--save`` is set, refine the optimization plan with "
+        "an LLM. Independent of ``--use-llm`` / ``--use-both``.",
     ),
 ):
     """Evaluate a RAGConfig against an eval suite.
@@ -61,13 +95,31 @@ def evaluate(
 
     Example::
 
+        # Just score + emit JSON:
         ragdx evaluate --config rag_config.yaml \\
             --questions my_eval.jsonl --output baseline.json
         ragdx diagnose baseline.json --use-llm
+
+        # Score + diagnose + plan + persist to RunStore in one call:
+        ragdx evaluate --config rag_config.yaml \\
+            --questions my_eval.jsonl --output baseline.json \\
+            --save --name "esg-baseline" --use-llm
+        ragdx runs        # baseline now appears here
+        ragdx dashboard   # and here
     """
+    # Validate mutually-exclusive flags before paying for ragas.
+    if use_llm and use_both:
+        raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
+    if (use_llm or use_both or use_llm_planner or baseline_run_id) and not save:
+        raise typer.BadParameter(
+            "--use-llm / --use-both / --use-llm-planner / --baseline-run-id "
+            "only apply when --save is set."
+        )
+
     # Lazy imports so `ragdx --help` doesn't drag in dspy / langchain.
     import os
 
+    from ragdx.cli._shared import _diagnose_and_plan, _store
     from ragdx.experiments import (
         ExperimentConfig,
         _load_corpus_and_records,
@@ -169,10 +221,34 @@ def evaluate(
         "  E2E:",
         json.dumps({k: round(v, 4) for k, v in result.e2e.items()}),
     )
-    print(
-        "\n[dim]Next: `ragdx diagnose <out>` / `ragdx plan <out>` / "
-        "`ragdx compare <out> <baseline>`.[/dim]"
-    )
+
+    if save:
+        # Diagnose + plan + persist so the run is visible in `ragdx runs`
+        # / `ragdx dashboard` without the caller having to invoke
+        # `ragdx save` separately. This is the closed-loop path docs/12
+        # describes: a single command from RAGConfig to dashboard.
+        report, opt_plan = _diagnose_and_plan(
+            result,
+            use_llm=use_llm,
+            use_both=use_both,
+            use_llm_planner=use_llm_planner,
+        )
+        run = _store().save_run(
+            result, report, opt_plan,
+            name=name or None,
+            baseline_run_id=baseline_run_id or None,
+        )
+        print(f"[green]Saved run:[/green] {run.run_id}")
+        print(
+            f"\n[dim]Next: `ragdx runs` / `ragdx dashboard` / "
+            f"`ragdx export-report {run.run_id} report.md`.[/dim]"
+        )
+    else:
+        print(
+            "\n[dim]Next: `ragdx diagnose <out>` / `ragdx plan <out>` / "
+            "`ragdx compare <out> <baseline>` "
+            "(or re-run with --save to persist to the RunStore).[/dim]"
+        )
 
 
 __all__ = ["evaluate"]

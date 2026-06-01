@@ -199,6 +199,116 @@ def test_tune_stage_choices_includes_all_stage_optimizers():
     assert set(_STAGE_CHOICES) == {"chunking", "retrieval", "generation", "joint"}
 
 
+# ============================================================ RunStore wiring (follow-up)
+def test_evaluate_has_runstore_save_flags():
+    """The follow-up that closes the README workflow's loop: ``evaluate
+    --save`` must expose the same diagnose/persist surface as ``ragdx
+    diagnose --save`` (``--save``, ``--baseline-run-id``, ``--use-llm``,
+    ``--use-both``, ``--use-llm-planner``). Without these the user has
+    to chain ``ragdx save`` manually and runs never appear in the
+    dashboard."""
+    params = set(inspect.signature(cli_evaluate).parameters)
+    for required in (
+        "save", "baseline_run_id", "use_llm", "use_both", "use_llm_planner",
+    ):
+        assert required in params, f"`ragdx evaluate` missing --{required}"
+
+
+def test_tune_has_runstore_save_flags():
+    """``ragdx tune --save`` must close the same loop: persist the
+    tuned best-config evaluation to the RunStore so the result is
+    visible in ``ragdx runs`` / ``ragdx dashboard``."""
+    params = set(inspect.signature(cli_tune).parameters)
+    for required in (
+        "save", "name", "baseline_run_id",
+        "use_llm", "use_both", "use_llm_planner",
+    ):
+        assert required in params, f"`ragdx tune` missing --{required}"
+
+
+def test_evaluate_rejects_use_llm_without_save(monkeypatch, tmp_path):
+    """``--use-llm`` / ``--use-both`` / ``--use-llm-planner`` /
+    ``--baseline-run-id`` are meaningless without ``--save`` (they
+    drive the diagnose/persist path). Validating early avoids a
+    silent no-op after a multi-minute eval run."""
+    import typer
+    cfg_path = tmp_path / "rag.yaml"
+    q_path = tmp_path / "q.jsonl"
+    cfg_path.write_text("name: stub\n", encoding="utf-8")
+    q_path.write_text('{"question": "Q"}\n', encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match="only apply when --save"):
+        cli_evaluate(
+            config=str(cfg_path), questions=str(q_path), corpus="",
+            output=str(tmp_path / "o.json"), api_key="stub", name="",
+            save=False, baseline_run_id="",
+            use_llm=True, use_both=False, use_llm_planner=False,
+        )
+
+
+def test_tune_rejects_use_llm_without_save(tmp_path):
+    """Same early-fail invariant for ``ragdx tune``."""
+    import typer
+    cfg_path = tmp_path / "rag.yaml"
+    q_path = tmp_path / "q.jsonl"
+    cfg_path.write_text("name: stub\n", encoding="utf-8")
+    q_path.write_text('{"question": "Q"}\n', encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match="only apply when --save"):
+        cli_tune(
+            base_config=str(cfg_path), questions=str(q_path), stage="joint",
+            corpus="", budget=4, bo_init=2, seed=0,
+            output=str(tmp_path / "o.json"),
+            write_optimized_config="", api_key="stub",
+            save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=True,
+        )
+
+
+def test_tune_save_synthesizes_evaluation_result_from_best_trial(tmp_path):
+    """The ``--save`` path on tune synthesizes an EvaluationResult from
+    the best trial's ragas scores before calling diagnose/save_run.
+    Verify the synthesis helper directly (the full path needs live
+    ragas/LLM, exercised in the e2e bundles)."""
+    from ragdx.optim.stages import StageResult, StageTrial
+    from ragdx.workflows.evaluate import _scores_to_evaluation_result
+
+    trial = StageTrial(
+        trial_index=0,
+        params={"top_k": 5},
+        n_chunks=100,
+        scores={
+            "context_precision": 0.82,
+            "faithfulness": 0.71,
+            "answer_correctness": 0.65,
+        },
+        composite_score=1.4,
+        feasible=True,
+        violations=[],
+        answers_preview=["short..."],
+        records=[],
+        elapsed_seconds=1.0,
+    )
+    sr = StageResult(
+        stage_name="retrieval",
+        search_space={"top_k": [3, 5, 7]},
+        trials=[trial],
+        best_params={"top_k": 5},
+        best_config=None,
+        best_composite=1.4,
+        objective_spec={},
+        n_init=2,
+        max_trials=4,
+    )
+    matching = [t for t in sr.trials if t.params == sr.best_params]
+    assert matching, "Expected the best-params lookup to find the trial."
+    er = _scores_to_evaluation_result(
+        dict(matching[0].scores), metadata={"tune_stage": "retrieval"},
+    )
+    assert er.retrieval == {"context_precision": 0.82}
+    assert er.generation == {"faithfulness": 0.71}
+    assert er.e2e == {"answer_correctness": 0.65}
+    assert er.metadata["tune_stage"] == "retrieval"
+
+
 # ============================================================ Experiment alias surface
 def test_experiment_build_runtime_uses_factory():
     """``ragdx.experiments._build_runtime`` is a delegation shim after

@@ -15,6 +15,7 @@ This folder contains a detailed markdown documentation set for `ragdx`, a RAG ev
 - [09-extension-guide.md](09-extension-guide.md): how to extend the library with new metrics, tools, runtimes, and optimization strategies
 - [10-examples.md](10-examples.md): practical examples and typical end-to-end usage patterns
 - [11-limitations-and-roadmap.md](11-limitations-and-roadmap.md): current limitations, design trade-offs, and roadmap suggestions
+- [12-evaluate-tune-workflow.md](12-evaluate-tune-workflow.md): `RAGConfig` + `RAGPipeline` + `ragdx evaluate` / `ragdx tune` (PR1–PR5 control plane)
 
 ## Suggested reading order
 
@@ -26,6 +27,11 @@ For a first pass:
 4. `05-cli-and-dashboard.md`
 5. `06-configuration.md`
 6. `10-examples.md`
+
+For users who want to score a production RAG (described as YAML) and tune its bottleneck stages:
+
+1. `12-evaluate-tune-workflow.md`
+2. `04-workflows.md` (the diagnose/save/dashboard half)
 
 For implementation and extension work:
 

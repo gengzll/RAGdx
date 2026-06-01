@@ -125,7 +125,31 @@ The evaluation JSON can include `metadata` fields such as:
 - `pipeline_module`
 - any runtime-specific annotations needed by your runner
 
-## 10. Practical configuration guidance
+## 10. `RAGConfig` (production RAG description)
+
+PR1–PR5 added `RAGConfig` as a first-class YAML object so users can
+describe a production RAG once and reuse it across `ragdx evaluate`,
+`ragdx tune`, and as a library import. See
+[12-evaluate-tune-workflow.md](12-evaluate-tune-workflow.md) for the
+full schema.
+
+Reliability knobs commonly set in the YAML:
+
+- `runtime` (`langchain` | `llamaindex`) — in-process backend dispatch.
+- `judge.llm_max_concurrent` — ragas judge throughput. Default `2`
+  (survives strict-rate-limit providers like GLM-4-Flash).
+- `judge.llm_max_retries` — ragas judge retry budget. Default `5`.
+- `generator.temperature` — forwarded to litellm. Automatically
+  clamped to `≥ 0.01` in both the litellm and openai client layers so
+  providers that reject `temperature=1e-08` don't crash mid-run.
+- `generator.system_instruction` — production prompt. Also used as
+  the MIPROv2 seed when `ragdx tune --stage generation` runs.
+
+Credentials in YAML are scrubbed by `RAGConfig.scrubbed_for_commit()`
+before `ragdx tune --write-optimized-config` writes the optimized
+config — the committed YAML is safe.
+
+## 11. Practical configuration guidance
 
 For local development:
 

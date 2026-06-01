@@ -1,5 +1,28 @@
 # Workflows
 
+## 0. From a production RAG config (closed loop)
+
+If you can describe your RAG as a `RAGConfig` YAML, you can collapse
+several steps into a single command:
+
+```bash
+ragdx evaluate --config rag_config.yaml --questions my_eval.jsonl \
+    --output baseline.json --save --name baseline --use-llm
+# Score + diagnose + plan + persist to RunStore in one call.
+
+ragdx tune --base-config rag_config.yaml --questions my_eval.jsonl \
+    --stage retrieval --budget 8 --save --name retrieval-sweep \
+    --baseline-run-id <baseline_run_id> \
+    --write-optimized-config rag_config.optimized.yaml
+# Stage-targeted optimization + RunStore-linked baseline + scrubbed YAML.
+```
+
+See [12-evaluate-tune-workflow.md](12-evaluate-tune-workflow.md) for
+the full RAGConfig / RAGPipeline / evaluate / tune surface.
+
+If you don't have a `RAGConfig` (e.g. you already have ragas /
+RAGChecker outputs), start from §1 below.
+
 ## 1. Minimal workflow
 
 ### Step 1: prepare an evaluation file
