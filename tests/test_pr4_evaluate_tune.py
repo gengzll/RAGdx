@@ -200,6 +200,181 @@ def test_tune_stage_choices_includes_all_stage_optimizers():
     assert set(_STAGE_CHOICES) == {"chunking", "retrieval", "generation", "joint"}
 
 
+# ============================================================ Latest-default helpers
+def test_load_eval_or_latest_explicit_path_round_trips(tmp_path):
+    """An explicit path wins; no RunStore consultation needed."""
+    from ragdx.cli._shared import _load_eval_or_latest
+
+    p = tmp_path / "eval.json"
+    EvaluationResult(retrieval={"context_precision": 0.42}).model_dump_json()
+    p.write_text(
+        EvaluationResult(retrieval={"context_precision": 0.42}).model_dump_json(),
+        encoding="utf-8",
+    )
+    result, hint = _load_eval_or_latest(str(p))
+    assert result.retrieval == {"context_precision": 0.42}
+    assert hint == ""  # explicit path: no log hint needed
+
+
+def test_load_eval_or_latest_empty_falls_back_to_latest_run(tmp_path, monkeypatch):
+    """When called with empty path, pulls the latest SavedRun's
+    evaluation. This is what makes ``ragdx diagnose`` / ``plan`` work
+    with no arguments after a recent ``evaluate --save``."""
+    from ragdx.cli._shared import _load_eval_or_latest
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        OptimizationPlan,
+    )
+    from ragdx.storage.run_store import RunStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx"))
+    store = RunStore(root=str(tmp_path / ".ragdx"))
+    store.save_run(
+        EvaluationResult(retrieval={"context_precision": 0.7}),
+        DiagnosisReport(summary="stub"),
+        OptimizationPlan(objective_metric="context_precision"),
+        name="latest",
+    )
+    result, hint = _load_eval_or_latest("")
+    assert result.retrieval == {"context_precision": 0.7}
+    assert "latest run" in hint and "latest" in hint
+
+
+def test_load_eval_or_latest_empty_store_raises_with_helpful_error(monkeypatch, tmp_path):
+    """An empty RunStore + empty arg must produce a clear, actionable
+    error -- the message must mention `ragdx evaluate --save` as the
+    fix path."""
+    import typer
+
+    from ragdx.cli._shared import _load_eval_or_latest
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx-empty"))
+    with pytest.raises(typer.BadParameter, match="ragdx evaluate --save"):
+        _load_eval_or_latest("")
+
+
+def test_resolve_run_id_or_latest(tmp_path, monkeypatch):
+    """The run-id sibling of _load_eval_or_latest. Used by
+    ``export-report`` so users can omit the run id."""
+    from ragdx.cli._shared import _resolve_run_id_or_latest
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        OptimizationPlan,
+    )
+    from ragdx.storage.run_store import RunStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx"))
+    store = RunStore(root=str(tmp_path / ".ragdx"))
+    saved = store.save_run(
+        EvaluationResult(retrieval={"context_precision": 0.5}),
+        DiagnosisReport(summary="stub"),
+        OptimizationPlan(objective_metric="context_precision"),
+        name="my-run",
+    )
+    # Explicit run_id passes through.
+    rid, hint = _resolve_run_id_or_latest(saved.run_id)
+    assert rid == saved.run_id and hint == ""
+    # Empty → latest.
+    rid, hint = _resolve_run_id_or_latest("")
+    assert rid == saved.run_id and "my-run" in hint
+
+
+def test_tune_defaults_from_run_to_latest_when_no_args(tmp_path, monkeypatch):
+    """The headline ergonomic win: ``ragdx tune --save`` with no
+    --from-run and no --base-config defaults to RunStore.latest().
+    Lock down the resolution path -- if the default ever stops kicking
+    in, downstream `--from-run` inheritance silently breaks too."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RAGDX_ROOT", str(tmp_path / ".ragdx"))
+    monkeypatch.delenv("RAGDX_PROJECT", raising=False)
+
+    from ragdx.schemas.models import (
+        DiagnosisReport,
+        OptimizationExperiment,
+        OptimizationPlan,
+    )
+    from ragdx.storage.run_store import RunStore
+
+    store = RunStore(root=str(tmp_path / ".ragdx"))
+    q_path = tmp_path / "q.jsonl"
+    q_path.write_text('{"question": "Q?"}\n', encoding="utf-8")
+    plan = OptimizationPlan(
+        objective_metric="context_precision",
+        experiments=[OptimizationExperiment(
+            name="planned",
+            tool="manual",
+            target_component="retrieval",
+            description="planned",
+            stage="retrieval",
+            max_trials=4,
+            search_space={"top_k": [3, 5]},
+        )],
+    )
+    store.save_run(
+        EvaluationResult(
+            retrieval={"context_precision": 0.5},
+            metadata={"questions_path": str(q_path), "corpus": "/dev/null"},
+        ),
+        DiagnosisReport(summary="stub"),
+        plan,
+        name="auto-latest-seed",
+        rag_config=RAGConfig(name="auto-latest-test"),
+    )
+
+    captured: dict = {}
+
+    class _FakeOptimizer:
+        def __init__(self): pass
+        def optimize(self, ctx):
+            captured["ctx"] = ctx
+            from ragdx.optim.stages import StageResult
+            return StageResult(
+                stage_name="retrieval", search_space={"top_k": ctx.top_ks},
+                trials=[], best_params={"top_k": 3},
+                best_config=ctx.base_config, best_composite=1.0,
+                objective_spec={}, n_init=ctx.n_bo_init, max_trials=ctx.n_bo_trials,
+            )
+
+    from unittest.mock import MagicMock
+    fake_runtime = MagicMock()
+    fake_runtime.embeddings = None
+    fake_runtime.llm_callable = lambda p: "stub"
+
+    from ragdx.optim import stages as stages_mod
+    monkeypatch.setattr(stages_mod, "RetrievalOptimizer", _FakeOptimizer)
+    from ragdx.runtime import factories
+    monkeypatch.setattr(factories, "build_runtime", lambda c: fake_runtime)
+    from ragdx import experiments as exp_mod
+    monkeypatch.setattr(
+        exp_mod, "_load_corpus_and_records",
+        lambda stub, runtime: (["chunk"], [], {}),
+    )
+    monkeypatch.setattr(exp_mod, "_build_ragas_metrics_for_mode", lambda mode: [])
+    monkeypatch.setattr(exp_mod, "_make_pdf_re_chunk_fn", lambda stub, chunks: None)
+    monkeypatch.setenv("ZHIPU_API_KEY", "stub-key")
+
+    # No --from-run, no --base-config, no --questions, no --corpus, no --stage,
+    # no --budget. Everything should default from RunStore.latest().
+    cli_tune(
+        base_config="", questions="",
+        from_run="", experiment_name="",   # ← key: from_run defaults to latest
+        stage="auto", corpus="", budget=0,
+        bo_init=2, seed=0,
+        output=str(tmp_path / "o.json"),
+        write_optimized_config="", api_key="",
+        save=False, name="", baseline_run_id="",
+        use_llm=False, use_both=False, use_llm_planner=False,
+    )
+    # Confirm the seed run's plan drove the optimizer.
+    ctx = captured["ctx"]
+    assert ctx.base_config.name == "auto-latest-test"
+    assert ctx.top_ks == [3, 5]
+    assert ctx.n_bo_trials == 4
+
+
 # ============================================================ RunStore wiring (follow-up)
 def test_evaluate_has_runstore_save_flags():
     """The follow-up that closes the README workflow's loop: ``evaluate

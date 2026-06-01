@@ -62,7 +62,7 @@
     "mode": "weighted_sum"
   },
   "inherited": {
-    "from_run": "d95411ebb60f",
+    "from_run": "e390a1cef541",
     "experiment_name": "retrieval-pipeline-search",
     "experiment_stage": "retrieval",
     "experiment_max_trials": 4,
@@ -197,7 +197,7 @@
             "answer": "The three key components mentioned for ensuring employee health and safety are:\n\n1. **Establish and maintain comprehensive policies and programmes that foster a safe and wholesome work environment.**\n2. **Ensure working conditions are secure, aiming to pre-empt work-related injuries, ill health, and prevent occupational as well as infectious diseases.**\n3. **Vigilantly identify and eliminate hazards, while minimising OHS risks through proactive measures.**"
           }
         ],
-        "elapsed_seconds": 171.95
+        "elapsed_seconds": 172.65
       },
       {
         "trial_index": 1,
@@ -258,7 +258,7 @@
             "answer": "The three key components mentioned for ensuring employee health and safety are:\n\n1. **Establish and maintain comprehensive policies and programmes that foster a safe and wholesome work environment.**\n2. **Ensure working conditions are secure, aiming to pre-empt work-related injuries, ill health, and prevent occupational as well as infectious diseases.**\n3. **Vigilantly identify and eliminate hazards, while minimising OHS risks through proactive measures.**"
           }
         ],
-        "elapsed_seconds": 113.71
+        "elapsed_seconds": 148.12
       },
       {
         "trial_index": 2,
@@ -313,7 +313,7 @@
             "answer": "The three key components mentioned for ensuring employee health and safety are:\n\n1. Hazard identification, risk assessment, and incident investigation\n2. Occupational health services\n3. Worker participation, consultation, and communication on occupational health and safety"
           }
         ],
-        "elapsed_seconds": 95.3
+        "elapsed_seconds": 101.43
       },
       {
         "trial_index": 3,
@@ -380,7 +380,7 @@
             "answer": "The three key components mentioned for ensuring employee health and safety are:\n\n1. Hazard identification, risk assessment, and incident investigation\n2. Occupational health services\n3. Worker participation, consultation, and communication on occupational health and safety"
           }
         ],
-        "elapsed_seconds": 146.46
+        "elapsed_seconds": 136.63
       }
     ],
     "best_params": {

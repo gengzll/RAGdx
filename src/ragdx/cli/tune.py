@@ -54,7 +54,10 @@ def tune(
         "``--stage`` / ``--budget`` / ``--baseline-run-id`` are pulled "
         "from the run by default (explicit flags still win). Requires "
         "the saved run was produced by ``ragdx evaluate --save`` on "
-        "PR6+ (so SavedRun.rag_config is populated).",
+        "PR6+ (so SavedRun.rag_config is populated). When neither "
+        "``--from-run`` nor ``--base-config`` is set, defaults to the "
+        "most recent run in the RunStore -- the common 'tune the thing "
+        "I just evaluated' case needs zero arguments.",
     ),
     experiment_name: str = typer.Option(
         "", "--experiment",
@@ -171,8 +174,9 @@ def tune(
             "--use-llm / --use-both / --use-llm-planner / --baseline-run-id "
             "only apply when --save is set."
         )
-    if experiment_name and not from_run:
-        raise typer.BadParameter("--experiment is only meaningful with --from-run.")
+    # NB: ``experiment_name`` requires --from-run, but ``from_run`` may
+    # be defaulted from RunStore.latest() below. Defer the check until
+    # after the default resolves.
 
     # Lazy imports keep `ragdx --help` light.
     import os
@@ -198,6 +202,32 @@ def tune(
     from ragdx.runtime.pipeline import RAGPipeline
     from ragdx.schemas.models import DatasetRecord
     from ragdx.schemas.rag_config import RAGConfig
+
+    # ------------------------------------------------------------------
+    # Default --from-run to RunStore.latest() when nothing is provided
+    # so the most common path ("tune what I just evaluated") is a
+    # zero-argument call. ``--base-config`` opts out of the default
+    # (the user is bringing a new YAML, not iterating on a saved run).
+    # ------------------------------------------------------------------
+    if not from_run and not base_config:
+        latest = _store().latest()
+        if latest is not None:
+            from_run = latest.run_id
+            print(
+                f"[dim]No --from-run / --base-config given; defaulting "
+                f"to latest run [bold]{from_run}[/bold] "
+                f"([cyan]{latest.name}[/cyan]).[/dim]"
+            )
+
+    # Deferred validation: --experiment is only meaningful with --from-run
+    # (either explicitly passed or defaulted from RunStore.latest()).
+    # If from_run is still empty here, no inheritance can happen.
+    if experiment_name and not from_run:
+        raise typer.BadParameter(
+            "--experiment is only meaningful with --from-run "
+            "(pass --from-run explicitly, or populate the RunStore "
+            "with `ragdx evaluate --save` so the default kicks in)."
+        )
 
     # ------------------------------------------------------------------
     # Inheritance from a SavedRun (--from-run).

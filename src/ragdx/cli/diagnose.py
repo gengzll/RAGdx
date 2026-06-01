@@ -15,13 +15,18 @@ import typer
 from rich import print
 
 from ragdx.cli._app import app
-from ragdx.cli._shared import _diagnose_and_plan, _load_eval, _store
+from ragdx.cli._shared import _diagnose_and_plan, _load_eval_or_latest, _store
 from ragdx.utils.reporting import summarize_plan
 
 
 @app.command()
 def diagnose(
-    eval_json: str = typer.Argument(..., help="Path to an evaluation results JSON file."),
+    eval_json: str = typer.Argument(
+        "",
+        help="Path to an EvaluationResult JSON. Optional: defaults to "
+        "the most recent saved run's evaluation in the current "
+        "(or --project'd) RunStore.",
+    ),
     save: bool = typer.Option(False, help="Persist the run, diagnosis and plan to the RunStore."),
     name: str = typer.Option("", help="Optional human-readable name to attach to the saved run."),
     baseline_run_id: str = typer.Option("", help="Run id to attach as the baseline for this run."),
@@ -32,7 +37,9 @@ def diagnose(
     """Diagnose an evaluation result and emit a DiagnosisReport JSON."""
     if use_llm and use_both:
         raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
-    result = _load_eval(eval_json)
+    result, source = _load_eval_or_latest(eval_json)
+    if source:
+        print(f"[dim]Diagnosing {source}[/dim]")
     report, plan = _diagnose_and_plan(
         result, use_llm=use_llm, use_both=use_both, use_llm_planner=use_llm_planner
     )
@@ -46,7 +53,11 @@ def diagnose(
 
 @app.command()
 def plan(
-    eval_json: str = typer.Argument(..., help="Path to an evaluation results JSON file."),
+    eval_json: str = typer.Argument(
+        "",
+        help="Path to an EvaluationResult JSON. Optional: defaults to "
+        "the most recent saved run's evaluation.",
+    ),
     strategy: str = typer.Option("bayesian", help="Search strategy: bayesian or pareto_evolutionary."),
     budget: int = typer.Option(12, help="Trial budget to distribute across experiments."),
     use_llm_planner: bool = typer.Option(False, help="Refine the optimization plan with an LLM."),
@@ -57,7 +68,9 @@ def plan(
     ),
 ):
     """Generate an OptimizationPlan from an evaluation result."""
-    result = _load_eval(eval_json)
+    result, source = _load_eval_or_latest(eval_json)
+    if source:
+        print(f"[dim]Planning from {source}[/dim]")
     _report, opt_plan = _diagnose_and_plan(
         result, strategy=strategy, budget=budget, use_llm_planner=use_llm_planner
     )

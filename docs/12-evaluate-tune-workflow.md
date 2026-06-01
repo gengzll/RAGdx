@@ -388,7 +388,41 @@ range `top_k ∈ [4, 6, 8, 10]` and found `top_k=4`, which scored
 **better** (1.675 vs 1.667). The plan's search space was the
 informed choice; the manual default was the lazy one.
 
-## 10. Related docs
+## 10. Latest-by-default fallbacks
+
+PR6 added "default to the most recent saved run" fallbacks across
+the CLI so common workflows need almost no arguments:
+
+| Command | Implicit default when arg is empty |
+|---|---|
+| `ragdx tune` | `--from-run` defaults to `RunStore.latest().run_id` when neither `--from-run` nor `--base-config` is given. |
+| `ragdx diagnose <eval_json>` | Defaults to `RunStore.latest().evaluation` when `eval_json` is omitted. |
+| `ragdx plan <eval_json>` | Same. |
+| `ragdx optimize <eval_json>` | Same. |
+| `ragdx save <eval_json>` | Same (re-runs diagnose/plan/save on the latest run). |
+| `ragdx compare <current> <baseline>` | `<baseline>` defaults to `RunStore.latest().evaluation` when omitted. |
+| `ragdx export-report <run_id> <out.md>` | `<run_id>` defaults to `RunStore.latest().run_id` when an empty string is passed (`ragdx export-report "" out.md`). |
+
+When the default kicks in, the command prints a short hint so the
+implicit choice is visible:
+
+```text
+$ ragdx compare new_demo3/A_baseline.json
+Baseline: latest run ca1fba72987e (demo3-optimized)
+...
+```
+
+The latest-default respects `--project`: under `--project esg` the
+default is the latest run in `.ragdx/projects/esg/`, not the global
+default-project latest. Empty RunStore → clear error pointing at
+`ragdx evaluate --save` as the fix path.
+
+The combined effect with §9 is that the full
+"evaluate → diagnose → tune → evaluate → compare" loop can be
+expressed without ever copy-pasting a run id by hand. See
+`new_demo3/README.md` for the worked example.
+
+## 11. Related docs
 
 - `docs/03-data-models.md` — `EvaluationResult` / `SavedRun` / `OptimizationPlan` shapes.
 - `docs/04-workflows.md` — the offline-evaluation-first workflows (normalize → diagnose → plan).

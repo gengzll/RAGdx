@@ -13,7 +13,7 @@ import typer
 from rich import print
 
 from ragdx.cli._app import app
-from ragdx.cli._shared import _diagnose_and_plan, _load_eval, _store
+from ragdx.cli._shared import _diagnose_and_plan, _load_eval_or_latest, _store
 from ragdx.optim.executor import OptimizationExecutor
 from ragdx.utils.logging import get_logger
 
@@ -22,7 +22,11 @@ logger = get_logger(__name__)
 
 @app.command()
 def optimize(
-    eval_json: str = typer.Argument(..., help="Path to an evaluation results JSON file."),
+    eval_json: str = typer.Argument(
+        "",
+        help="Path to an EvaluationResult JSON. Optional: defaults to "
+        "the most recent saved run's evaluation.",
+    ),
     strategy: str = typer.Option("bayesian", help="Search strategy: bayesian or pareto_evolutionary."),
     budget: int = typer.Option(12, help="Trial budget to distribute across experiments."),
     mode: str = typer.Option("simulate", help="Execution mode: simulate, prepare_only, or execute."),
@@ -56,7 +60,9 @@ def optimize(
             "RAGDX_<tool>_RUNNER_CMD) for real metrics."
         )
 
-    result = _load_eval(eval_json)
+    result, source = _load_eval_or_latest(eval_json)
+    if source:
+        print(f"[dim]Optimizing {source}[/dim]")
     report, opt_plan = _diagnose_and_plan(
         result,
         use_llm=use_llm,

@@ -1,4 +1,6 @@
-Inheriting from run d95411ebb60f: experiment=retrieval-pipeline-search, 
+No --from-run / --base-config given; defaulting to latest run e390a1cef541 
+(demo3-pr6-baseline).
+Inheriting from run e390a1cef541: experiment=retrieval-pipeline-search, 
 stage=retrieval, max_trials=4, search_space={'retriever': ['bm25', 'vector', 
 'hybrid'], 'embedding_model': ['bge-m3', 'e5-large-v2', 'gte-large'], 
 'reranker': ['none', 'bge-reranker', 'cross-encoder'], 'top_k': [4, 6, 8, 10], 
@@ -14,20 +16,20 @@ embeddings.position_ids | UNEXPECTED |  |
 - UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
 Running retrieval optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 
 4)...
-2026-06-01 11:14:38 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:38,  4.86s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:25<01:38, 14.07s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:58<02:16, 22.70s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:59<01:10, 14.05s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [01:02<00:40, 10.20s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:37<00:56, 18.70s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:42<00:28, 14.30s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [02:00<00:15, 15.26s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:29<00:00, 19.52s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:29<00:00, 16.57s/it]
-2026-06-01 11:17:26 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:33,  4.21s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:24<01:34, 13.56s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:36<01:17, 13.00s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:39<00:44,  8.92s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:46<00:33,  8.45s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:05<00:35, 11.78s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:09<00:18,  9.20s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:28<00:12, 12.56s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:37<00:00, 11.35s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:37<00:00, 10.83s/it]
-2026-06-01 11:19:18 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:39,  4.99s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:19<01:12, 10.42s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:24<00:48,  8.03s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:30<00:35,  7.10s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:47<00:43, 10.86s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:52<00:26,  8.73s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [00:55<00:13,  6.89s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:12<00:10, 10.10s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:19<00:00,  9.25s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:19<00:00,  8.85s/it]
-2026-06-01 11:20:54 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:03<00:29,  3.63s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:21<01:23, 11.88s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:48<01:53, 18.99s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:49<00:58, 11.63s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:52<00:35,  8.82s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:18<00:43, 14.65s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:22<00:22, 11.17s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:33<00:10, 10.96s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:11<00:00, 19.54s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:11<00:00, 14.65s/it]
+2026-06-01 16:35:29 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:33,  4.22s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:25<01:39, 14.18s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:52<02:00, 20.04s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:57<01:11, 14.23s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:59<00:38,  9.66s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:41<01:02, 20.90s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:45<00:30, 15.11s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [02:05<00:16, 16.74s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:33<00:00, 20.38s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:33<00:00, 17.09s/it]
+2026-06-01 16:38:24 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:07<00:59,  7.44s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:40<02:38, 22.63s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [01:00<02:07, 21.20s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [01:05<01:13, 14.77s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [01:15<00:53, 13.26s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:37<00:48, 16.03s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:40<00:23, 11.80s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:53<00:12, 12.42s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:07<00:00, 12.86s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [02:07<00:00, 14.20s/it]
+2026-06-01 16:40:50 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:05<00:41,  5.21s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:21<01:23, 11.99s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:30<01:03, 10.51s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:35<00:42,  8.44s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:58<00:54, 13.62s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:00<00:28,  9.44s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:04<00:15,  7.71s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:23<00:11, 11.38s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  7.85s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  9.28s/it]
+2026-06-01 16:42:29 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:06<00:52,  6.56s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:22<01:24, 12.05s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:46<01:45, 17.59s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:50<01:01, 12.27s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:51<00:32,  8.14s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:19<00:44, 14.70s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:24<00:23, 11.65s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:36<00:11, 11.75s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:59<00:00, 15.44s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:59<00:00, 13.32s/it]
 Wrote new_demo3\F2_tune.json
 Wrote optimized config new_demo3\rag_config.f.optimized.yaml (credentials 
 scrubbed)
 Best composite: 1.675
 Best params: {'top_k': 4}
-2026-06-01 11:23:05 INFO    ragdx.storage.run_store :: Saved run 275934a3280d name=demo3-pr6-tune-retrieval
-Saved run: 275934a3280d (name: demo3-pr6-tune-retrieval)
-Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 275934a3280d 
+2026-06-01 16:44:30 INFO    ragdx.storage.run_store :: Saved run 5646b1cc0265 name=demo3-pr6-tune-retrieval
+Saved run: 5646b1cc0265 (name: demo3-pr6-tune-retrieval)
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 5646b1cc0265 
 report.md`.

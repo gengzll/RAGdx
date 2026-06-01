@@ -1,28 +1,33 @@
-# new_demo3 — End-to-end walkthrough of the PR1–PR5 `evaluate` / `tune` workflow
+# new_demo3 — End-to-end walkthrough of the PR1–PR6 `evaluate` / `tune` workflow
 
 This directory is a real, executed end-to-end run of every command
-added in the `RAGConfig` / `RAGPipeline` / `evaluate` / `tune` control
-plane (PR1–PR5 + the `--save` RunStore wiring follow-up). The corpus
-is the public **ASMPT 2024 ESG report** (`e0522-asmptesgreport.pdf`,
-114 pages); the generator is **GLM-4-Flash** through ZHIPU's
-OpenAI-compatible endpoint. All commands were run on
-**2026-06-01**.
+added by the `RAGConfig` / `RAGPipeline` / `evaluate` / `tune` control
+plane (PR1–PR5), plus the PR6 follow-up that adds per-project
+storage, plan-driven `tune --from-run`, and **latest-by-default
+fallbacks** so common workflows need almost no arguments.
+
+The corpus is the public **ASMPT 2024 ESG report**
+(`e0522-asmptesgreport.pdf`, 114 pages); the generator is
+**GLM-4-Flash** through ZHIPU's OpenAI-compatible endpoint. All
+commands were run on **2026-06-01**.
 
 > Every JSON/log file in this directory was emitted by `ragdx` during
 > the run — they are not hand-crafted samples. Run IDs and timings
-> are from the live execution.
+> come from the live execution. The directory was wiped to empty
+> before this run, so the artifacts below are fully reproducible.
 
 ## What this demo covers
 
-Five scenarios, in dependency order:
+Six scenarios, in dependency order:
 
 | # | Command | What it teaches |
 |---|---|---|
 | **A** | `ragdx evaluate` | Score a `RAGConfig` and emit a normalized `EvaluationResult` JSON. The simplest mode — no RunStore, no diagnose. |
-| **B** | `ragdx evaluate --save` | Same scoring, **plus** diagnose + plan + persist to RunStore in one call. The closed-loop replacement for `evaluate → diagnose → save`. |
-| **C** | `ragdx tune --stage retrieval --save` | Stage-targeted Bayesian search (fastest stage — single pipeline rebuild). Synthesizes an EvaluationResult from the best trial and persists it linked to a baseline run. |
-| **D** | `ragdx evaluate --save --baseline-run-id` on the tuned config | Re-score the winning config and link it as a delta of the baseline. |
-| **E** | `ragdx runs` / `ragdx compare` / `ragdx export-report` | RunStore visibility — list / diff / export. |
+| **B** | `ragdx evaluate --save` | Same scoring, **plus** diagnose + plan + persist to RunStore in one call. Stores the (scrubbed) RAGConfig too, so downstream tune commands can inherit it. |
+| **C** | `ragdx tune --save` | Stage-targeted Bayesian search with **zero positional args**: `--from-run` / `--base-config` / `--questions` / `--corpus` / `--stage` / `--budget` / `--baseline-run-id` all auto-default from the latest run's plan. |
+| **D** | `ragdx evaluate --save --baseline-run-id` on the tuned config | Re-score the winning config and link it as a delta of the original baseline. |
+| **E** | `ragdx runs` / `ragdx compare` / `ragdx export-report` | RunStore visibility. Shows the **latest-defaults**: `compare A.json` (no baseline → uses latest) and `export-report "" file.md` (no run id → uses latest). |
+| **F** | `ragdx --project demo3-pr6 ...` | Per-project namespace. F1 evaluates and F2 tunes; **F2 again uses no `--from-run`** — it picks the latest run *within that project*, demonstrating that the default respects `--project`. |
 
 The full background and design rationale is in
 [`docs/12-evaluate-tune-workflow.md`](../docs/12-evaluate-tune-workflow.md).
@@ -50,9 +55,8 @@ The PDF (`e0522-asmptesgreport.pdf`) lives at the repo root.
 
 ## Scenario A — Pure scoring, no persistence
 
-**When to use it:** quick sanity check on a config before committing
-to a full diagnose/save cycle. Or in CI where you only need the
-numbers.
+**When to use it:** quick sanity check before committing to a full
+diagnose/save cycle, or in CI where you only need the numbers.
 
 ```bash
 PYTHONPATH=src python -m ragdx.cli evaluate \
@@ -71,32 +75,18 @@ Wrote new_demo3\A_baseline.json
   Retrieval: {"context_precision": 0.5556}
   Generation: {"faithfulness": 1.0}
   E2E: {}
-
-Next: `ragdx diagnose <out>` / `ragdx plan <out>` / `ragdx compare <out> <baseline>` (or re-run with --save to persist to the RunStore).
 ```
 
-Notes:
-
-- **548 chunks** generated from the PDF (`chunk_size=512`,
-  `chunk_overlap=50`). 3 records × 3 metrics = 9 ragas evaluations
-  (visible in the progress bar). One metric (`answer_relevancy`)
-  returned NaN and was filtered out by
-  `_scores_to_evaluation_result`'s non-numeric guard — the partition
-  is lossless, dropped scores end up under
-  `metadata['unmapped_scores']` if any.
-- `e2e` is empty because no ground truth was provided; `context_recall`
-  / `answer_correctness` only run when GT is populated.
-- The hint at the bottom suggests the next step is either chaining
-  `diagnose` / `plan` / `compare` manually, **or** re-running with
-  `--save` (which is Scenario B).
+`548 chunks` from the PDF, 3 records × 3 ragas metrics = 9
+evaluations. No RunStore side effects.
 
 ---
 
 ## Scenario B — `evaluate --save`: the closed loop
 
-**When to use it:** production. Score → diagnose → plan → persist all
-in one call so the result shows up in `ragdx runs` and the dashboard
-without manual chaining.
+**When to use it:** production. Score → diagnose → plan → persist in
+one call. The saved run carries the (scrubbed) `RAGConfig`, which
+Scenario C will inherit automatically.
 
 ```bash
 PYTHONPATH=src python -m ragdx.cli evaluate \
@@ -107,105 +97,79 @@ PYTHONPATH=src python -m ragdx.cli evaluate \
     --save --name "demo3-baseline"
 ```
 
-Output (full log in [`B_console.log`](B_console.log)):
+Output ([`B_console.log`](B_console.log)):
 
 ```text
 Wrote new_demo3\B_baseline_saved.json
   Retrieval: {"context_precision": 0.5556}
   Generation: {"faithfulness": 1.0}
-  E2E: {}
-Saved run: 46c0fcbe5954
-
-Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 46c0fcbe5954 report.md`.
+Saved run: d84762c9da44
 ```
 
-The metric values are identical to Scenario A (same config, same data
-— but with the diagnose + plan + persist side effects). The new
-information is **`46c0fcbe5954`**: the SavedRun ID we'll link to in
-Scenarios C and D.
-
-Available flags (none used here but worth knowing):
-
-- `--use-llm` / `--use-both` — switch diagnosis from rule-based to
-  LLM-only or rule+LLM. Requires `ZHIPU_API_KEY` / `OPENAI_API_KEY`
-  in the env so `get_llm_callable()` can build the explainer LLM
-  (independent of `--api-key`, which only feeds the **generator**).
-- `--use-llm-planner` — refine the optimization plan with an LLM.
-- `--baseline-run-id <id>` — set a baseline link at evaluate time.
-- These flags only make sense with `--save`; passing them without it
-  fails fast.
+`d84762c9da44` becomes the latest run in the RunStore.
 
 ---
 
-## Scenario C — `tune --stage retrieval --save`: stage-targeted BO
+## Scenario C — `tune --save` with zero positional args (PR6 headline)
 
-**When to use it:** you've baseline-scored a config and want to
-improve **one slice** without re-running everything. `retrieval` is
-the cheapest stage because the vector store is built once and reused
-across trials (only `top_k` varies per call).
+**This is the headline ergonomic win.** No `--from-run`, no
+`--base-config`, no `--questions`, no `--corpus`, no `--stage`, no
+`--budget`, no `--baseline-run-id`. Everything is pulled from the
+latest saved run + its plan.
 
 ```bash
 PYTHONPATH=src python -m ragdx.cli tune \
-    --base-config new_demo3/rag_config.yaml \
-    --questions new_demo3/questions.jsonl \
-    --corpus e0522-asmptesgreport.pdf \
-    --stage retrieval --budget 4 --bo-init 2 \
+    --experiment retrieval-pipeline-search \
     --output new_demo3/C_tune_retrieval.json \
     --write-optimized-config new_demo3/rag_config.optimized.yaml \
-    --save --name "demo3-retrieval-sweep" \
-    --baseline-run-id 46c0fcbe5954
+    --save --name "demo3-retrieval-sweep"
 ```
 
-Output (full log in [`C_console.log`](C_console.log)):
+The only arg that requires manual choice is `--experiment`: the plan
+has three experiments (`corpus-chunking-search`,
+`retrieval-pipeline-search`, `generator-prompt-optimization`), and
+we pick the cheapest. Omit it and tune picks the first
+(`corpus-chunking-search` here — slower but valid).
+
+Output ([`C_console.log`](C_console.log)):
 
 ```text
+No --from-run / --base-config given; defaulting to latest run d84762c9da44 (demo3-baseline).
+Inheriting from run d84762c9da44: experiment=retrieval-pipeline-search,
+  stage=retrieval, max_trials=4, search_space={...'top_k': [4, 6, 8, 10]...}
 Running retrieval optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 4)...
-[4 BO trials over top_k ∈ {1, 3, 5, 7}, each one ragas-evaluating 3 records]
+[4 BO trials over top_k ∈ {4, 6, 8, 10}]
 Wrote new_demo3\C_tune_retrieval.json
 Wrote optimized config new_demo3\rag_config.optimized.yaml (credentials scrubbed)
-Best composite: 1.667
-Best params: {'top_k': 3}
-Saved run: 77e06e2eecc6 (name: demo3-retrieval-sweep)
+Best composite: 1.675
+Best params: {'top_k': 4}
+Saved run: 669c0d73d771 (name: demo3-retrieval-sweep)
 ```
 
-What happened:
+What got auto-inherited (none of these were passed as flags):
 
-- BO searched `top_k ∈ {1, 3, 5, 7}` (the default `RetrievalOptimizer`
-  axis). Best was **`top_k=3`** — same as the baseline. This is a
-  perfectly normal outcome: it means our baseline was already at a
-  local optimum within the search space, and the tune **confirmed** it
-  rather than improving it. The composite score is reported so you
-  can compare across stages or sweeps.
-- [`rag_config.optimized.yaml`](rag_config.optimized.yaml) is the
-  winning `RAGConfig` written to disk. **Credentials are scrubbed**
-  (`api_key: null`) by `RAGConfig.scrubbed_for_commit()` before
-  serialization — this file is safe to commit.
-- SavedRun **`77e06e2eecc6`** is linked to baseline `46c0fcbe5954`
-  via `--baseline-run-id`, so the dashboard's compare view auto-pairs
-  them.
-- [`C_tune_retrieval.json`](C_tune_retrieval.json) is the full
-  bundle: 4 trials, scores, elapsed times, the search space, the
-  objective spec.
+| From the SavedRun | Used as |
+|---|---|
+| `rag_config` | `--base-config` |
+| `evaluation.metadata.questions_path` | `--questions` |
+| `evaluation.metadata.corpus` | `--corpus` |
+| `optimization_plan.experiments[retrieval-pipeline-search].stage` | `--stage retrieval` |
+| `optimization_plan.experiments[…].max_trials` | `--budget 4` |
+| `optimization_plan.experiments[…].search_space.top_k` | `ctx.top_ks=[4,6,8,10]` |
+| The defaulted `--from-run` itself | `--baseline-run-id d84762c9da44` |
 
-> **⚠ Bug discovered + fixed during this scenario.** The first run
-> of `--output` C_tune_retrieval.json leaked
-> `generator.api_key` through the embedded `base_config` field
-> (PR4–PR5 fixed the YAML path via `scrubbed_for_commit()`, but the
-> JSON bundle wasn't going through it). Fixed in `src/ragdx/cli/tune.py`
-> the same day — `base_config` is now serialized via
-> `rag_config.scrubbed_for_commit().model_dump(...)`. The file in
-> this directory is the post-fix shape; a regression test
-> (`test_tune_bundle_base_config_is_scrubbed` in
-> `tests/test_pr4_evaluate_tune.py`) verifies the source path stays
-> scrubbed. **Always grep your tune bundles for secrets before
-> committing them**, especially after upgrading ragdx.
+**Result**: best `top_k=4`, composite **1.675**. The plan's
+recommended sweep `[4, 6, 8, 10]` found an improvement that the
+default StageContext range `[1, 3, 5, 7]` (which the manual
+`--stage retrieval --budget 8` form used to use) didn't have access
+to. **This is the practical payoff of letting the plan drive tune.**
 
 ---
 
 ## Scenario D — Re-score the optimized config + link as delta
 
-**When to use it:** to confirm the tuned config behaves as the tune
-report claims, and to feed the comparison view in the dashboard.
+**When to use it:** confirm the tuned config holds up at re-eval
+time, and feed the dashboard's compare view.
 
 ```bash
 PYTHONPATH=src python -m ragdx.cli evaluate \
@@ -214,100 +178,98 @@ PYTHONPATH=src python -m ragdx.cli evaluate \
     --corpus e0522-asmptesgreport.pdf \
     --output new_demo3/D_optimized.json \
     --save --name "demo3-optimized" \
-    --baseline-run-id 46c0fcbe5954
+    --baseline-run-id d84762c9da44
 ```
 
-Output (full log in [`D_console.log`](D_console.log)):
+`--baseline-run-id` is explicit because we want to link to **B**
+(the original baseline), not to C (the tune run, which is now
+latest). The default would have picked C.
+
+Output ([`D_console.log`](D_console.log)):
 
 ```text
 Wrote new_demo3\D_optimized.json
-  Retrieval: {"context_precision": 0.5556}
+  Retrieval: {"context_precision": 0.5833}
   Generation: {"faithfulness": 1.0}
-  E2E: {}
-Saved run: 5fe0a5837a23
+Saved run: ca1fba72987e
 ```
 
-Identical scores to Scenario B — expected, because `top_k` is
-unchanged. SavedRun **`5fe0a5837a23`** is the third run; the
-RunStore now has the full A → C → D chain.
-
-Note: because the optimized config has `api_key: null` (scrubbed),
-this command relied on the `ZHIPU_API_KEY` env var to resolve the
-credential. That's the intended workflow: scrub before commit, then
-re-hydrate from env / `--api-key` at runtime.
+`context_precision` went from **0.5556** (baseline) to **0.5833**
+(tuned, `top_k=4`) — a real +5% improvement at re-eval time, not just
+during the BO sweep. SavedRun `ca1fba72987e` linked to B.
 
 ---
 
-## Scenario E — RunStore visibility (`runs`, `compare`, `export-report`)
+## Scenario E — RunStore visibility with latest-defaults
 
-**When to use it:** review or share results.
-
-### `ragdx runs`
-
-```bash
-PYTHONPATH=src python -m ragdx.cli runs
-```
-
-Output (full log in [`E_runs.log`](E_runs.log)):
-
-```text
-                               Saved ragdx runs
-+-----------------------------------------------------------------------------+
-| Run ID    | Created | Name              | Baseline    | Sess | Feedback     |
-|-----------+---------+-------------------+-------------+------+--------------|
-| 5fe0a583… | 2026-06 | demo3-optimized   | 46c0fcb…    |      | 0            |
-| 77e06e2e… | 2026-06 | demo3-retrieval…  | 46c0fcb…    |      | 0            |
-| 46c0fcbe… | 2026-06 | demo3-baseline    |             |      | 0            |
-| 60f9431…  | 2026-05 | esg-baseline      |             |      | 0  (e2e,esg) |
-+-----------------------------------------------------------------------------+
-```
-
-All three demo3 runs are visible, and the **Baseline** column shows
-C and D linked back to B (`46c0fcbe…`). Without `--save` they'd be
-absent.
-
-### `ragdx compare` (standalone, no RunStore needed)
-
-```bash
-PYTHONPATH=src python -m ragdx.cli compare \
-    new_demo3/D_optimized.json new_demo3/B_baseline_saved.json
-```
-
-Output ([`D_compare.log`](D_compare.log)):
+### `ragdx compare D.json B.json` (explicit)
 
 ```text
                        Metric comparison
 +--------------------------------------------------------------+
 | Metric            | Current | Baseline | Delta   | Direction |
 |-------------------+---------+----------+---------+-----------|
-| context_precision | 0.5556  | 0.5556   | +0.0000 | unchanged |
+| context_precision | 0.5833  | 0.5556   | +0.0278 | improved  |
 | faithfulness      | 1.0000  | 1.0000   | +0.0000 | unchanged |
 +--------------------------------------------------------------+
 ```
 
-`compare` works on any two `EvaluationResult` JSONs — they don't
-have to be in the RunStore. Useful for CI scripts.
+([`E_compare_explicit.log`](E_compare_explicit.log))
 
-### `ragdx export-report`
+### `ragdx compare A.json` (no baseline → uses latest = D, automatic)
 
-```bash
-PYTHONPATH=src python -m ragdx.cli export-report 5fe0a5837a23 new_demo3/E_report.md
+```text
+Baseline: latest run ca1fba72987e (demo3-optimized)
+                       Metric comparison
++--------------------------------------------------------------+
+| Metric            | Current | Baseline | Delta   | Direction |
+|-------------------+---------+----------+---------+-----------|
+| context_precision | 0.5556  | 0.5833   | -0.0278 | regressed |
+| faithfulness      | 1.0000  | 1.0000   | +0.0000 | unchanged |
++--------------------------------------------------------------+
 ```
 
-Output: a Markdown summary of Scenario D's run
-([`E_report.md`](E_report.md)) including the diagnosis
-(`retrieval_precision_defect`, posterior 0.97), causal signals, and
-the auto-generated optimization plan. Suitable for sharing in a PR
-comment or Slack.
+([`E_compare_default.log`](E_compare_default.log))
+
+The header `Baseline: latest run ca1fba72987e (demo3-optimized)`
+makes the implicit choice visible. Same trick on `diagnose`,
+`plan`, `optimize`, `save`.
+
+### `ragdx runs`
+
+```text
++------------+-------------------+--------------+
+| Run ID     | Name              | Baseline     |
++------------+-------------------+--------------+
+| ca1fba7…   | demo3-optimized   | d84762c…     |  ← D
+| 669c0d7…   | demo3-retrieval…  | d84762c…     |  ← C
+| d84762c…   | demo3-baseline    |              |  ← B
+| 60f9431…   | esg-baseline      |              |  (older, e2e_test)
++------------+-------------------+--------------+
+```
+
+([`E_runs.log`](E_runs.log))
+
+### `ragdx export-report "" report.md` (no run id → uses latest)
+
+```text
+Exporting latest run (demo3-optimized)
+Wrote new_demo3\E_report.md
+```
+
+([`E_export.log`](E_export.log), markdown in [`E_report.md`](E_report.md))
+
+The `""` opts into the default. For backward compatibility,
+`run_id` is still the first positional, so `ragdx export-report
+<id> report.md` keeps working unchanged.
 
 ---
 
-## Scenario F — Per-project storage + `tune --from-run` (PR6+)
+## Scenario F — Per-project storage + project-scoped latest-defaults
 
-**When to use it:** real production use. Each project gets its own
-`.ragdx/` namespace; tune inherits everything from the previous
-evaluate run — no more re-passing `--base-config` / `--questions` /
-`--stage` / `--budget` / `--baseline-run-id` by hand.
+**When to use it:** real production with multiple RAGs in one repo.
+Each project's runs, sessions, feedback, and causal priors live in
+their own folder. The `latest` default also scopes to the project.
 
 ### F1 — `evaluate --save` under `--project demo3-pr6`
 
@@ -320,106 +282,50 @@ PYTHONPATH=src python -m ragdx.cli --project demo3-pr6 evaluate \
     --save --name "demo3-pr6-baseline"
 ```
 
-Output (full log in [`F1_console.log`](F1_console.log)):
+Saved run `e390a1cef541` → lands in
+**`.ragdx/projects/demo3-pr6/runs/e390a1cef541.json`** (not the
+default `.ragdx/runs/`). The default RunStore still has only B/C/D.
 
-```text
-Saved run: d95411ebb60f
-```
-
-This run lands in **`.ragdx/projects/demo3-pr6/runs/d95411ebb60f.json`**
-(not the default `.ragdx/runs/`). Verify with:
-
-```bash
-ragdx --project demo3-pr6 runs    # → 1 run: demo3-pr6-baseline
-ragdx runs                          # → still shows the older A-E runs only
-```
-
-The saved JSON now carries the production `RAGConfig` itself
-(scrubbed of credentials) and the auto-generated `OptimizationPlan`
-recommending 3 experiments. Inspecting:
-
-```text
-plan experiments: 3
-  corpus-chunking-search: stage=corpus, max_trials=3
-  retrieval-pipeline-search: stage=retrieval, max_trials=4,
-      search_space top_k=[4, 6, 8, 10]
-  generator-prompt-optimization: stage=generation, max_trials=4
-```
-
-### F2 — `tune --from-run` (one command, zero re-typed args)
+### F2 — `tune --save` (still zero `--from-run`, defaults to the project's latest)
 
 ```bash
 PYTHONPATH=src python -m ragdx.cli --project demo3-pr6 tune \
-    --from-run d95411ebb60f \
     --experiment retrieval-pipeline-search \
     --output new_demo3/F2_tune.json \
     --write-optimized-config new_demo3/rag_config.f.optimized.yaml \
     --save --name "demo3-pr6-tune-retrieval"
 ```
 
-Output (full log in [`F2_console.log`](F2_console.log)):
+Output ([`F2_console.log`](F2_console.log)):
 
 ```text
-Inheriting from run d95411ebb60f: experiment=retrieval-pipeline-search,
-  stage=retrieval, max_trials=4, search_space={'top_k': [4, 6, 8, 10], ...}
-Running retrieval optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 4)...
-[4 BO trials over top_k ∈ {4, 6, 8, 10}]
-Wrote new_demo3\F2_tune.json
-Wrote optimized config new_demo3\rag_config.f.optimized.yaml (credentials scrubbed)
+No --from-run / --base-config given; defaulting to latest run e390a1cef541 (demo3-pr6-baseline).
+Inheriting from run e390a1cef541: experiment=retrieval-pipeline-search,
+  stage=retrieval, max_trials=4, search_space={...'top_k': [4, 6, 8, 10]...}
 Best composite: 1.675
 Best params: {'top_k': 4}
-Saved run: 275934a3280d (name: demo3-pr6-tune-retrieval)
+Saved run: 5646b1cc0265 (name: demo3-pr6-tune-retrieval)
 ```
 
-What got auto-inherited (none of these passed as flags):
+The default picked **F1** (the project's latest), **not D** (which
+is `main`'s latest). That's the project isolation working.
 
-| From the SavedRun | Used as |
-|---|---|
-| `rag_config` | `--base-config` |
-| `evaluation.metadata.questions_path` | `--questions` |
-| `evaluation.metadata.corpus` | `--corpus` |
-| `optimization_plan.experiments[retrieval-pipeline-search].stage` | `--stage retrieval` |
-| `optimization_plan.experiments[…].max_trials` | `--budget 4` |
-| `optimization_plan.experiments[…].search_space.top_k` | `ctx.top_ks=[4,6,8,10]` |
-| The `--from-run` value itself | `--baseline-run-id d95411ebb60f` |
-
-The tune bundle ([`F2_tune.json`](F2_tune.json)) stamps an
-`inherited` section recording what was carried over, so the choice
-is auditable.
-
-**Result:** best `top_k=4`, composite **1.675** — slightly better
-than Scenarios B/C/D's baseline (composite 1.667 with `top_k=3`).
-The plan-recommended sweep range
-(`[4, 6, 8, 10]`) found an actual improvement, which the manually
-configured Scenario C didn't search because it used the hardcoded
-default `[1, 3, 5, 7]`. **This is the practical payoff of letting
-the plan drive tune.**
-
-### F3 — Confirm per-project isolation
-
-```bash
-PYTHONPATH=src python -m ragdx.cli --project demo3-pr6 runs
-```
-
-Output ([`F3_runs.log`](F3_runs.log)):
+### F3 — `ragdx --project demo3-pr6 runs`
 
 ```text
-+-----------------------------------------------------------------------------+
-| Run ID    | Name                       | Baseline    | Feedback             |
-|-----------+----------------------------+-------------+----------------------|
-| 275934a3… | demo3-pr6-tune-retrieval  | d95411eb…   | 0                    |
-| d95411eb… | demo3-pr6-baseline         |             | 0                    |
-+-----------------------------------------------------------------------------+
++------------+-------------------------+-------------+
+| Run ID     | Name                    | Baseline    |
++------------+-------------------------+-------------+
+| 5646b1cc…  | demo3-pr6-tune-retrieval| e390a1ce…   |  ← F2
+| e390a1ce…  | demo3-pr6-baseline      |             |  ← F1
++------------+-------------------------+-------------+
 ```
 
-Compared to the un-projected `ragdx runs` (which still shows
-Scenarios B/C/D from the global `.ragdx/runs/`), the two stores stay
-independent. Add a second project (`--project legal`) and its runs
-land in `.ragdx/projects/legal/` — never colliding with ESG runs.
+([`F3_runs.log`](F3_runs.log))
 
-Explicit overrides still work; passing `--stage joint --budget 8`
-along with `--from-run` overrides the inherited values (the explicit
-flag wins). See `tests/test_pr4_evaluate_tune.py::test_tune_from_run_explicit_flags_override_plan`.
+Just the demo3-pr6 runs. The main project's B/C/D never appear here.
+
+---
 
 ## File map
 
@@ -427,41 +333,41 @@ flag wins). See `tests/test_pr4_evaluate_tune.py::test_tune_from_run_explicit_fl
 |---|---|---|
 | `rag_config.yaml` | hand-written | Baseline RAGConfig (input). |
 | `questions.jsonl` | hand-written | 3-question eval suite (input). |
-| `A_baseline.json` | Scenario A `--output` | EvaluationResult, not persisted. |
-| `A_console.log` | Scenario A stdout/stderr | Reference log. |
-| `B_baseline_saved.json` | Scenario B `--output` | EvaluationResult, also persisted as run `46c0fcbe5954`. |
-| `B_console.log` | Scenario B stdout/stderr | Reference log. |
-| `C_tune_retrieval.json` | Scenario C `--output` | Tune bundle with 4 BO trials. |
-| `rag_config.optimized.yaml` | Scenario C `--write-optimized-config` | Winning config (credentials scrubbed). |
-| `C_console.log` | Scenario C stdout/stderr | Reference log including the BO trial sequence. |
-| `D_optimized.json` | Scenario D `--output` | EvaluationResult for the tuned config, persisted as run `5fe0a5837a23` linked to baseline B. |
-| `D_console.log` | Scenario D stdout/stderr | Reference log. |
-| `D_compare.log` | Scenario E `ragdx compare` | Side-by-side delta table. |
-| `E_runs.log` | Scenario E `ragdx runs` | RunStore listing. |
-| `E_export.log` | Scenario E export confirmation | `Wrote ...` line. |
-| `E_report.md` | Scenario E `ragdx export-report` | Markdown report of run `5fe0a5837a23`. |
-| `F1_baseline.json` | Scenario F1 `--output` | EvaluationResult under `--project demo3-pr6`, persisted to `.ragdx/projects/demo3-pr6/runs/d95411ebb60f.json`. |
-| `F1_console.log` | Scenario F1 stdout/stderr | Reference log. |
-| `F2_tune.json` | Scenario F2 `--output` | Tune bundle from `tune --from-run`. The `inherited` section records what was auto-pulled from the SavedRun + plan. |
-| `rag_config.f.optimized.yaml` | Scenario F2 `--write-optimized-config` | Winning config (top_k=4), credentials scrubbed. |
-| `F2_console.log` | Scenario F2 stdout/stderr | Reference log. |
-| `F3_runs.log` | Scenario F3 `ragdx --project demo3-pr6 runs` | Per-project run list. |
+| `A_baseline.json` | A `--output` | EvaluationResult, not persisted. |
+| `A_console.log` | A stdout/stderr | Reference log. |
+| `B_baseline_saved.json` | B `--output` | EvaluationResult, persisted as run `d84762c9da44`. |
+| `B_console.log` | B stdout/stderr | Reference log. |
+| `C_tune_retrieval.json` | C `--output` | Tune bundle (4 BO trials over `top_k ∈ [4,6,8,10]`). `inherited` section records what was carried from the SavedRun + plan. |
+| `rag_config.optimized.yaml` | C `--write-optimized-config` | Winning config (`top_k=4`), credentials scrubbed. |
+| `C_console.log` | C stdout/stderr | Shows the auto-default + inherited block. |
+| `D_optimized.json` | D `--output` | EvaluationResult at the tuned config, persisted as run `ca1fba72987e` linked to B. |
+| `D_console.log` | D stdout/stderr | Reference log. |
+| `E_compare_explicit.log` | `compare D.json B.json` | Side-by-side delta table (D vs B). |
+| `E_compare_default.log` | `compare A.json` | Same renderer, baseline auto-resolved to D. |
+| `E_runs.log` | `ragdx runs` | Main-project RunStore listing. |
+| `E_export.log` | `export-report "" file.md` | Latest-default export. |
+| `E_report.md` | `export-report` output | Markdown report of run `ca1fba72987e`. |
+| `F1_baseline.json` | F1 `--output` | EvaluationResult under `--project demo3-pr6`. |
+| `F1_console.log` | F1 stdout/stderr | Reference log. |
+| `F2_tune.json` | F2 `--output` | Tune bundle (project-scoped). The `inherited.from_run` records F1's run id, **not** main-project's D. |
+| `rag_config.f.optimized.yaml` | F2 `--write-optimized-config` | Winning config from the project-scoped tune. |
+| `F2_console.log` | F2 stdout/stderr | Reference log. |
+| `F3_runs.log` | `--project demo3-pr6 runs` | Project-scoped run list. |
 
 ## Wall-clock budget
 
-The full run (Scenarios A → E, with 3 questions × `chunk_size=512`)
-took **~17 minutes** including PDF chunking and FAISS indexing.
-Breakdown:
+This run took **~33 minutes** end-to-end (A–F). Breakdown:
 
-- A: ~1 min (1 evaluate)
-- B: ~1 min (1 evaluate + diagnose; diagnose is cheap)
-- C: ~6 min (4 BO trials × ~90s each)
-- D: ~1.5 min (1 evaluate + diagnose, slightly slower due to ragas pace)
-- E: a few seconds total (RunStore reads, markdown formatting)
+- A + B: ~5 min (2 evaluates; first one's PDF chunking + ragas pace
+  was slow due to GLM rate-limit jitter)
+- C: ~10 min (4 BO retrieval trials, each ~2 min of ragas)
+- D: ~1.5 min (1 evaluate + diagnose)
+- E: a few seconds total
+- F1 + F2: ~11 min (1 evaluate + 1 tune with 4 BO trials)
 
-If you want a faster smoke test, drop the question set to 1 record
-and `--budget 2`. If you want a more realistic budget, push to
-~20 questions and `--budget 12`.
+For a faster smoke test, drop the question set to 1 record and
+`--budget 2`. For a realistic budget, push to ~20 questions and
+`--budget 12`.
 
 ## Picking the right scenario
 
@@ -469,13 +375,12 @@ and `--budget 2`. If you want a more realistic budget, push to
 |---|---|
 | Score a YAML quickly, no side effects | **A** |
 | Score + diagnose + persist for review | **B** (or **F1** with `--project`) |
-| Improve `top_k` on an already-decent config | **C** with `--stage retrieval` |
-| Sweep chunker (slower, vstore rebuilt per trial) | **C** with `--stage chunking` |
-| Sweep all three knobs jointly (matches `ragdx experiment`) | **C** with `--stage joint` |
-| Optimize the system prompt via DSPy MIPROv2 | **C** with `--stage generation` |
-| **Let the plan choose the stage + search axes** | **F2** (`tune --from-run <id>`) |
-| Compare two configs without persisting | **A** twice → `compare` |
-| Compare two runs that are already in the RunStore | dashboard (the Compare tab) |
+| **Tune what I just evaluated** | **C** — `ragdx tune --save` with no `--from-run` needed |
+| Run a specific stage instead of plan's first pick | **C** with `--experiment <name>` |
+| Override the plan with a specific search axis | **C** with explicit `--stage` / `--budget` |
+| Compare two configs without persisting | **A** twice → `compare a.json b.json` |
+| Compare against last run without typing paths | `compare new.json` (baseline auto-resolves) |
+| Export the latest run as markdown | `export-report "" report.md` |
 | Keep multiple production projects' results isolated | `--project <name>` (Scenario F) |
 
 ## Reproducing this demo
@@ -484,9 +389,9 @@ and `--budget 2`. If you want a more realistic budget, push to
 git clone https://github.com/gengzll/RAGdx.git && cd RAGdx
 pip install -e ".[langchain,bo,ragas,openai]"
 export ZHIPU_API_KEY=<your-key>
-# Re-run scenarios A → E using the commands in this README.
-# Run IDs will differ; everything else (metric values, control flow)
-# should match.
+# Then run scenarios A through F using the commands in this README.
+# Run IDs will differ; everything else (metric values, control flow,
+# the "defaulting to latest" hints) should match.
 ```
 
 For the design rationale + every flag's contract see

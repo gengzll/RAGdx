@@ -6,15 +6,15 @@ embeddings.position_ids | UNEXPECTED |  |
 
 [3mNotes:
 - UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
-2026-06-01 11:11:35 INFO    ragdx.workflows.evaluate :: evaluate: 548 chunks, 3 records, model=openai/glm-4-flash
-2026-06-01 11:11:49 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:05<00:42,  5.32s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:21<01:22, 11.84s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:21<00:39,  6.51s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:25<00:27,  5.45s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:41<00:36,  9.08s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:54<00:31, 10.42s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [00:58<00:16,  8.43s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:02<00:06,  6.89s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:11<00:00,  7.65s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:11<00:00,  7.94s/it]
+2026-06-01 16:32:40 INFO    ragdx.workflows.evaluate :: evaluate: 548 chunks, 3 records, model=openai/glm-4-flash
+2026-06-01 16:32:51 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:38,  4.86s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:19<01:16, 10.86s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:22<00:42,  7.14s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:27<00:30,  6.17s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:44<00:40, 10.10s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:51<00:27,  9.00s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [00:55<00:14,  7.46s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:02<00:07,  7.45s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:13<00:00,  8.38s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:13<00:00,  8.16s/it]
 Wrote new_demo3\F1_baseline.json
   Retrieval: {"context_precision": 0.5556}
   Generation: {"faithfulness": 1.0}
   E2E: {}
-2026-06-01 11:13:02 INFO    ragdx.storage.run_store :: Saved run d95411ebb60f name=demo3-pr6-baseline
-Saved run: d95411ebb60f
+2026-06-01 16:34:06 INFO    ragdx.storage.run_store :: Saved run e390a1cef541 name=demo3-pr6-baseline
+Saved run: e390a1cef541
 
-Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report d95411ebb60f 
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report e390a1cef541 
 report.md`.

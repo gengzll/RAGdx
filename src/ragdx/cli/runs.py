@@ -17,14 +17,25 @@ from rich import print
 from rich.table import Table
 
 from ragdx.cli._app import app
-from ragdx.cli._shared import _diagnose_and_plan, _load_eval, _store
+from ragdx.cli._shared import (
+    _diagnose_and_plan,
+    _load_eval,
+    _load_eval_or_latest,
+    _resolve_run_id_or_latest,
+    _store,
+)
 from ragdx.core.compare import compare_results
 from ragdx.schemas.models import FeedbackEvent
 
 
 @app.command()
 def save(
-    eval_json: str = typer.Argument(..., help="Path to an evaluation results JSON file."),
+    eval_json: str = typer.Argument(
+        "",
+        help="Path to an EvaluationResult JSON. Optional: defaults to "
+        "the most recent saved run's evaluation (re-saving with new "
+        "name/tags/notes/baseline link).",
+    ),
     name: str = typer.Option("", help="Optional human-readable name."),
     tags: str = typer.Option("", help="Comma-separated tags to attach to the saved run."),
     notes: str = typer.Option("", help="Free-form notes attached to the saved run."),
@@ -36,7 +47,9 @@ def save(
     """Run diagnose+plan and persist the run."""
     if use_llm and use_both:
         raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
-    result = _load_eval(eval_json)
+    result, source = _load_eval_or_latest(eval_json)
+    if source:
+        print(f"[dim]Re-saving {source}[/dim]")
     report, opt_plan = _diagnose_and_plan(
         result, use_llm=use_llm, use_both=use_both, use_llm_planner=use_llm_planner
     )
@@ -55,11 +68,31 @@ def save(
 @app.command()
 def compare(
     current_eval_json: str = typer.Argument(..., help="Path to the current EvaluationResult JSON."),
-    baseline_eval_json: str = typer.Argument(..., help="Path to the baseline EvaluationResult JSON."),
+    baseline_eval_json: str = typer.Argument(
+        "",
+        help="Path to the baseline EvaluationResult JSON. Optional: "
+        "defaults to the most recent saved run's evaluation, so "
+        "`ragdx compare new.json` diffs against your latest saved "
+        "baseline without needing the path.",
+    ),
 ):
     """Compare two evaluation results metric-by-metric."""
     current = _load_eval(current_eval_json)
-    baseline = _load_eval(baseline_eval_json)
+    if baseline_eval_json:
+        baseline = _load_eval(baseline_eval_json)
+    else:
+        latest = _store().latest()
+        if latest is None:
+            raise typer.BadParameter(
+                "No baseline_eval_json given and the RunStore is empty. "
+                "Pass a baseline path explicitly, or run `ragdx evaluate "
+                "--save` first."
+            )
+        baseline = latest.evaluation
+        print(
+            f"[dim]Baseline: latest run {latest.run_id} "
+            f"({latest.name})[/dim]"
+        )
     comparisons = compare_results(current, baseline)
     table = Table(title="Metric comparison")
     table.add_column("Metric")
@@ -154,11 +187,24 @@ def sessions():
 
 @app.command("export-report")
 def export_report(
-    run_id: str = typer.Argument(..., help="Saved run id."),
+    run_id: str = typer.Argument(
+        "",
+        help="Saved run id. Optional: defaults to the most recent "
+        "saved run when omitted (pass an explicit run id or use "
+        "an empty string \"\" to opt into the default).",
+    ),
     output_md: str = typer.Argument(..., help="Output Markdown file path."),
 ):
-    """Export a Markdown report for a saved run."""
-    path = _store().export_markdown(run_id, output_md)
+    """Export a Markdown report for a saved run.
+
+    The traditional call is ``ragdx export-report <run_id> <out.md>``.
+    Pass an empty ``run_id`` (e.g. ``ragdx export-report "" out.md``)
+    to default to the most recent saved run.
+    """
+    resolved_run_id, source = _resolve_run_id_or_latest(run_id)
+    if source:
+        print(f"[dim]Exporting {source}[/dim]")
+    path = _store().export_markdown(resolved_run_id, output_md)
     print(f"Wrote {path}")
 
 

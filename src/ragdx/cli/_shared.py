@@ -43,6 +43,53 @@ def _load_eval(path: str | Path) -> EvaluationResult:
         return EvaluationResult(**json.load(f))
 
 
+def _load_eval_or_latest(path: str | Path) -> tuple[EvaluationResult, str]:
+    """Load an eval from ``path``; fall back to ``RunStore.latest()``
+    when ``path`` is empty.
+
+    Returns ``(result, hint)`` where ``hint`` is either ``""`` (loaded
+    from an explicit path; no log needed) or a short string the caller
+    can show the user to make the implicit default visible
+    (``f"latest run {id} ({name})"``).
+
+    Used by ``diagnose`` / ``plan`` / ``optimize`` / ``save`` /
+    ``compare`` so the common "rerun on the thing I just saved" case
+    needs zero arguments. Empty RunStore raises a clear error.
+    """
+    if path:
+        return _load_eval(path), ""
+    latest = _store().latest()
+    if latest is None:
+        raise typer.BadParameter(
+            "No evaluation JSON given and the RunStore is empty. Pass "
+            "an EvaluationResult JSON path, or run `ragdx evaluate "
+            "--save` first to populate the RunStore."
+        )
+    return latest.evaluation, f"latest run {latest.run_id} ({latest.name})"
+
+
+def _resolve_run_id_or_latest(run_id: str) -> tuple[str, str]:
+    """Resolve a run-id argument, falling back to the latest saved
+    run when ``run_id`` is empty.
+
+    Returns ``(run_id, hint)`` matching :func:`_load_eval_or_latest`'s
+    contract. Empty RunStore raises ``typer.BadParameter``.
+
+    Used by commands that accept a run id positional (e.g.
+    ``export-report``, ``attach-feedback``).
+    """
+    if run_id:
+        return run_id, ""
+    latest = _store().latest()
+    if latest is None:
+        raise typer.BadParameter(
+            "No run id given and the RunStore is empty. Pass a run "
+            "id, or run `ragdx evaluate --save` first to populate the "
+            "RunStore."
+        )
+    return latest.run_id, f"latest run ({latest.name})"
+
+
 def _build_engine(use_llm: bool = False, use_both: bool = False) -> RAGDiagnosisEngine:
     """Build a diagnosis engine, optionally with an LLM explainer."""
     if not use_llm and not use_both:
@@ -75,5 +122,7 @@ __all__ = [
     "_build_llm_callable",
     "_diagnose_and_plan",
     "_load_eval",
+    "_load_eval_or_latest",
+    "_resolve_run_id_or_latest",
     "_store",
 ]

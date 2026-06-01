@@ -1,6 +1,6 @@
 {
   "retrieval": {
-    "context_precision": 0.5555555554999999
+    "context_precision": 0.5833333332819444
   },
   "generation": {
     "faithfulness": 1.0
