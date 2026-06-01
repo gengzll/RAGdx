@@ -18,7 +18,7 @@ commands were run on **2026-06-01**.
 
 ## What this demo covers
 
-Six scenarios, in dependency order:
+Seven scenarios, in dependency order:
 
 | # | Command | What it teaches |
 |---|---|---|
@@ -28,6 +28,7 @@ Six scenarios, in dependency order:
 | **D** | `ragdx evaluate --save --baseline-run-id` on the tuned config | Re-score the winning config and link it as a delta of the original baseline. |
 | **E** | `ragdx runs` / `ragdx compare` / `ragdx export-report` | RunStore visibility. Shows the **latest-defaults**: `compare A.json` (no baseline → uses latest) and `export-report "" file.md` (no run id → uses latest). |
 | **F** | `ragdx --project demo3-pr6 ...` | Per-project namespace. F1 evaluates and F2 tunes; **F2 again uses no `--from-run`** — it picks the latest run *within that project*, demonstrating that the default respects `--project`. |
+| **G** | `ragdx tune --stage generation` | **The non-BO stage**: DSPy MIPROv2 evolves the `system_instruction` at the current retrieval config. Produces a `dspy_a_b` section in the bundle that `experiment-report` renders as a baseline-vs-optimized bar chart. |
 
 The full background and design rationale is in
 [`docs/12-evaluate-tune-workflow.md`](../docs/12-evaluate-tune-workflow.md).
@@ -292,6 +293,92 @@ equivalent: `PYTHONPATH=src python -m ragdx.cli experiment-dashboard
 new_demo3/C_tune_retrieval.json` (interactive, but needs a
 streamlit server).
 
+## Scenario G — `tune --stage generation`: DSPy MIPROv2 prompt optimization
+
+**When to use it:** the plan / diagnose path flagged
+`grounding_defect` or `generation_quality_drop`, or you simply want
+to see whether a better prompt can squeeze more out of your current
+retrieval config. This is the **non-BO** stage; it runs
+[DSPy MIPROv2](https://dspy.ai/learn/optimization/optimizers/#mipro)
+to evolve the `generator.system_instruction` (and few-shot demos)
+at the existing retrieval config.
+
+```bash
+PYTHONPATH=src python -m ragdx.cli tune \
+    --stage generation \
+    --from-run d84762c9da44 \
+    --output new_demo3/G_tune_generation.json \
+    --save --name "demo3-generation-tune"
+```
+
+`--stage generation` is explicit; without it the plan's first
+experiment (`corpus-chunking-search`) would be picked. `--from-run
+d84762c9da44` points at the original baseline (B) so the prompt
+sweep uses the same retrieval config + questions + corpus that
+produced the original 0.5556 / 1.0 baseline scores.
+
+Output ([`G_console.log`](G_console.log), bundle in
+[`G_tune_generation.json`](G_tune_generation.json)):
+
+```text
+Inheriting from run d84762c9da44: experiment=corpus-chunking-search, ...
+Running generation optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 4)...
+[DSPy/no_gt] (a) baseline run
+[DSPy/no_gt] (b) MIPROv2 optimisation
+  Bootstrapping 11 sets of demonstrations...
+  Returning best identified program with score 100.0!
+[DSPy/no_gt] (c) optimised re-run
+
+Best composite: 1.667
+Best params: {'system_instruction': 'You are an ESG sustainability analyst...'}
+Saved run: ba147d961aba (name: demo3-generation-tune)
+```
+
+### What MIPROv2 actually did
+
+1. **Baseline run** — score the user-supplied `system_instruction`
+   on the 3 questions with the existing retrieval config.
+2. **MIPROv2 optimisation** — bootstrap 11 candidate
+   instructions + few-shot demo sets, internally score each, pick
+   the best.
+3. **Optimised re-run** — score the winning program again on the
+   3 questions to produce a true before/after comparison.
+
+The MIPROv2 score=100 means the candidate hits every internal
+heuristic; the **actual ragas-based** before/after is in
+`dspy_a_b.no_gt.{baseline_scores, optimized_scores, delta}`:
+
+```text
+baseline_scores  : {context_precision: 0.5556, faithfulness: 1.0}
+optimized_scores : {context_precision: 0.5556, faithfulness: 1.0}
+delta            : {context_precision: 0.0,    faithfulness: 0.0}
+composite Δ      : 0.0
+```
+
+**Result:** MIPROv2 explored 11 alternatives and concluded the
+hand-crafted ESG analyst prompt was already at a local optimum for
+this question set + retrieval config. The "winning" instruction is
+*identical* to baseline. That's a valid and informative outcome:
+your prompt is already strong. With a larger trainset or more
+ambitious `optimizer_kwargs.auto="medium" / "heavy"`, MIPROv2 has
+more room to experiment, but at this scale + budget it can't beat
+the seed.
+
+### Visualizing the DSPy A/B as HTML
+
+```bash
+PYTHONPATH=src python -m ragdx.cli experiment-report \
+    new_demo3/G_tune_generation.json \
+    --output new_demo3/G_tune_report.html \
+    --title "demo3 Scenario G: DSPy MIPROv2 prompt tune"
+```
+
+Output: [`G_tune_report.html`](G_tune_report.html) (~27 KB). The
+HTML has a dedicated "**DSPy before/after**" section with a
+side-by-side bar chart (baseline vs optimized scores per metric),
+composite delta, and the prompt text. This is the same renderer
+that handles `ragdx experiment` bundles' DSPy section.
+
 ## Scenario F — Per-project storage + project-scoped latest-defaults
 
 **When to use it:** real production with multiple RAGs in one repo.
@@ -382,6 +469,9 @@ Just the demo3-pr6 runs. The main project's B/C/D never appear here.
 | `F3_runs.log` | `--project demo3-pr6 runs` | Project-scoped run list. |
 | `C_tune_report.html` | `experiment-report` on C bundle | Self-contained HTML rendering of Scenario C's BO trials. |
 | `F2_tune_report.html` | `experiment-report` on F2 bundle | Same, for the project-scoped tune. |
+| `G_tune_generation.json` | G `--output` | DSPy MIPROv2 result bundle: baseline_scores, optimized_scores, delta, instructions, demos, trial_scores. |
+| `G_console.log` | G stdout/stderr | Shows MIPROv2's "Bootstrapping" + "Returning best identified program" log. |
+| `G_tune_report.html` | `experiment-report` on G bundle | HTML with the DSPy before/after section (~27 KB). |
 
 ## Wall-clock budget
 
@@ -407,6 +497,7 @@ For a faster smoke test, drop the question set to 1 record and
 | **Tune what I just evaluated** | **C** — `ragdx tune --save` with no `--from-run` needed |
 | Run a specific stage instead of plan's first pick | **C** with `--experiment <name>` |
 | Override the plan with a specific search axis | **C** with explicit `--stage` / `--budget` |
+| **Improve the prompt at the existing retrieval config** | **G** — `ragdx tune --stage generation` (DSPy MIPROv2) |
 | Compare two configs without persisting | **A** twice → `compare a.json b.json` |
 | Compare against last run without typing paths | `compare new.json` (baseline auto-resolves) |
 | Export the latest run as markdown | `export-report "" report.md` |
