@@ -135,9 +135,16 @@ dmypy.json
 .ragdx_*/
 # Local end-to-end verification output dirs (e.g. `ragdx experiment
 # --output-dir new_demoN`, `ragdx evaluate` baseline.json, etc.).
-# Real LLM run artifacts, not source.
-new_demo*/
+# Real LLM run artifacts, not source. ``new_demo3/`` is intentionally
+# tracked -- it's the documented walkthrough of the PR1-PR5
+# ``evaluate``/``tune`` workflow. Add a ``!`` exception for any
+# future demo dirs you want to commit.
+new_demo1/
+new_demo2/
 e2e_test/
+# Track new_demo3's console transcripts (they're cross-linked from
+# new_demo3/README.md and document the live run output).
+!new_demo3/*.log
 .ruff_cache/
 .claude/
 result/

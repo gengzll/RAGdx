@@ -263,6 +263,32 @@ def test_tune_rejects_use_llm_without_save(tmp_path):
         )
 
 
+def test_tune_bundle_base_config_is_scrubbed():
+    """The ``--output`` bundle JSON ``ragdx tune`` writes must scrub
+    ``generator.api_key`` / ``judge.api_key`` from ``base_config``.
+    Otherwise the env-resolved key leaks into a file users may commit
+    -- discovered while running the new_demo3 scenarios (2026-06-01).
+
+    Cheap source-level check: verifies the cli/tune.py code path uses
+    ``scrubbed_for_commit()`` before ``model_dump`` on ``base_config``.
+    A more thorough test would run the command and inspect the JSON,
+    but that needs live ragas + LLM (covered by the demo bundles)."""
+    import inspect
+
+    src = inspect.getsource(cli_tune)
+    assert "scrubbed_for_commit" in src and "base_config" in src
+    # Specifically the bundle-construction line must scrub. A simple
+    # regex catches the common ways someone might re-introduce the leak.
+    import re
+    pattern = re.compile(
+        r'"base_config"\s*:\s*rag_config\.scrubbed_for_commit\(\)'
+    )
+    assert pattern.search(src), (
+        "cli/tune.py bundle JSON must serialize base_config via "
+        "scrubbed_for_commit() to prevent api_key leakage."
+    )
+
+
 def test_tune_save_synthesizes_evaluation_result_from_best_trial(tmp_path):
     """The ``--save`` path on tune synthesizes an EvaluationResult from
     the best trial's ragas scores before calling diagnose/save_run.

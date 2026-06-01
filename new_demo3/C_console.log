@@ -1,0 +1,27 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Running retrieval optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 
+4)...
+2026-06-01 10:06:55 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:03<00:28,  3.61s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:26<01:43, 14.85s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:45<01:39, 16.62s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:48<00:56, 11.38s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:48<00:29,  7.38s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:12<00:39, 13.00s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:18<00:21, 10.63s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:20<00:07,  7.80s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:50<00:00, 14.78s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:50<00:00, 12.25s/it]
+2026-06-01 10:08:59 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:32,  4.11s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:26<01:44, 14.91s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:28<00:54,  9.08s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:32<00:35,  7.00s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:52<00:46, 11.63s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:04<00:35, 11.80s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:08<00:18,  9.19s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:11<00:07,  7.26s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:24<00:00,  9.14s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:24<00:00,  9.41s/it]
+2026-06-01 10:10:30 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:34,  4.36s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:10<00:37,  5.30s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:19<00:42,  7.10s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:23<00:29,  5.88s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:26<00:19,  4.76s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:29<00:13,  4.34s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [00:33<00:07,  3.98s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [00:34<00:03,  3.23s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [00:38<00:00,  3.39s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [00:38<00:00,  4.28s/it]
+2026-06-01 10:11:26 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:02<00:23,  2.97s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:22<01:27, 12.44s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:31<01:06, 11.05s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:34<00:40,  8.06s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:56<00:51, 12.91s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:03<00:32, 10.80s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:07<00:17,  8.54s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:28<00:12, 12.56s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:33<00:00, 10.43s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:33<00:00, 10.44s/it]
+Wrote new_demo3\C_tune_retrieval.json
+Wrote optimized config new_demo3\rag_config.optimized.yaml (credentials 
+scrubbed)
+Best composite: 1.667
+Best params: {'top_k': 3}
+2026-06-01 10:13:00 INFO    ragdx.storage.run_store :: Saved run 77e06e2eecc6 name=demo3-retrieval-sweep
+Saved run: 77e06e2eecc6 (name: demo3-retrieval-sweep)
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 77e06e2eecc6 
+report.md`.

@@ -284,10 +284,15 @@ def tune(
     # ------------------------------------------------------------------
     # Serialize the result.
     # ------------------------------------------------------------------
+    # Scrub credentials before serializing the base_config into the
+    # bundle JSON. ``rag_config.generator.api_key`` was hydrated above
+    # from --api-key or env, and the unscrubbed copy would leak into
+    # the on-disk bundle (same bug class as --write-optimized-config,
+    # fixed for that path in commit 73ee990; this is the JSON sibling).
     bundle: dict[str, Any] = {
         "stage": stage,
         "gt_mode": mode_label,
-        "base_config": rag_config.model_dump(mode="json"),
+        "base_config": rag_config.scrubbed_for_commit().model_dump(mode="json"),
         "best_params": result.best_params,
         "best_composite": result.best_composite,
         "objective_spec": result.objective_spec,

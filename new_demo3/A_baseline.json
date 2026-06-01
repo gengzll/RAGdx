@@ -1,0 +1,36 @@
+{
+  "retrieval": {
+    "context_precision": 0.5555555554999999
+  },
+  "generation": {
+    "faithfulness": 1.0
+  },
+  "e2e": {},
+  "metadata": {
+    "n_records": 3,
+    "n_chunks": 548,
+    "model": "openai/glm-4-flash",
+    "config_name": "esg-analyst-baseline",
+    "config_path": "D:\\work\\RAGdx-main\\RAGdx-main\\new_demo3\\rag_config.yaml",
+    "questions_path": "D:\\work\\RAGdx-main\\RAGdx-main\\new_demo3\\questions.jsonl",
+    "corpus": "e0522-asmptesgreport.pdf",
+    "corpus_source": {
+      "corpus": "e0522-asmptesgreport.pdf",
+      "kind": "pdf",
+      "pdf_meta": {
+        "page_count": 114,
+        "chunks": 548,
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "raw_text_chars": 211339
+      },
+      "questions_path": "new_demo3\\questions.jsonl"
+    },
+    "name": "demo3-A-no-save"
+  },
+  "raw_tool_outputs": {},
+  "traces": [],
+  "evaluator_scores": [],
+  "feedback_events": [],
+  "calibrations": []
+}

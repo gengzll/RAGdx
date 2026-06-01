@@ -1,0 +1,20 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+2026-06-01 10:15:56 INFO    ragdx.workflows.evaluate :: evaluate: 548 chunks, 3 records, model=openai/glm-4-flash
+2026-06-01 10:16:08 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:37,  4.68s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:19<01:15, 10.85s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:20<00:37,  6.30s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:24<00:26,  5.39s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:38<00:34,  8.52s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:56<00:35, 11.70s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:00<00:18,  9.17s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:01<00:06,  6.45s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:18<00:00,  9.78s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:18<00:00,  8.71s/it]
+Wrote new_demo3\D_optimized.json
+  Retrieval: {"context_precision": 0.5556}
+  Generation: {"faithfulness": 1.0}
+  E2E: {}
+2026-06-01 10:17:28 INFO    ragdx.storage.run_store :: Saved run 5fe0a5837a23 name=demo3-optimized
+Saved run: 5fe0a5837a23
+
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 5fe0a5837a23 
+report.md`.
