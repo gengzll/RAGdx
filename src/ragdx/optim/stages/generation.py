@@ -123,6 +123,41 @@ class GenerationOptimizer(StageOptimizer):
         mipro_logger.addHandler(capture)
         prior = mipro_logger.level
         mipro_logger.setLevel(logging.INFO)
+
+        # Capture the proposed candidate instructions. MIPROv2's
+        # ``_propose_instructions`` returns a
+        # ``{predictor_name: [instruction_str, ...]}`` dict, but it's a
+        # local variable inside ``compile`` and not stored on self -- so
+        # we monkey-patch the method for the duration of the call,
+        # restore after. This lets the visualization show "what prompts
+        # did MIPROv2 actually try", not just the final winner.
+        proposed_capture: dict[str, list[str]] = {}
+        try:
+            import dspy.teleprompt.mipro_optimizer_v2 as _mipro_mod
+            _orig_propose = _mipro_mod.MIPROv2._propose_instructions
+
+            def _patched_propose(self, *args, **kwargs):
+                result = _orig_propose(self, *args, **kwargs)
+                # ``result`` is ``{predictor_name: [str, ...]}``. Copy
+                # defensively so future MIPROv2 internal mutations don't
+                # change what we report.
+                try:
+                    proposed_capture.update({
+                        str(k): [str(s) for s in v] for k, v in dict(result).items()
+                    })
+                except Exception:  # pragma: no cover - defensive
+                    pass
+                return result
+
+            _mipro_mod.MIPROv2._propose_instructions = _patched_propose
+            _patch_installed = True
+        except Exception as exc:  # pragma: no cover - dspy API drift
+            logger.warning(
+                "[DSPy/%s] could not patch MIPROv2._propose_instructions: %s",
+                ctx.label, exc,
+            )
+            _patch_installed = False
+
         try:
             opt_result = adapter.optimize(
                 records_with_ctxs,
@@ -143,6 +178,8 @@ class GenerationOptimizer(StageOptimizer):
         finally:
             mipro_logger.removeHandler(capture)
             mipro_logger.setLevel(prior)
+            if _patch_installed:
+                _mipro_mod.MIPROv2._propose_instructions = _orig_propose
 
         logger.info("[DSPy/%s] (c) optimised re-run", ctx.label)
         optimised_answered = _run_program(opt_result["optimized_program"])
@@ -206,6 +243,19 @@ class GenerationOptimizer(StageOptimizer):
             },
             "trial_scores": list(capture.scores_so_far),
             "best_score_progression": list(capture.best_scores),
+            # Every candidate instruction MIPROv2 proposed, keyed by
+            # predictor name. The winning instruction (in ``instructions``
+            # above) is one of these. Empty {} when the monkey-patch
+            # failed (DSPy API drift) -- the rest of the bundle is
+            # unaffected.
+            "proposed_instructions_by_predictor": dict(proposed_capture),
+            # Per-trial log: trial number, score, kind (default /
+            # minibatch / full), and chosen parameters string
+            # ``"{'predict': (instruction_idx, demo_idx)}"`` parsed from
+            # MIPROv2's logger. The HTML renderer joins this with
+            # ``proposed_instructions_by_predictor`` to display
+            # "trial 3 → instruction text X → score 0.78".
+            "trial_log": list(capture.trials),
             "gt_mode": opt_result["gt_mode"],
             "optimizer": opt_result["optimizer"],
             "trainset_size": opt_result["trainset_size"],

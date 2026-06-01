@@ -510,9 +510,70 @@ def _render_dspy_a_b(bundle: dict) -> str:
                 'score seen so far.</p>'
             )
 
+        # Candidate instructions MIPROv2 explored (PR6+ capture).
+        # This is the user-visible answer to "what prompts did DSPy
+        # actually try?". The winner is one of these entries.
+        proposed = payload.get("proposed_instructions_by_predictor") or {}
+        opt_instr = payload.get("instructions") or {}
+        trial_log = payload.get("trial_log") or []
+        if proposed:
+            parts.append('<h4>Candidate instructions MIPROv2 proposed</h4>')
+            parts.append(
+                '<p class="caption">MIPROv2 generates N candidate '
+                '<code>system_instruction</code>s (via its grounded '
+                'proposer) and evaluates each on the trainset. The '
+                'winner (highlighted) is what ends up in '
+                '<code>generator.system_instruction</code>. '
+                'A candidate count of 1 means MIPROv2 only tried the '
+                'seed — usually because the budget was too tight or '
+                'the trainset was too small for the proposer.</p>'
+            )
+            for pname, cands in sorted(proposed.items()):
+                winner = (opt_instr or {}).get(pname)
+                body_parts = [f'<p class="subtle">{len(cands)} candidate(s) for predictor <code>{_esc(pname)}</code>.</p>']
+                for i, cand in enumerate(cands):
+                    is_winner = (winner is not None and cand.strip() == (winner or "").strip())
+                    marker = ' ★ <strong>winner</strong>' if is_winner else ''
+                    body_parts.append(
+                        f'<details {"open" if is_winner else ""}>'
+                        f'<summary>Candidate {i}{marker}</summary>'
+                        f'<pre>{_esc(cand)}</pre>'
+                        f'</details>'
+                    )
+                parts.append(_details(
+                    f"Predictor `{pname}` — {len(cands)} candidate(s)",
+                    "\n".join(body_parts),
+                    open_=True,
+                ))
+
+        # Per-trial log: trial # → chosen (instruction_idx, demo_idx)
+        # → score. Lets users see "trial 3 picked instruction 4, scored
+        # 0.78". Built from the MIPROv2 logger.
+        if trial_log:
+            parts.append('<h4>Trial-by-trial decisions</h4>')
+            parts.append(
+                '<p class="caption">Each row is one MIPROv2 trial. '
+                '<code>params</code> is the chosen <code>(instruction_idx, '
+                'demo_idx)</code> tuple from the candidate sets above. '
+                'Combine with the candidate list to see which prompt got '
+                'tried on which trial.</p>'
+            )
+            rows_t = []
+            for t in trial_log:
+                rows_t.append({
+                    "trial": t.get("trial", "?"),
+                    "kind": t.get("kind", "?"),
+                    "score": (
+                        f"{t.get('score'):.3f}"
+                        if isinstance(t.get("score"), (int, float))
+                        else "—"
+                    ),
+                    "params": _esc(str(t.get("params") or "—")),
+                })
+            parts.append(_table(rows_t, cols=["trial", "kind", "score", "params"]))
+
         # Prompts: baseline vs optimized
         base_instr = payload.get("baseline_instructions") or {}
-        opt_instr = payload.get("instructions") or {}
         base_demos = payload.get("baseline_demos") or {}
         opt_demos = payload.get("demos") or {}
         if base_instr or opt_instr:

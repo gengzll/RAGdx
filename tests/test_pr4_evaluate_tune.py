@@ -929,6 +929,157 @@ def test_tune_bundle_is_shape_compatible_with_experiment_report():
     assert '"meta":' in src or 'bundle["meta"]' in src
 
 
+def test_mipro_capture_parses_trial_log_lines():
+    """The MIPROv2 log capture must reconstruct per-trial decisions
+    (trial #, score, kind, chosen params) from DSPy's logger output,
+    so the HTML report's per-trial table has data to render.
+
+    Tests both DSPy log shapes:
+      "== Trial N / M - Minibatch =="
+      "Score: 100.0 on minibatch of size 25 with parameters {'predict': (3, 1)}."
+      "Default program score: 50.0"
+    """
+    import logging
+
+    from ragdx.experiments import _MIPROTrialScoreCapture
+
+    cap = _MIPROTrialScoreCapture()
+    cap.setLevel(logging.INFO)
+
+    def _fire(msg: str):
+        rec = logging.LogRecord(
+            name="dspy", level=logging.INFO, pathname="", lineno=0,
+            msg=msg, args=(), exc_info=None,
+        )
+        cap.emit(rec)
+
+    # Default-program (trial 1)
+    _fire("== Trial 1 / 6 - Full Evaluation of Default Program ==")
+    _fire("Default program score: 0.5")
+    # Trial 2: minibatch with chosen params
+    _fire("== Trial 2 / 6 - Minibatch ==")
+    _fire("Score: 0.78 on minibatch of size 25 with parameters {'predict': (3, 1)}.")
+    # Trial 3
+    _fire("== Trial 3 / 6 - Minibatch ==")
+    _fire("Score: 0.61 with parameters {'predict': (1, 0)}.")
+    # Scores so far / best so far
+    _fire("Scores so far: [0.78, 0.61]")
+    _fire("Best score so far: 0.78")
+
+    assert len(cap.trials) == 3
+    assert cap.trials[0] == {
+        "trial": 1, "score": 0.5, "kind": "default", "params": None,
+    }
+    assert cap.trials[1]["trial"] == 2
+    assert cap.trials[1]["score"] == 0.78
+    assert cap.trials[1]["kind"] == "minibatch"
+    assert "(3, 1)" in cap.trials[1]["params"]
+    assert cap.trials[2]["score"] == 0.61
+    # The Scores so far / Best score so far paths still work.
+    assert cap.scores_so_far == [0.78, 0.61]
+    assert cap.best_scores == [0.78]
+
+
+def test_mipro_capture_parses_dspy_3x_list_params():
+    """DSPy 3.x logs ``parameters`` as a list of strings
+    (``['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']``)
+    instead of the older dict (``{'predict': (1, 3)}``). The regex
+    must accept both -- otherwise modern DSPy installs lose the
+    trial-by-trial visualization. Discovered when re-running new_demo3
+    Scenario G on dspy 3.1.3."""
+    import logging
+
+    from ragdx.experiments import _MIPROTrialScoreCapture
+
+    cap = _MIPROTrialScoreCapture()
+    cap.setLevel(logging.INFO)
+
+    def _fire(msg: str):
+        rec = logging.LogRecord(
+            name="dspy", level=logging.INFO, pathname="", lineno=0,
+            msg=msg, args=(), exc_info=None,
+        )
+        cap.emit(rec)
+
+    _fire("== Trial 1 / 10 - Full Evaluation of Default Program ==")
+    _fire("Default program score: 100.0")
+    _fire("== Trial 2 / 10 - Minibatch ==")
+    _fire("Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].")
+    _fire("== Trial 3 / 10 - Minibatch ==")
+    _fire("Score: 95.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].")
+
+    assert len(cap.trials) == 3
+    assert cap.trials[0]["kind"] == "default"
+    assert cap.trials[1]["score"] == 100.0
+    assert "Instruction 1" in cap.trials[1]["params"]
+    assert cap.trials[2]["score"] == 95.0
+    assert "Instruction 2" in cap.trials[2]["params"]
+
+
+def test_render_dspy_a_b_shows_candidate_prompts(tmp_path):
+    """When dspy_a_b includes ``proposed_instructions_by_predictor``
+    and ``trial_log``, the HTML report must render a 'Candidate
+    instructions' section + a 'Trial-by-trial decisions' table, and
+    mark the winner."""
+    from ragdx.ui import experiment_report as er
+
+    bundle = {
+        "schema_version": 1,
+        "stage": "generation",
+        "gt_mode": "no_gt",
+        "meta": {
+            "model": "openai/glm-4-flash",
+            "modes_run": ["no_gt"],
+            "has_gt": False,
+            "detected_gt_mode": "no_gt",
+            "source": "ragdx tune --from-run abc123",
+        },
+        "best_params": {"system_instruction": "Be concise."},
+        "best_composite": 1.0,
+        "objective_spec": {},
+        "dspy_a_b": {
+            "no_gt": {
+                "baseline_scores": {"faithfulness": 0.7},
+                "optimized_scores": {"faithfulness": 0.7},
+                "delta": {"faithfulness": 0.0},
+                "composite": {
+                    "baseline": {"score": 1.05},
+                    "optimized": {"score": 1.05},
+                    "delta": 0.0,
+                },
+                "baseline_instructions": {"predict": "You are an analyst."},
+                "instructions": {"predict": "Be concise."},
+                "proposed_instructions_by_predictor": {
+                    "predict": [
+                        "You are an analyst.",
+                        "Be concise.",
+                        "Answer using only context.",
+                    ]
+                },
+                "trial_log": [
+                    {"trial": 1, "score": 0.5, "kind": "default", "params": None},
+                    {"trial": 2, "score": 0.7, "kind": "minibatch",
+                     "params": "{'predict': (1, 0)}"},
+                    {"trial": 3, "score": 0.6, "kind": "minibatch",
+                     "params": "{'predict': (2, 0)}"},
+                ],
+                "records": [],
+            }
+        },
+    }
+    html = er.render_report(bundle, title="dspy candidates test")
+
+    assert "Candidate instructions MIPROv2 proposed" in html
+    assert "You are an analyst." in html
+    assert "Be concise." in html
+    assert "Answer using only context." in html
+    # Winner marker
+    assert "winner" in html.lower()
+    # Trial-by-trial table
+    assert "Trial-by-trial decisions" in html
+    assert "(1, 0)" in html
+
+
 def test_tune_bundle_renders_via_experiment_report(tmp_path):
     """End-to-end shape check: synthesize a minimal tune-shaped bundle,
     pass it through ``experiment_report.render`` (the HTML renderer

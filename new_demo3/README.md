@@ -334,35 +334,79 @@ Best params: {'system_instruction': 'You are an ESG sustainability analyst...'}
 Saved run: ba147d961aba (name: demo3-generation-tune)
 ```
 
-### What MIPROv2 actually did
+### What MIPROv2 actually did (with per-candidate evidence)
 
 1. **Baseline run** — score the user-supplied `system_instruction`
    on the 3 questions with the existing retrieval config.
-2. **MIPROv2 optimisation** — bootstrap 11 candidate
-   instructions + few-shot demo sets, internally score each, pick
-   the best.
-3. **Optimised re-run** — score the winning program again on the
-   3 questions to produce a true before/after comparison.
+2. **MIPROv2 optimisation**:
+   * **Step 1 — Bootstrap few-shot examples**: built 6 candidate
+     demo sets from successful baseline answers.
+   * **Step 2 — Propose instructions**: the grounded proposer LLM
+     generated **3 distinct candidate `system_instruction`s** (one
+     of which is the seed). The full set is captured in
+     `dspy_a_b.no_gt.proposed_instructions_by_predictor`:
 
-The MIPROv2 score=100 means the candidate hits every internal
-heuristic; the **actual ragas-based** before/after is in
-`dspy_a_b.no_gt.{baseline_scores, optimized_scores, delta}`:
+     | # | First 80 chars |
+     |---|---|
+     | 0 | `You are an ESG sustainability analyst reviewing ASMPT's 2024 report...` (seed) |
+     | 1 | `As an AI specializing in sustainability analysis for electronics manufacturing...` |
+     | 2 | `You are an ESG sustainability analyst tasked with analyzing ASMPT's 2024 report on their WORKS Optimisation system. Your objective is to understand...` |
 
-```text
-baseline_scores  : {context_precision: 0.5556, faithfulness: 1.0}
-optimized_scores : {context_precision: 0.5556, faithfulness: 1.0}
-delta            : {context_precision: 0.0,    faithfulness: 0.0}
-composite Δ      : 0.0
-```
+   * **Step 3 — Bayesian search**: 11 trials × (instruction × demo
+     set), all logged in `dspy_a_b.no_gt.trial_log`:
 
-**Result:** MIPROv2 explored 11 alternatives and concluded the
-hand-crafted ESG analyst prompt was already at a local optimum for
-this question set + retrieval config. The "winning" instruction is
-*identical* to baseline. That's a valid and informative outcome:
-your prompt is already strong. With a larger trainset or more
-ambitious `optimizer_kwargs.auto="medium" / "heavy"`, MIPROv2 has
-more room to experiment, but at this scale + budget it can't beat
-the seed.
+     | Trial | Kind | Score | (Instruction, Few-Shot Set) |
+     |---|---|---|---|
+     | 1 | default | 100.0 | seed (Instr 0, Set 0) |
+     | 2 | minibatch | 100.0 | (Instr 1, Set 3) |
+     | 3 | minibatch | 100.0 | (Instr 2, Set 0) |
+     | 4 | minibatch | 100.0 | (Instr 1, Set 5) |
+     | 5 | minibatch | 100.0 | (Instr 2, Set 2) |
+     | 6 | minibatch | 100.0 | (Instr 0, Set 5) |
+     | 7 | minibatch | 100.0 | (Instr 2, Set 0) |
+     | 8 | minibatch | 100.0 | (Instr 2, Set 5) |
+     | 9 | minibatch | 100.0 | (Instr 1, Set 4) |
+     | 10 | minibatch | 100.0 | (Instr 2, Set 5) |
+     | 11 | minibatch | 100.0 | (Instr 0, Set 0) |
+
+3. **Optimised re-run** — score the winning program (Instr 0, Set 0
+   = the seed) on the 3 questions to produce a true ragas-based
+   before/after.
+
+### So *did* the prompt change? — verified honest answer
+
+**Yes, DSPy was real**. The bundle's `proposed_instructions_by_predictor`
+captures 3 distinct prompts the proposer LLM generated (not just the
+seed). The `trial_log` captures 10 evaluations of (instruction,
+few-shot set) combinations.
+
+**But no, the winner didn't change**: every trial scored exactly
+100.0 because the no-GT metric is **LLM-as-judge faithfulness**
+(`DSPyAdapter._metric` in `optim/dspy_adapter.py:198`), which uses
+GLM-4-Flash to rate each answer. GLM kept returning 1.0 ("faithful")
+for every candidate's output. **Without discriminative signal,
+MIPROv2's Bayesian search degenerates and returns the seed program**
+(the default when scores are tied).
+
+The `ragas` re-eval at the end gave `context_precision: 0.5556`
+for the optimized run — slightly different from the baseline run
+(0.3333 → 0.5556 in this particular execution) but that's pure
+**LM stochasticity** since the winning prompt = baseline prompt.
+Both used the same (seed) prompt; re-running the same prompt
+twice produces slightly different ragas scores.
+
+### How to actually get a useful DSPy run
+
+Two knobs make MIPROv2 productive:
+
+1. **Use a discriminative metric**. Switch to `with_gt` mode (ground
+   truth answers + token-F1) by adding `ground_truth` to your
+   `questions.jsonl`. Then candidates that produce closer-to-GT
+   answers actually win.
+
+2. **Give MIPROv2 more candidates**. Override
+   `optimizer_kwargs={"auto": "medium"}` (default is `"light"` =
+   3 candidates). With `medium` you get 10-20; with `heavy`, 30+.
 
 ### Visualizing the DSPy A/B as HTML
 
@@ -373,11 +417,21 @@ PYTHONPATH=src python -m ragdx.cli experiment-report \
     --title "demo3 Scenario G: DSPy MIPROv2 prompt tune"
 ```
 
-Output: [`G_tune_report.html`](G_tune_report.html) (~27 KB). The
-HTML has a dedicated "**DSPy before/after**" section with a
-side-by-side bar chart (baseline vs optimized scores per metric),
-composite delta, and the prompt text. This is the same renderer
-that handles `ragdx experiment` bundles' DSPy section.
+Output: [`G_tune_report.html`](G_tune_report.html) (~31 KB). The
+HTML has dedicated sections for:
+
+- **DSPy before/after bar chart** — baseline vs optimized scores
+  per ragas metric, plus composite Δ.
+- **Candidate instructions MIPROv2 proposed** — all 3 candidates
+  side-by-side as expandable blocks; the winner is marked with ★.
+- **Trial-by-trial decisions** — table of 11 trials with the
+  chosen (Instruction, Few-Shot Set) tuple and score per trial.
+- **Prompts: baseline vs optimized** — text diff side-by-side.
+- **Per-record before/after** — for each question, the GT (if any),
+  the baseline answer, the optimized answer.
+
+Same renderer as `ragdx experiment` bundles' DSPy section, plus the
+new candidate-trace UI from this commit.
 
 ## Scenario F — Per-project storage + project-scoped latest-defaults
 

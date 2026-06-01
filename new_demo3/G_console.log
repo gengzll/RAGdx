@@ -13,11 +13,13 @@ embeddings.position_ids | UNEXPECTED |  |
 - UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
 Running generation optimizer on 548 chunks x 3 records (GT mode: no_gt, budget:
 3)...
-2026-06-01 17:36:58 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (a) baseline run
-2026-06-01 17:37:30 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:03<00:27,  3.41s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:21<01:26, 12.32s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:41<01:32, 15.41s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:41<00:48,  9.69s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:45<00:29,  7.35s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:02<00:31, 10.58s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:07<00:17,  8.86s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:09<00:06,  6.79s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:24<00:00,  9.29s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:24<00:00,  9.39s/it]
-2026-06-01 17:38:56 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (b) MIPROv2 optimisation
-2026/06/01 17:38:56 INFO dspy.teleprompt.mipro_optimizer_v2: 
+2026-06-01 17:59:23 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (a) baseline run
+2026-06-01 17:59:51 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:06<00:49,  6.25s/it]Exception raised in Job[2]: TimeoutError()
+Evaluating:  22%|¨€¨€¨‡       | 2/9 [07:52<32:16, 276.66s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [08:22<16:26, 164.39s/it]Exception raised in Job[0]: TimeoutError()
+Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [08:24<08:20, 100.13s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [08:26<04:18, 64.74s/it] Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [08:40<02:22, 47.45s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [08:45<01:07, 33.50s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [08:52<00:25, 25.07s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [08:59<00:00, 19.37s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [08:59<00:00, 59.90s/it]
+2026-06-01 18:08:51 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (b) MIPROv2 optimisation
+2026/06/01 18:08:51 INFO dspy.teleprompt.mipro_optimizer_v2: 
 RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
 num_trials: 10
 minibatch: False
@@ -25,155 +27,153 @@ num_fewshot_candidates: 6
 num_instruct_candidates: 3
 valset size: 2
 
-2026/06/01 17:38:56 INFO dspy.teleprompt.mipro_optimizer_v2: 
+2026/06/01 18:08:51 INFO dspy.teleprompt.mipro_optimizer_v2: 
 ==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
-2026/06/01 17:38:56 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
+2026/06/01 18:08:51 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
 
-2026/06/01 17:38:56 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
+2026/06/01 18:08:51 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
 Bootstrapping set 1/6
 Bootstrapping set 2/6
 Bootstrapping set 3/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:18<00:00, 18.14s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:18<00:00, 18.14s/it]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:14<00:00, 14.69s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:14<00:00, 14.69s/it]
 Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
 Bootstrapping set 4/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:13<00:00, 13.75s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:13<00:00, 13.75s/it]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:11<00:00, 11.67s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:11<00:00, 11.67s/it]
 Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
 Bootstrapping set 5/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:13<00:00, 13.22s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:13<00:00, 13.22s/it]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:10<00:00, 10.02s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:10<00:00, 10.02s/it]
 Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
 Bootstrapping set 6/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:13<00:00, 13.33s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:13<00:00, 13.33s/it]
-2026/06/01 17:39:54 INFO dspy.teleprompt.mipro_optimizer_v2: 
+  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:12<00:00, 12.62s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:12<00:00, 12.62s/it]
+2026/06/01 18:09:40 INFO dspy.teleprompt.mipro_optimizer_v2: 
 ==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
-2026/06/01 17:39:54 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
-2026/06/01 17:40:11 INFO dspy.teleprompt.mipro_optimizer_v2: 
+2026/06/01 18:09:40 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
+2026/06/01 18:10:02 INFO dspy.teleprompt.mipro_optimizer_v2: 
 Proposing N=3 instructions...
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: 0: You are an ESG sustainability analyst reviewing ASMPT's 2024 report.
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: 0: You are an ESG sustainability analyst reviewing ASMPT's 2024 report.
 Quote exact wording from the supplied context when possible. If the
 answer is not in the context, reply "Not in report".
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: 1: Prompt the Language Model to analyze a given question and context related to ASMPT's WORKS Optimisation system. The model should generate a step-by-step reasoning process and provide an answer based on the context, ensuring that exact wording is quoted when available and indicating if the answer is not found in the report.
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: 1: As an AI specializing in sustainability analysis for electronics manufacturing, analyze the context provided and generate well-reasoned answers to questions related to ASMPT's WORKS Optimisation system. Quote direct text from the context to support your responses. If a question cannot be answered from the provided context, indicate "Not in report.
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: 2: ```
-Prompt the Language Model to act as an ESG sustainability analyst reviewing ASMPT's 2024 report. The task is to analyze the provided context and answer specific questions, ensuring that the answers are accurately quoted from the context when possible. If the answer is not present in the context, instruct the model to respond with "Not in report." The analysis should mimic the thoroughness and detail of an ESG sustainability analyst, focusing on aspects such as the comprehensive nature of ASMPT's WORKS Optimisation system, its contrast with traditional inspection systems, and the integration of Industry 4.0 concepts.
-```
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: 2: You are an ESG sustainability analyst tasked with analyzing ASMPT's 2024 report on their WORKS Optimisation system. Your objective is to understand how this system differs from traditional inspection systems in the electronics manufacturing industry. To accomplish this, you will need to generate reasoning and answers based on the provided context. When constructing your reasoning and answers, ensure that you accurately quote from the context whenever possible. If the information required to answer a question is not present in the context, simply reply "Not in report". Pay close attention to the system's integration capabilities, efficiency, and its role in addressing labor shortages and customer requirements.
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: 
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: 
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
 
-2026/06/01 17:41:52 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
+2026/06/01 18:12:06 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
 Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:10<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:10, 10.47s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:10, 10.47s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  4.83s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.67s/it]2026/06/01 17:42:03 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:42:03 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 100.0
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:10<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:10, 10.30s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:12<00:10, 10.30s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  5.61s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  6.31s/it]2026/06/01 18:12:18 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:12:18 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 100.0
 
 C:\Users\gengz\anaconda3\Lib\site-packages\dspy\teleprompt\mipro_optimizer_v2.py:646: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
   sampler = optuna.samplers.TPESampler(seed=seed, multivariate=True)
-2026/06/01 17:42:03 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
+2026/06/01 18:12:18 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
 
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:07<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:07<00:07,  7.80s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:14<00:07,  7.80s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  6.92s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  7.05s/it]2026/06/01 17:42:17 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:42:17 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
-2026/06/01 17:42:17 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0]
-2026/06/01 17:42:17 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:42:17 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/06/01 17:42:17 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
-
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:10<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:10, 10.95s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:10, 10.95s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.51s/it]2026/06/01 17:42:28 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:42:28 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/06/01 17:42:28 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0]
-2026/06/01 17:42:28 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:42:28 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:12<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:12<00:12, 12.54s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:15<00:12, 12.54s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:15<00:00,  6.68s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:15<00:00,  7.56s/it]2026/06/01 18:12:34 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:12:34 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
+2026/06/01 18:12:34 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0]
+2026/06/01 18:12:34 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:12:34 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
 
 
-2026/06/01 17:42:28 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
+2026/06/01 18:12:34 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
 
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:14<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:14<00:14, 14.26s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:14<00:14, 14.26s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  6.21s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  7.42s/it]2026/06/01 17:42:43 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:42:43 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
-2026/06/01 17:42:43 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:42:43 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:42:43 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/06/01 17:42:43 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
-
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:10<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:10, 10.54s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:12<00:10, 10.54s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  5.76s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  6.48s/it]2026/06/01 17:42:56 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:42:56 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/06/01 17:42:56 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:42:56 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:42:56 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:13<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:13<00:13, 13.35s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:18<00:13, 13.35s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:18<00:00,  8.30s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:18<00:00,  9.05s/it]2026/06/01 18:12:52 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:12:52 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
+2026/06/01 18:12:52 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0]
+2026/06/01 18:12:52 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:12:52 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
 
 
-2026/06/01 17:42:56 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
+2026/06/01 18:12:52 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
 
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.52s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:14<00:09,  9.52s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  6.87s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  7.26s/it]2026/06/01 17:43:11 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:43:11 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
-2026/06/01 17:43:11 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:43:11 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:43:11 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/06/01 17:43:11 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
-
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.32s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:09,  9.32s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  4.95s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.60s/it]2026/06/01 17:43:22 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:43:22 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/06/01 17:43:22 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:43:22 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:43:22 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:10<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:10, 10.03s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:10, 10.03s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.20s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.92s/it]2026/06/01 18:13:03 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:13:03 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
+2026/06/01 18:13:03 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:13:03 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:13:03 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
 
 
-2026/06/01 17:43:22 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
+2026/06/01 18:13:03 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
 
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.73s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:09,  9.73s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:10<00:00,  4.65s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:10<00:00,  5.41s/it]2026/06/01 17:43:33 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:43:33 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/06/01 17:43:33 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:43:33 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:43:33 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/06/01 17:43:33 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
-
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.07s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:12<00:09,  9.07s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  5.47s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  6.01s/it]2026/06/01 17:43:45 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:43:45 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
-2026/06/01 17:43:45 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:43:45 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:43:45 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:08<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:08<00:08,  8.56s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:08,  8.56s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.50s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.96s/it]2026/06/01 18:13:15 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:13:15 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
+2026/06/01 18:13:15 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:13:15 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:13:15 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
 
 
-2026/06/01 17:43:45 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
+2026/06/01 18:13:15 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
 
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.53s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:09,  9.53s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  4.82s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.52s/it]2026/06/01 17:43:56 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:43:56 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/06/01 17:43:56 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:43:56 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:43:56 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/06/01 17:43:56 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
-
-  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.35s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:09,  9.35s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:10<00:00,  4.69s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:10<00:00,  5.39s/it]2026/06/01 17:44:07 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
-2026/06/01 17:44:07 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 0'].
-2026/06/01 17:44:07 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-2026/06/01 17:44:07 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
-2026/06/01 17:44:07 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.73s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:11<00:09,  9.73s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.15s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:11<00:00,  5.84s/it]2026/06/01 18:13:27 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:13:27 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
+2026/06/01 18:13:27 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:13:27 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:13:27 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
 
 
-2026/06/01 17:44:07 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 100.0!
-2026-06-01 17:44:07 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (c) optimised re-run
-2026-06-01 17:44:35 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+2026/06/01 18:13:27 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
 
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:05<00:42,  5.34s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:20<01:17, 11.08s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:42<01:37, 16.23s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:46<00:56, 11.31s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:48<00:32,  8.08s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:02<00:30, 10.06s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:07<00:16,  8.27s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:10<00:06,  6.60s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  8.51s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  9.24s/it]
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:08<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:08<00:08,  8.77s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:14<00:08,  8.77s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  6.75s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:14<00:00,  7.05s/it]2026/06/01 18:13:41 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:13:41 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
+2026/06/01 18:13:41 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:13:41 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:13:41 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/06/01 18:13:41 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
+
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.77s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:10<00:09,  9.77s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:10<00:00,  4.58s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:10<00:00,  5.36s/it]2026/06/01 18:13:52 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:13:52 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
+2026/06/01 18:13:52 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:13:52 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:13:52 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/06/01 18:13:52 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
+
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.66s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:12<00:09,  9.66s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  5.89s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:12<00:00,  6.46s/it]2026/06/01 18:14:05 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:14:05 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
+2026/06/01 18:14:05 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:14:05 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:14:05 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2026/06/01 18:14:05 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
+
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.64s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:09<00:09,  9.64s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:09<00:00,  4.14s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:09<00:00,  4.97s/it]2026/06/01 18:14:15 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:14:15 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
+2026/06/01 18:14:15 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:14:15 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:14:15 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+
+
+2026/06/01 18:14:15 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
+
+  0%|          | 0/2 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/2 [00:08<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:08<00:08,  8.23s/it]Average Metric: 2.00 / 2 (100.0%):  50%|¨€¨€¨€¨€¨€     | 1/2 [00:08<00:08,  8.23s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:08<00:00,  3.68s/it]Average Metric: 2.00 / 2 (100.0%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 2/2 [00:08<00:00,  4.36s/it]2026/06/01 18:14:24 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 2 (100.0%)
+2026/06/01 18:14:24 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 0'].
+2026/06/01 18:14:24 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2026/06/01 18:14:24 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2026/06/01 18:14:24 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+
+
+2026/06/01 18:14:24 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 100.0!
+2026-06-01 18:14:24 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (c) optimised re-run
+2026-06-01 18:14:50 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:06<00:48,  6.12s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:25<01:37, 13.86s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:28<00:54,  9.07s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:34<00:38,  7.77s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:52<00:45, 11.40s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:58<00:28,  9.60s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:04<00:16,  8.27s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:17<00:10, 10.05s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  8.66s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  9.28s/it]
 Wrote new_demo3\G_tune_generation.json
 Best composite: 1.667
 Best params: {'system_instruction': 'You are an ESG sustainability analyst 
 reviewing ASMPT\'s 2024 report.\nQuote exact wording from the supplied context 
 when possible. If the\nanswer is not in the context, reply "Not in report".'}
-2026-06-01 17:46:00 INFO    ragdx.storage.run_store :: Saved run ba147d961aba name=demo3-generation-tune
-Saved run: ba147d961aba (name: demo3-generation-tune)
-Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report ba147d961aba 
+2026-06-01 18:16:14 INFO    ragdx.storage.run_store :: Saved run 312dc2ae56f6 name=demo3-generation-tune
+Saved run: 312dc2ae56f6 (name: demo3-generation-tune)
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 312dc2ae56f6 
 report.md`.

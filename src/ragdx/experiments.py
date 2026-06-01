@@ -46,6 +46,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -205,10 +206,51 @@ class ExperimentResult:
 # DSPy MIPROv2 trial-score capture (matches the demos)
 # =====================================================================
 class _MIPROTrialScoreCapture(logging.Handler):
+    """Captures MIPROv2's optimization log so the visualization can
+    show per-trial decisions.
+
+    Three buckets:
+
+    * ``scores_so_far`` / ``best_scores`` -- the raw score progression
+      DSPy logs ("Scores so far: [...]") for the score plot.
+    * ``trials`` -- per-trial records reconstructed from the
+      "== Trial N / M ==" + "Score: X ... parameters {...}" log lines.
+      Each record has ``trial``, ``score``, ``kind`` (default /
+      minibatch / full), and ``params`` (predictor → instruction_idx).
+      Combined with the proposed instructions captured separately
+      (see ``GenerationOptimizer._propose_instructions`` monkey-patch),
+      this gives the user the "what prompt got tried on which trial"
+      mapping the HTML report visualizes.
+    """
+
+    # Capture patterns. Tolerates two DSPy 3.x header styles:
+    #   * ``== Trial 1 / 10 - Full Evaluation of Default Program ==``
+    #   * ``===== Trial 2 / 10 =====``
+    # The "- <kind> " part is optional; when absent we default to
+    # ``"minibatch"`` since that's how MIPROv2 logs every trial after
+    # the first.
+    _TRIAL_HEADER_RE = re.compile(
+        r"==+\s*Trial\s*(\d+)\s*/\s*(\d+)\s*"
+        r"(?:-\s*([A-Za-z][\w ]+?)\s*)?==+",
+    )
+    _SCORE_LINE_RE = re.compile(
+        r"^Score:\s*([0-9.\-eE]+)(?:\s+on minibatch[^.]*)?"
+        # ``parameters`` is either a dict ``{...}`` (older DSPy) or a
+        # list of strings ``[...]`` (DSPy 3.x: e.g.
+        # ``['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']``).
+        r"\s*with parameters\s*([\{\[].*?[\}\]])\.?$",
+    )
+    _DEFAULT_SCORE_RE = re.compile(
+        r"Default program score:\s*([0-9.\-eE]+)",
+    )
+
     def __init__(self) -> None:
         super().__init__()
         self.scores_so_far: list[float] = []
         self.best_scores: list[float] = []
+        self.trials: list[dict] = []
+        self._current_trial: int | None = None
+        self._current_kind: str | None = None
 
     def emit(self, record: logging.LogRecord) -> None:
         msg = record.getMessage()
@@ -218,12 +260,58 @@ class _MIPROTrialScoreCapture(logging.Handler):
                 self.scores_so_far = json.loads(tail)
             except Exception:
                 pass
-        elif "Best score so far:" in msg:
+            return
+        if "Best score so far:" in msg:
             tail = msg.split("Best score so far:", 1)[1].strip()
             try:
                 self.best_scores.append(float(tail))
             except Exception:
                 pass
+            return
+        # Trial header: remember the active trial so the next Score line
+        # gets attributed correctly. ``kind`` is optional in the
+        # ``===== Trial N / M =====`` short form (MIPROv2 only labels
+        # the default trial explicitly; the rest are minibatch by
+        # convention).
+        m = self._TRIAL_HEADER_RE.search(msg)
+        if m is not None:
+            self._current_trial = int(m.group(1))
+            kind_grp = m.group(3)
+            self._current_kind = (
+                kind_grp.strip().lower() if kind_grp else "minibatch"
+            )
+            return
+        # Default-program baseline score.
+        m = self._DEFAULT_SCORE_RE.search(msg)
+        if m is not None:
+            try:
+                self.trials.append({
+                    "trial": self._current_trial or 1,
+                    "score": float(m.group(1)),
+                    "kind": "default",
+                    "params": None,
+                })
+            except Exception:
+                pass
+            return
+        # Per-trial Score line with chosen parameters.
+        for line in msg.splitlines():
+            m = self._SCORE_LINE_RE.search(line.strip())
+            if m is not None:
+                try:
+                    params_str = m.group(2)
+                    self.trials.append({
+                        "trial": self._current_trial,
+                        "score": float(m.group(1)),
+                        "kind": self._current_kind or "minibatch",
+                        # Keep as a string -- the dict format varies
+                        # across DSPy versions and would require fragile
+                        # eval to parse. The HTML renderer just displays
+                        # it as a code fragment.
+                        "params": params_str,
+                    })
+                except Exception:
+                    pass
 
 
 # =====================================================================
