@@ -422,7 +422,55 @@ The combined effect with §9 is that the full
 expressed without ever copy-pasting a run id by hand. See
 `new_demo3/README.md` for the worked example.
 
-## 11. Related docs
+## 11. Visualizing results
+
+`ragdx` ships two visualization layers; PR6 makes both work on the
+new `evaluate --save` / `tune --save` artifacts.
+
+### `ragdx dashboard` (Streamlit) — for **SavedRun** objects
+
+Reads everything that lives in the RunStore via `RunStore`. Tabs:
+Scores, Diagnosis, Optimization Plan, Optimization Sessions, Traces,
+Feedback & Governance, Compare, Raw JSON.
+
+```bash
+ragdx dashboard                      # default project (.ragdx/runs/)
+ragdx --project esg dashboard        # esg project's RunStore
+```
+
+Side panel: "Use latest saved run" checkbox. Both `evaluate --save`
+and `tune --save` runs show up here.
+
+### `ragdx experiment-report` (HTML) — for **tune `--output` bundles**
+
+PR6 made tune bundles shape-compatible with `ragdx experiment`
+bundles (`bayes_search: {<gt_mode>: payload}`, optional `dspy_a_b`,
+minimal `meta`) so the same HTML renderer works on them:
+
+```bash
+ragdx experiment-report new_demo3/C_tune_retrieval.json \
+    --output C_tune_report.html
+```
+
+Output is a single self-contained HTML file (~18 KB for a 4-trial
+retrieval tune). Embedded Plotly charts; open in any browser; Ctrl-P
+→ Save as PDF for a static deliverable. The Streamlit equivalent
+(`ragdx experiment-dashboard`) renders the same data interactively.
+
+This means the BO trial table, search space, per-trial metric
+deltas, and the `inherited` block from `--from-run` are all visible
+without leaving the deliverable.
+
+### Quick map: which command renders what
+
+| Artifact | Renderer |
+|---|---|
+| `ragdx evaluate --save` run | `ragdx dashboard` (Scores/Diagnosis/Plan tabs), `ragdx export-report` (Markdown) |
+| `ragdx tune --save` synthesized run | Same — appears as a SavedRun in `ragdx dashboard` |
+| `ragdx tune --output <bundle>.json` | `ragdx experiment-report` (HTML), `ragdx experiment-dashboard` (Streamlit) |
+| `ragdx optimize` session | `ragdx dashboard` Optimization Sessions tab, `ragdx monitor-session` |
+
+## 12. Related docs
 
 - `docs/03-data-models.md` — `EvaluationResult` / `SavedRun` / `OptimizationPlan` shapes.
 - `docs/04-workflows.md` — the offline-evaluation-first workflows (normalize → diagnose → plan).

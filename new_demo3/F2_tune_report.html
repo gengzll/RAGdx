@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>demo3 Scenario F2: project-scoped retrieval tune</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root { --fg:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#ffffff;
+        --accent:#1a73e8; --warn:#b45309; --ok:#15803d; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                          Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 14px; line-height: 1.55; }
+.page { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+h1 { font-size: 28px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 12px; padding-top: 16px;
+     border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 20px 0 8px; color: #111827; }
+h4 { font-size: 14px; margin: 14px 0 6px; color: #374151; }
+.subtle { color: var(--muted); font-size: 13px; }
+.caption { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }
+.metric-row { display: flex; gap: 16px; margin: 12px 0 20px; flex-wrap: wrap; }
+.metric { flex: 1 1 180px; padding: 12px 16px; background: #f9fafb;
+          border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
+.metric .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase;
+               letter-spacing: 0.05em; }
+.metric .val { font-size: 18px; font-weight: 600; margin-top: 2px;
+               word-break: break-all; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px;
+        font-size: 13px; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px;
+         text-align: left; vertical-align: top; }
+th { background: #f3f4f6; font-weight: 600; }
+tr:hover td { background: #fafbfc; }
+pre, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 12px; }
+pre { background: #f3f4f6; padding: 10px 12px; border-radius: 6px;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+.box { border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px;
+       margin: 12px 0; background: #fafbfc; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two-col > div { min-width: 0; }
+details { margin: 8px 0; border: 1px solid var(--line); border-radius: 6px;
+          padding: 8px 12px; background: #fafbfc; }
+details > summary { cursor: pointer; font-weight: 500; color: #374151; }
+details[open] > summary { margin-bottom: 10px; }
+.warn { color: var(--warn); }
+.ok { color: var(--ok); }
+.tag { display: inline-block; padding: 2px 8px; background: #eef2ff;
+       color: #3730a3; border-radius: 4px; font-size: 12px; }
+.tag.warn { background: #fef3c7; color: #92400e; }
+.tag.ok { background: #d1fae5; color: #065f46; }
+.divider { border-top: 1px dashed var(--line); margin: 16px 0; }
+@media print {
+  .page { max-width: none; margin: 0; padding: 12mm; }
+  h2 { page-break-before: auto; }
+  details { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body><div class="page">
+<header>
+  <h1>demo3 Scenario F2: project-scoped retrieval tune</h1>
+  <div class="subtle">Generated 2026-06-01 17:25:11 · ragdx schema v1</div>
+</header>
+<h2>Run metadata</h2>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Experiment mode</div><div class="val">retrieval</div></div>
+<div class="metric"><div class="lbl">Modes run</div><div class="val">no_gt</div></div>
+<div class="metric"><div class="lbl">Has GT</div><div class="val">No</div></div>
+<div class="metric"><div class="lbl">Detected GT</div><div class="val">no_gt</div></div>
+</div>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Model</div><div class="val">openai/glm-4-flash</div></div>
+<div class="metric"><div class="lbl">Endpoint</div><div class="val">https://open.bigmodel.cn/api/paas/v4</div></div>
+</div>
+<details open><summary>Corpus source</summary><pre>&quot;ragdx tune (rewrapped for renderer compat)&quot;</pre><p class="caption">PDF <code>initial_load_*</code> fields reflect the chunking used at load-time for question synthesis. The Bayesian search below explores alternate chunk_size / chunk_overlap values; see <strong>Bayesian search → best_params</strong> for the winner.</p></details>
+<h2>Bayesian RAG-config search</h2>
+<h3>Mode: <code>no_gt</code></h3>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Trials</div><div class="val">4</div></div>
+<div class="metric"><div class="lbl">Best composite</div><div class="val">1.675</div></div>
+<div class="metric"><div class="lbl">Best params</div><div class="val">top_k=4</div></div>
+</div>
+<details><summary>Search space</summary><pre>{
+  &quot;top_k&quot;: [
+    4,
+    6,
+    8,
+    10
+  ]
+}</pre></details>
+<table><thead><tr><th>#</th><th>params</th><th>composite</th><th>feasible</th><th>context_precision</th><th>faithfulness</th></tr></thead><tbody><tr><td>0</td><td>top_k=10</td><td>1.652</td><td>✓</td><td>0.506</td><td>1.000</td></tr><tr><td>1</td><td>top_k=6</td><td>1.651</td><td>✓</td><td>0.504</td><td>1.000</td></tr><tr><td>2</td><td>top_k=4</td><td>1.675</td><td>✓</td><td>0.583</td><td>1.000</td></tr><tr><td>3</td><td>top_k=8</td><td>1.652</td><td>✓</td><td>0.506</td><td>1.000</td></tr></tbody></table>
+<div>                            <div id="cd5054ad-e22e-4aee-b923-8f723a3bd12f" class="plotly-graph-div" style="height:360px; width:100%;"></div>            <script type="text/javascript">                                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("cd5054ad-e22e-4aee-b923-8f723a3bd12f")) {                    Plotly.newPlot(                        "cd5054ad-e22e-4aee-b923-8f723a3bd12f",                        [{"hovertemplate":"series=composite\u003cbr\u003etrial=%{x}\u003cbr\u003escore=%{y}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"composite","line":{"color":"#636efa","dash":"solid"},"marker":{"symbol":"circle"},"mode":"lines+markers","name":"composite","orientation":"v","showlegend":true,"x":[1,2,3,4],"xaxis":"x","y":[1.651666666658625,1.651111111102685,1.6749999999845833,1.651666666658625],"yaxis":"y","type":"scatter"},{"hovertemplate":"series=running best\u003cbr\u003etrial=%{x}\u003cbr\u003escore=%{y}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"running best","line":{"color":"#EF553B","dash":"solid"},"marker":{"symbol":"circle"},"mode":"lines+markers","name":"running best","orientation":"v","showlegend":true,"x":[1,2,3,4],"xaxis":"x","y":[1.651666666658625,1.651666666658625,1.6749999999845833,1.6749999999845833],"yaxis":"y","type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"xaxis":{"anchor":"y","domain":[0.0,1.0],"title":{"text":"trial"}},"yaxis":{"anchor":"x","domain":[0.0,1.0],"title":{"text":"score"}},"legend":{"title":{"text":"series"},"tracegroupgap":0},"title":{"text":"BO progression — no_gt"},"margin":{"t":60,"b":40},"height":360},                        {"responsive": true}                    )                };                            </script>        </div>
+<p class="caption"><strong>composite</strong> = this trial's composite score (per the objective above). <strong>running best</strong> = highest composite seen so far -- the non-decreasing curve shows BO convergence.</p>
+<details><summary>Per-record outputs (first 3 trials)</summary><h4>Trial #0 (top_k=10)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th></tr></thead><tbody><tr><td>1</td><td>What is the primary focus of ASMPT&#x27;s WORKS Optimisation system in contrast to traditional inspection systems?</td><td>—</td><td>In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.</td></tr><tr><td>2</td><td>What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?</td><td>—</td><td>The Group has made some adjustments to the ESG Material Factors to enhance clarity and consistency. Similar factors were combined, including combining “Energy Management” and “Product Energy Efficiency” into “Energy Management &amp; Product Energy Efficiency” as well as “Business Ethics” and “Corporate </td></tr><tr><td>3</td><td>What are the three key components mentioned for ensuring employee health and safety?</td><td>—</td><td>The three key components mentioned for ensuring employee health and safety are:
+
+1. **Establish and maintain comprehensive policies and programmes that foster a safe and wholesome work environment.**
+2. **Ensure working conditions are secure, aiming to pre-empt work-related injuries, ill health, and</td></tr></tbody></table><h4>Trial #1 (top_k=6)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th></tr></thead><tbody><tr><td>1</td><td>What is the primary focus of ASMPT&#x27;s WORKS Optimisation system in contrast to traditional inspection systems?</td><td>—</td><td>In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.</td></tr><tr><td>2</td><td>What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?</td><td>—</td><td>The Group has made some adjustments to the ESG Material Factors to enhance clarity and consistency. Similar factors have been combined, including combining “Energy Management” and “Product Energy Efficiency” into “Energy Management &amp; Product Energy Efficiency” as well as “Business Ethics” and “Corpo</td></tr><tr><td>3</td><td>What are the three key components mentioned for ensuring employee health and safety?</td><td>—</td><td>The three key components mentioned for ensuring employee health and safety are:
+
+1. **Establish and maintain comprehensive policies and programmes that foster a safe and wholesome work environment.**
+2. **Ensure working conditions are secure, aiming to pre-empt work-related injuries, ill health, and</td></tr></tbody></table><h4>Trial #2 (top_k=4)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th></tr></thead><tbody><tr><td>1</td><td>What is the primary focus of ASMPT&#x27;s WORKS Optimisation system in contrast to traditional inspection systems?</td><td>—</td><td>In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.</td></tr><tr><td>2</td><td>What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?</td><td>—</td><td>The Group has made some adjustments to the ESG Material Factors to enhance clarity and consistency. Similar factors have been combined, including combining “Energy Management” and “Product Energy Efficiency” into “Energy Management &amp; Product Energy Efficiency” as well as “Business Ethics” and “Corpo</td></tr><tr><td>3</td><td>What are the three key components mentioned for ensuring employee health and safety?</td><td>—</td><td>The three key components mentioned for ensuring employee health and safety are:
+
+1. Hazard identification, risk assessment, and incident investigation
+2. Occupational health services
+3. Worker participation, consultation, and communication on occupational health and safety</td></tr></tbody></table></details>
+</div></body></html>

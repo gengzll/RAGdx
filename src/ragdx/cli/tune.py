@@ -458,13 +458,31 @@ def tune(
     # from --api-key or env, and the unscrubbed copy would leak into
     # the on-disk bundle (same bug class as --write-optimized-config,
     # fixed for that path in commit 73ee990; this is the JSON sibling).
+    # Tune bundles are shape-compatible with ``ragdx experiment`` bundles
+    # so the existing ``experiment-dashboard`` (Streamlit) and
+    # ``experiment-report`` (HTML) renderers work on them without
+    # special-casing. The renderer iterates ``bayes_search`` / ``dspy_a_b``
+    # as ``{gt_mode: payload}`` so we wrap by ``mode_label`` (a single-key
+    # dict for tune, vs. two-key for full experiment runs).
     bundle: dict[str, Any] = {
+        "schema_version": 1,
         "stage": eff_stage,
         "gt_mode": mode_label,
         "base_config": rag_config.scrubbed_for_commit().model_dump(mode="json"),
         "best_params": result.best_params,
         "best_composite": result.best_composite,
         "objective_spec": result.objective_spec,
+        # Minimal ``meta`` block so experiment-report's header has
+        # something to render (model, source, mode list).
+        "meta": {
+            "model": rag_config.generator.model,
+            "model_endpoint": rag_config.generator.api_base,
+            "experiment_mode": eff_stage,
+            "modes_run": [mode_label],
+            "has_gt": has_gt,
+            "detected_gt_mode": mode_label,
+            "source": "ragdx tune",
+        },
     }
     if from_run:
         bundle["inherited"] = {
@@ -474,10 +492,14 @@ def tune(
             "experiment_max_trials": inherited_experiment.max_trials,
             "experiment_search_space": inherited_experiment.search_space,
         }
+        bundle["meta"]["source"] = f"ragdx tune --from-run {from_run}"
     if eff_stage == "generation":
-        bundle.update({"generation": result.extras})
+        # Experiment bundles call this section ``dspy_a_b`` (baseline vs.
+        # MIPROv2-optimized A/B comparison). Use the same name + mode
+        # wrapping so experiment-report's DSPy section renders.
+        bundle["dspy_a_b"] = {mode_label: result.extras}
     else:
-        bundle.update({"bayes_search": result.to_bayes_search_bundle()})
+        bundle["bayes_search"] = {mode_label: result.to_bayes_search_bundle()}
 
     out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

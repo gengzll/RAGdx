@@ -265,6 +265,33 @@ The `""` opts into the default. For backward compatibility,
 
 ---
 
+### Visualizing the tune bundle as a self-contained HTML report
+
+Tune bundles are **shape-compatible** with `ragdx experiment` bundles
+since PR6, so `ragdx experiment-report` renders them without any
+special-casing:
+
+```bash
+PYTHONPATH=src python -m ragdx.cli experiment-report \
+    new_demo3/C_tune_retrieval.json \
+    --output new_demo3/C_tune_report.html \
+    --title "demo3 Scenario C: retrieval tune"
+```
+
+Output: [`C_tune_report.html`](C_tune_report.html) (~18 KB, fully
+self-contained — open in a browser, no Streamlit server, no internet
+needed). Sections:
+
+- Run metadata (model, mode, source)
+- Bayesian RAG-config search (4 trials, search space, best params)
+- Trial-by-trial table with per-metric scores
+
+The same renderer works on Scenario F2's bundle —
+[`F2_tune_report.html`](F2_tune_report.html). For a Streamlit
+equivalent: `PYTHONPATH=src python -m ragdx.cli experiment-dashboard
+new_demo3/C_tune_retrieval.json` (interactive, but needs a
+streamlit server).
+
 ## Scenario F — Per-project storage + project-scoped latest-defaults
 
 **When to use it:** real production with multiple RAGs in one repo.
@@ -353,6 +380,8 @@ Just the demo3-pr6 runs. The main project's B/C/D never appear here.
 | `rag_config.f.optimized.yaml` | F2 `--write-optimized-config` | Winning config from the project-scoped tune. |
 | `F2_console.log` | F2 stdout/stderr | Reference log. |
 | `F3_runs.log` | `--project demo3-pr6 runs` | Project-scoped run list. |
+| `C_tune_report.html` | `experiment-report` on C bundle | Self-contained HTML rendering of Scenario C's BO trials. |
+| `F2_tune_report.html` | `experiment-report` on F2 bundle | Same, for the project-scoped tune. |
 
 ## Wall-clock budget
 

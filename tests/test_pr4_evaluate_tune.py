@@ -903,6 +903,100 @@ def test_tune_from_run_rejects_pre_pr6_savedrun(tmp_path, monkeypatch):
         )
 
 
+def test_tune_bundle_is_shape_compatible_with_experiment_report():
+    """``ragdx experiment-report`` (HTML) and ``experiment-dashboard``
+    (Streamlit) render any bundle whose ``bayes_search`` / ``dspy_a_b``
+    is a ``{gt_mode: payload}`` dict. Tune bundles must follow that
+    shape so the existing visualization stack works on them without
+    special-casing -- the renderer iterates ``bs.items()`` expecting
+    each value to be a payload dict, not a flat bundle.
+
+    The pre-fix tune output put ``bayes_search`` at the top of the
+    bundle directly (no mode wrapping), which crashed
+    ``_render_bayes_search`` with ``'int' object has no attribute
+    'get'``. This test locks the wrapping in place."""
+    import inspect as _inspect
+
+    src = _inspect.getsource(cli_tune)
+    # The line that builds the BO section must wrap by mode_label.
+    # We accept either the explicit assign form or the dict literal.
+    assert 'bundle["bayes_search"] = {mode_label:' in src or \
+        '"bayes_search": {mode_label:' in src
+    # Same for the generation/DSPy section.
+    assert 'bundle["dspy_a_b"] = {mode_label:' in src or \
+        '"dspy_a_b": {mode_label:' in src
+    # And a minimal ``meta`` block (experiment-report header needs it).
+    assert '"meta":' in src or 'bundle["meta"]' in src
+
+
+def test_tune_bundle_renders_via_experiment_report(tmp_path):
+    """End-to-end shape check: synthesize a minimal tune-shaped bundle,
+    pass it through ``experiment_report.render`` (the HTML renderer
+    under the hood of ``ragdx experiment-report``), and assert the
+    output mentions the trials. Catches future renderer drift."""
+    from ragdx.ui import experiment_report as er
+
+    bundle = {
+        "schema_version": 1,
+        "stage": "retrieval",
+        "gt_mode": "no_gt",
+        "meta": {
+            "model": "openai/gpt-4o-mini",
+            "experiment_mode": "retrieval",
+            "modes_run": ["no_gt"],
+            "has_gt": False,
+            "detected_gt_mode": "no_gt",
+            "source": "ragdx tune",
+        },
+        "best_params": {"top_k": 5},
+        "best_composite": 1.42,
+        "objective_spec": {},
+        "bayes_search": {
+            "no_gt": {
+                "search_space": {"top_k": [3, 5, 7]},
+                "n_init": 2,
+                "max_trials": 3,
+                "objective_spec": {},
+                "trials": [
+                    {
+                        "trial_index": 0,
+                        "params": {"top_k": 3},
+                        "n_chunks": 100,
+                        "scores": {"context_precision": 0.5},
+                        "composite_score": 1.1,
+                        "feasible": True,
+                        "violations": [],
+                        "answers_preview": ["a"],
+                        "records": [],
+                        "elapsed_seconds": 1.0,
+                    },
+                    {
+                        "trial_index": 1,
+                        "params": {"top_k": 5},
+                        "n_chunks": 100,
+                        "scores": {"context_precision": 0.6},
+                        "composite_score": 1.42,
+                        "feasible": True,
+                        "violations": [],
+                        "answers_preview": ["b"],
+                        "records": [],
+                        "elapsed_seconds": 1.0,
+                    },
+                ],
+                "best_params": {"top_k": 5},
+                "best_composite": 1.42,
+            }
+        },
+    }
+    html = er.render_report(bundle, title="test")
+    # Must include the bundle title, the BO section, and trial data.
+    assert "Bayesian RAG-config search" in html
+    assert "top_k=5" in html or "top_k=3" in html
+    assert "1.42" in html or "1.420" in html
+    # Must NOT crash on the mode key being a single-mode dict.
+    assert "no_gt" in html
+
+
 def test_tune_save_synthesizes_evaluation_result_from_best_trial(tmp_path):
     """The ``--save`` path on tune synthesizes an EvaluationResult from
     the best trial's ragas scores before calling diagnose/save_run.
