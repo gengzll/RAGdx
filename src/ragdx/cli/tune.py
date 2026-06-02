@@ -108,6 +108,22 @@ def tune(
         "saturates on permissive judges like GLM-4-Flash), "
         "``token_f1`` (token-F1 vs GT; requires GT-populated records).",
     ),
+    resume: str = typer.Option(
+        "", "--resume",
+        help="Resume a previously-interrupted tune. Pass a specific "
+        "checkpoint id (e.g. ``ckpt_a1b2c3d4``), or use the bare flag "
+        "(``--resume=auto`` / ``--resume=latest``) to pick the most "
+        "recent interrupted checkpoint for the same stage. BO stages "
+        "(retrieval / chunking / joint) resume per-trial; ``generation`` "
+        "resumes per-phase (baseline / miprov2 / re_eval).",
+    ),
+    no_checkpoint: bool = typer.Option(
+        False, "--no-checkpoint",
+        help="Don't create a checkpoint for this run. Use in CI / tests "
+        "where every invocation is a clean slate. Default is to "
+        "checkpoint after every BO trial (BO stages) or every phase "
+        "boundary (generation stage).",
+    ),
     output: str = typer.Option(
         "tune_result.json", "--output", "-o",
         help="Where to write the stage result bundle.",
@@ -437,6 +453,67 @@ def tune(
     else:
         stage_records = list(records)
 
+    # ------------------------------------------------------------------
+    # Checkpoint: load (--resume) or create. Skipped by --no-checkpoint.
+    # The stage optimizer auto-saves after every BO trial / generation
+    # phase, so a crash mid-run loses at most one unit of work.
+    # ------------------------------------------------------------------
+    checkpoint_obj = None
+    checkpoint_store = None
+    if not no_checkpoint:
+        from ragdx.checkpoint import Checkpoint, CheckpointStore
+        checkpoint_store = CheckpointStore()
+        ckpt_kind = f"tune.{eff_stage}"
+        if resume:
+            target = resume
+            if target.lower() in {"auto", "latest", "true"}:
+                incomplete = [
+                    c for c in checkpoint_store.list_incomplete()
+                    if c.kind == ckpt_kind
+                ]
+                if not incomplete:
+                    raise typer.BadParameter(
+                        f"No interrupted {ckpt_kind} checkpoint to resume. "
+                        "Run `ragdx checkpoints` to see what's available."
+                    )
+                target = incomplete[0].checkpoint_id
+            try:
+                checkpoint_obj = checkpoint_store.load(target)
+            except FileNotFoundError as exc:
+                raise typer.BadParameter(str(exc)) from exc
+            # Re-mark as running -- ctrl-C'd checkpoints come back as
+            # "interrupted" but we're now actively continuing them.
+            checkpoint_obj.status = "running"
+            checkpoint_obj.interrupted_reason = ""
+            print(
+                f"[bold]Resuming checkpoint[/bold] [cyan]{checkpoint_obj.checkpoint_id}[/cyan] "
+                f"(kind=[cyan]{checkpoint_obj.kind}[/cyan], "
+                f"trials_done=[cyan]{len(checkpoint_obj.trials_completed)}[/cyan], "
+                f"phase=[cyan]{checkpoint_obj.generation_phase or '—'}[/cyan])"
+            )
+        else:
+            checkpoint_obj = Checkpoint(
+                kind=ckpt_kind,
+                cli_args={
+                    "stage": eff_stage,
+                    "budget": eff_budget,
+                    "bo_init": bo_init,
+                    "seed": seed,
+                    "mipro_auto": mipro_auto,
+                    "dspy_metric": dspy_metric,
+                    "from_run": from_run,
+                    "experiment_name": experiment_name,
+                },
+                name=name,
+                rag_config_yaml=rag_config.scrubbed_for_commit().to_yaml_string(),
+            )
+            checkpoint_store.save(checkpoint_obj)
+            print(
+                f"[dim]Checkpoint:[/dim] [cyan]{checkpoint_obj.checkpoint_id}[/cyan] "
+                f"[dim](resumable via `ragdx tune --resume "
+                f"{checkpoint_obj.checkpoint_id}`)[/dim]"
+            )
+
     ctx_kwargs: dict[str, Any] = dict(
         base_config=rag_config,
         chunks_master=chunks_master,
@@ -451,6 +528,8 @@ def tune(
         label=mode_label,
         mipro_auto=mipro_auto,
         dspy_metric=dspy_metric,
+        checkpoint=checkpoint_obj,
+        checkpoint_store=checkpoint_store,
     )
     # When --from-run inherited a planned experiment, thread its
     # search_space into the BO axes the StageContext exposes. The plan
@@ -479,7 +558,34 @@ def tune(
         f"{len(chunks_master)} chunks x {len(records)} records "
         f"(GT mode: {mode_label}, budget: {eff_budget})..."
     )
-    result = optimizer.optimize(ctx)
+    try:
+        result = optimizer.optimize(ctx)
+    except KeyboardInterrupt:
+        if checkpoint_obj is not None and checkpoint_store is not None:
+            checkpoint_store.mark_interrupted(
+                checkpoint_obj.checkpoint_id, reason="keyboard_interrupt",
+            )
+            print(
+                f"\n[yellow]Interrupted.[/yellow] Resume with "
+                f"`ragdx tune --resume {checkpoint_obj.checkpoint_id}` "
+                "(any flag overrides still apply)."
+            )
+        raise
+    except Exception as exc:
+        if checkpoint_obj is not None and checkpoint_store is not None:
+            checkpoint_store.mark_interrupted(
+                checkpoint_obj.checkpoint_id,
+                reason=f"unhandled_exception:{type(exc).__name__}",
+            )
+            print(
+                f"\n[red]Crashed:[/red] {type(exc).__name__}: {exc}\n"
+                f"[yellow]Resume with[/yellow] "
+                f"`ragdx tune --resume {checkpoint_obj.checkpoint_id}` "
+                "once the underlying issue is fixed."
+            )
+        raise
+    if checkpoint_obj is not None and checkpoint_store is not None:
+        checkpoint_store.mark_completed(checkpoint_obj.checkpoint_id)
 
     # ------------------------------------------------------------------
     # Serialize the result.

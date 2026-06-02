@@ -93,6 +93,7 @@ def _root_options(
 # fire, registering each command with the :data:`app` singleton. The
 # order doesn't matter for typer; we use alphabetical for readability.
 from ragdx.cli import (  # noqa: E402, I001
+    checkpoints as _checkpoints_mod,
     config as _config_mod,
     dashboard as _dashboard_mod,
     diagnose as _diagnose_mod,
@@ -132,6 +133,9 @@ dashboard = _dashboard_mod.dashboard
 evaluate = _evaluate_mod.evaluate
 
 tune = _tune_mod.tune
+
+checkpoints = _checkpoints_mod.checkpoints
+checkpoint_clean = _checkpoints_mod.checkpoint_clean
 
 show_config = _config_mod.show_config
 normalize_tools = _config_mod.normalize_tools

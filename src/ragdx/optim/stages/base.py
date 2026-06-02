@@ -88,6 +88,17 @@ class StageContext:
     ``"heavy"`` (~30+ candidates, ~90 min). Larger budgets give the
     grounded proposer more room to find a prompt that beats the seed."""
 
+    # --- Checkpoint (PR6+) -------------------------------------------
+    checkpoint: Any = None
+    """Optional :class:`ragdx.checkpoint.Checkpoint`. When set, the BO
+    loop replays its completed trials into the sampler and saves an
+    updated state after every new trial. ``None`` keeps the
+    pre-checkpoint behaviour exactly."""
+
+    checkpoint_store: Any = None
+    """Optional :class:`ragdx.checkpoint.CheckpointStore` for the
+    per-trial save. Ignored when ``checkpoint`` is ``None``."""
+
     dspy_metric: str = "auto"
     """Which DSPy-side inner-loop metric to use for the MIPROv2 search.
 
@@ -228,8 +239,25 @@ class StageOptimizer(ABC):
 
         Subclasses can override for non-BO paths (Generation uses
         DSPy's MIPROv2 instead).
+
+        Checkpointing
+        -------------
+        If ``ctx.checkpoint`` is set, the optimizer:
+
+        * Replays each :class:`CompletedTrial` from
+          ``checkpoint.trials_completed`` into the BO sampler via
+          ``bo.report(...)`` so the sampler's posterior matches what
+          the previous (interrupted) run had learned.
+        * Re-uses the recorded ``StageTrial`` objects directly in
+          ``trials_out`` (no LLM re-call).
+        * Saves the updated checkpoint after every completed trial,
+          so a crash mid-loop loses at most one trial.
+
+        Without ``ctx.checkpoint``: behaviour is unchanged from PR3.
         """
-        # Lazy import to avoid pulling ragas into stage-only callers.
+        # Lazy imports so stage-only callers don't drag in the
+        # checkpoint / ragas modules unless needed.
+        from ragdx.checkpoint import CompletedTrial
         from ragdx.experiments import _evaluate_with_ragas
 
         space = self.search_space(ctx)
@@ -242,6 +270,32 @@ class StageOptimizer(ABC):
         # the same ``cache_key()`` every time -> single pipeline reused.
         pipeline_cache: dict[tuple, RAGPipeline] = {}
         trials_out: list[StageTrial] = []
+
+        # --- Replay completed trials from the checkpoint, if any ----
+        # ``BayesianSearch.report()`` requires a prior ``next_params()``
+        # to populate ``_pending_params``. For replay we already know
+        # both the params and the score, so we bypass the guard by
+        # priming ``_pending_params`` directly. Equivalent to telling the
+        # sampler "I'm continuing trial N with params X and score S",
+        # which is exactly what resume needs.
+        checkpoint = getattr(ctx, "checkpoint", None)
+        checkpoint_store = getattr(ctx, "checkpoint_store", None)
+        if checkpoint is not None and checkpoint.trials_completed:
+            for ct in checkpoint.trials_completed:
+                bo._pending_params = dict(ct.params)
+                bo.report(dict(ct.params), float(ct.composite_score))
+                trials_out.append(StageTrial(
+                    trial_index=ct.trial_index,
+                    params=dict(ct.params),
+                    n_chunks=ct.n_chunks,
+                    scores=dict(ct.scores),
+                    composite_score=ct.composite_score,
+                    feasible=ct.feasible,
+                    violations=list(ct.violations),
+                    answers_preview=list(ct.answers_preview),
+                    records=list(ct.records),
+                    elapsed_seconds=ct.elapsed_seconds,
+                ))
 
         while bo.has_next():
             params = bo.next_params()
@@ -292,28 +346,58 @@ class StageOptimizer(ABC):
             comp_eval = ctx.objective.evaluate(scores)
             bo.report(params, comp_eval["score"])
 
-            trials_out.append(
-                StageTrial(
-                    trial_index=len(bo.trials) - 1,
-                    params=dict(params),
-                    n_chunks=n_chunks,
-                    scores=scores,
-                    composite_score=comp_eval["score"],
-                    feasible=comp_eval["feasible"],
-                    violations=comp_eval["violations"],
-                    answers_preview=[(a.answer or "")[:200] for a in answered],
-                    records=[
-                        {
-                            "question": a.question,
-                            "ground_truth": a.ground_truth,
-                            "contexts": list(a.contexts or []),
-                            "answer": a.answer or "",
-                        }
-                        for a in answered
-                    ],
-                    elapsed_seconds=round(time.time() - t_start, 2),
-                )
+            new_trial = StageTrial(
+                trial_index=len(bo.trials) - 1,
+                params=dict(params),
+                n_chunks=n_chunks,
+                scores=scores,
+                composite_score=comp_eval["score"],
+                feasible=comp_eval["feasible"],
+                violations=comp_eval["violations"],
+                answers_preview=[(a.answer or "")[:200] for a in answered],
+                records=[
+                    {
+                        "question": a.question,
+                        "ground_truth": a.ground_truth,
+                        "contexts": list(a.contexts or []),
+                        "answer": a.answer or "",
+                    }
+                    for a in answered
+                ],
+                elapsed_seconds=round(time.time() - t_start, 2),
             )
+            trials_out.append(new_trial)
+
+            # Persist after every completed trial so a crash mid-loop
+            # loses at most this trial. Defensive: a checkpoint write
+            # failure must never sink the whole optimization.
+            if checkpoint is not None and checkpoint_store is not None:
+                try:
+                    checkpoint.trials_completed.append(CompletedTrial(
+                        trial_index=new_trial.trial_index,
+                        params=new_trial.params,
+                        n_chunks=new_trial.n_chunks,
+                        scores=new_trial.scores,
+                        composite_score=new_trial.composite_score,
+                        feasible=new_trial.feasible,
+                        violations=new_trial.violations,
+                        answers_preview=new_trial.answers_preview,
+                        records=new_trial.records,
+                        elapsed_seconds=new_trial.elapsed_seconds,
+                    ))
+                    checkpoint.search_space = dict(space)
+                    checkpoint.n_bo_init = ctx.n_bo_init
+                    checkpoint.max_trials = ctx.n_bo_trials
+                    checkpoint.seed = ctx.seed
+                    checkpoint.objective_spec = ctx.objective.to_dict()
+                    checkpoint.stage_label = ctx.label
+                    checkpoint_store.save(checkpoint)
+                except Exception as exc:  # pragma: no cover - defensive
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        "checkpoint save failed (continuing optimization): %s",
+                        exc,
+                    )
 
         best = bo.best_trial
         best_config = (

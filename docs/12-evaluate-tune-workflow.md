@@ -422,7 +422,77 @@ The combined effect with §9 is that the full
 expressed without ever copy-pasting a run id by hand. See
 `new_demo3/README.md` for the worked example.
 
-## 11. Visualizing results
+## 11. Experiment checkpoints (resume after interruption)
+
+Long-running `ragdx tune` invocations (retrieval BO with budget 12,
+generation MIPROv2 with `--mipro-auto heavy`, joint BO with re-chunking
+per trial) can take 30–90 minutes. A network blip or a process kill
+mid-run used to mean throwing everything away and restarting.
+
+PR6+ auto-checkpoints by default:
+
+* **BO stages** (`retrieval` / `chunking` / `joint`): per-trial. After
+  every completed trial the optimizer writes
+  `.ragdx/checkpoints/<id>/state.json` containing the BO sampler's
+  history of `(params, score)` pairs. Resuming replays them into a
+  fresh `BayesianSearch` so the sampler's posterior matches what the
+  interrupted run had learned, and continues from trial N+1.
+* **Generation stage** (DSPy MIPROv2): per-phase. We checkpoint between
+  (a) the baseline run, (b) MIPROv2's monolithic `compile()`, and (c)
+  the optimised re-run. Phase (b) is opaque to us — DSPy doesn't expose
+  mid-`compile()` state — so a crash inside MIPROv2 still costs that
+  whole phase, but the expensive (a) baseline ragas eval and (c) final
+  ragas eval are preserved across crashes.
+
+### CLI surface
+
+```bash
+# Auto-checkpoint kicks in. The id is printed on startup.
+ragdx tune --stage generation --from-run <id> --mipro-auto heavy
+
+# Process gets killed / network hangs / kernel panics. See it:
+ragdx checkpoints
+# +-------------+-----------------+---------------+------------+
+# | Checkpoint  | Kind            | Status        | Resume     |
+# +-------------+-----------------+---------------+------------+
+# | ckpt_a1b2…  | tune.generation | interrupted   | tune --resume ckpt_a1b2…
+# +-------------+-----------------+---------------+------------+
+
+# Continue exactly where it left off:
+ragdx tune --resume ckpt_a1b2c3d4
+# Or pick the most recent interrupted one of the same stage:
+ragdx tune --resume=auto --stage generation
+
+# Skip checkpointing entirely (CI / tests):
+ragdx tune --stage retrieval --no-checkpoint
+
+# Sweep done checkpoints off disk:
+ragdx checkpoint-clean --completed
+# Or one specific one:
+ragdx checkpoint-clean ckpt_a1b2c3d4
+```
+
+### Resume semantics
+
+| Stage | What survives a crash | What gets re-done |
+|---|---|---|
+| `retrieval` / `chunking` / `joint` | All completed trials + their ragas scores + the BO sampler state | The current trial that crashed + remaining trials |
+| `generation`, crash during phase (a) | Nothing (phase (a) is the first thing) | Phase (a), (b), (c) from scratch |
+| `generation`, crash during phase (b) | Phase (a) baseline ragas eval | Phase (b) MIPROv2 (entirely — DSPy is monolithic), phase (c) |
+| `generation`, crash during phase (c) | Phase (a) + the MIPROv2 winning instruction + all proposed candidates + trial history | Just phase (c) re-eval |
+
+The checkpoint file format is documented in
+`src/ragdx/checkpoint.py::Checkpoint`. The schema is version-stamped
+(`schema_version: 1`) so upgrading ragdx doesn't silently corrupt
+existing checkpoints.
+
+### When to use `--no-checkpoint`
+
+CI workflows, tests, or any scenario where every invocation should be
+a clean slate. The 1–2 trial-write disk overhead is negligible for
+production use, but in unit tests it makes the test directory grow.
+
+## 12. Visualizing results
 
 `ragdx` ships two visualization layers; PR6 makes both work on the
 new `evaluate --save` / `tune --save` artifacts.

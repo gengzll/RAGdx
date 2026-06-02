@@ -106,15 +106,78 @@ class GenerationOptimizer(StageOptimizer):
                 )
             return out
 
-        logger.info("[DSPy/%s] (a) baseline run", ctx.label)
-        baseline_answered = _run_program(baseline_program)
-        baseline_eval = _evaluate_with_ragas(
-            baseline_answered,
-            runtime.ragas_judge,
-            runtime.ragas_embeddings,
-            ctx.metrics,
-            run_config=runtime.ragas_run_config,
+        # Phase-level checkpoint support (PR6+). Three phases save state:
+        # (a) baseline_eval, (b) miprov2 winner, (c) optimised_eval.
+        # Resuming from phase X skips phases up to and including X.
+        checkpoint = getattr(ctx, "checkpoint", None)
+        checkpoint_store = getattr(ctx, "checkpoint_store", None)
+        phase_done = (checkpoint.generation_phase if checkpoint else "")
+        artifacts = (
+            dict(checkpoint.generation_artifacts) if checkpoint else {}
         )
+
+        def _save_phase(phase: str, **extra: Any) -> None:
+            """Persist phase progress. No-op when checkpoint isn't wired."""
+            if checkpoint is None or checkpoint_store is None:
+                return
+            artifacts.update(extra)
+            checkpoint.generation_artifacts = dict(artifacts)
+            checkpoint.generation_phase = phase
+            checkpoint.stage_label = ctx.label
+            try:
+                checkpoint_store.save(checkpoint)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "[DSPy/%s] checkpoint save failed (continuing): %s",
+                    ctx.label, exc,
+                )
+
+        # ----- Phase (a): baseline run -------------------------------
+        if phase_done in {"baseline", "miprov2", "re_eval"}:
+            logger.info(
+                "[DSPy/%s] (a) baseline -- replayed from checkpoint",
+                ctx.label,
+            )
+            # Reconstruct baseline_answered from stored records (no LLM calls).
+            baseline_records_payload = artifacts.get(
+                "baseline_records_payload", []
+            )
+            baseline_answered = [
+                DatasetRecord(
+                    question=r.get("question", ""),
+                    ground_truth=r.get("ground_truth"),
+                    contexts=list(r.get("contexts") or []),
+                    answer=r.get("answer", ""),
+                )
+                for r in baseline_records_payload
+            ]
+            baseline_eval = {
+                "scores": artifacts.get("baseline_scores", {}),
+                "skipped": [],
+            }
+        else:
+            logger.info("[DSPy/%s] (a) baseline run", ctx.label)
+            baseline_answered = _run_program(baseline_program)
+            baseline_eval = _evaluate_with_ragas(
+                baseline_answered,
+                runtime.ragas_judge,
+                runtime.ragas_embeddings,
+                ctx.metrics,
+                run_config=runtime.ragas_run_config,
+            )
+            _save_phase(
+                "baseline",
+                baseline_scores=dict(baseline_eval.get("scores", {}) or {}),
+                baseline_records_payload=[
+                    {
+                        "question": r.question,
+                        "ground_truth": r.ground_truth,
+                        "contexts": list(r.contexts or []),
+                        "answer": r.answer or "",
+                    }
+                    for r in baseline_answered
+                ],
+            )
 
         # ----- Pick the inner-loop DSPy metric (PR6+) -----------------
         # Default: ragas composite for no-GT (where ``llm_judge``
@@ -156,90 +219,177 @@ class GenerationOptimizer(StageOptimizer):
                 ctx.label,
             )
 
-        logger.info("[DSPy/%s] (b) MIPROv2 optimisation", ctx.label)
-        capture = _MIPROTrialScoreCapture()
-        capture.setLevel(logging.INFO)
-        mipro_logger = logging.getLogger("dspy.teleprompt.mipro_optimizer_v2")
-        mipro_logger.addHandler(capture)
-        prior = mipro_logger.level
-        mipro_logger.setLevel(logging.INFO)
-
-        # Capture the proposed candidate instructions. MIPROv2's
-        # ``_propose_instructions`` returns a
-        # ``{predictor_name: [instruction_str, ...]}`` dict, but it's a
-        # local variable inside ``compile`` and not stored on self -- so
-        # we monkey-patch the method for the duration of the call,
-        # restore after. This lets the visualization show "what prompts
-        # did MIPROv2 actually try", not just the final winner.
-        proposed_capture: dict[str, list[str]] = {}
-        try:
-            import dspy.teleprompt.mipro_optimizer_v2 as _mipro_mod
-            _orig_propose = _mipro_mod.MIPROv2._propose_instructions
-
-            def _patched_propose(self, *args, **kwargs):
-                result = _orig_propose(self, *args, **kwargs)
-                # ``result`` is ``{predictor_name: [str, ...]}``. Copy
-                # defensively so future MIPROv2 internal mutations don't
-                # change what we report.
-                try:
-                    proposed_capture.update({
-                        str(k): [str(s) for s in v] for k, v in dict(result).items()
-                    })
-                except Exception:  # pragma: no cover - defensive
-                    pass
-                return result
-
-            _mipro_mod.MIPROv2._propose_instructions = _patched_propose
-            _patch_installed = True
-        except Exception as exc:  # pragma: no cover - dspy API drift
-            logger.warning(
-                "[DSPy/%s] could not patch MIPROv2._propose_instructions: %s",
-                ctx.label, exc,
+        # ----- Phase (b): MIPROv2 ------------------------------------
+        # MIPROv2 is monolithic from the outside -- DSPy doesn't expose
+        # ``study.add_trial`` resumption points. So on resume from
+        # "miprov2" we rebuild the winning program from the stored
+        # ``winning_instruction`` text (cheap) and skip MIPROv2 entirely.
+        if phase_done in {"miprov2", "re_eval"}:
+            logger.info(
+                "[DSPy/%s] (b) MIPROv2 -- resumed from checkpoint, "
+                "skipping ~%d trial(s)",
+                ctx.label,
+                len(artifacts.get("trial_scores", [])),
             )
+            winning_instruction_ck = artifacts.get("winning_instruction", "")
+            # Rebuild a fresh program at the winning instruction. No LLM
+            # calls -- the program object is just a thin wrapper around
+            # a Signature.
+            optimized_program = adapter.build_program(
+                instruction=winning_instruction_ck or runtime.system_instruction,
+            )
+            opt_result = {
+                "optimized_program": optimized_program,
+                "instructions": dict(
+                    artifacts.get("opt_instructions", {})
+                ) or {"predict": winning_instruction_ck or ""},
+                "demos": {n: list(d) for n, d in (artifacts.get("opt_demos") or {}).items()},
+                "gt_mode": ctx.label,
+                "optimizer": "MIPROv2",
+                "trainset_size": len(records_with_ctxs),
+            }
+            proposed_capture = {
+                k: list(v)
+                for k, v in (artifacts.get("proposed_instructions_by_predictor") or {}).items()
+            }
+
+            class _CapturePlaceholder:
+                """Stand-in for the live ``_MIPROTrialScoreCapture`` so
+                the per-trial fields downstream still resolve when we
+                resumed past phase (b)."""
+
+                scores_so_far = list(artifacts.get("trial_scores") or [])
+                best_scores = list(artifacts.get("best_score_progression") or [])
+                trials = list(artifacts.get("trial_log") or [])
+
+            capture = _CapturePlaceholder()
             _patch_installed = False
-
-        try:
-            opt_result = adapter.optimize(
-                records_with_ctxs,
-                # Seed MIPROv2 with the same program the baseline used so
-                # the user's system_instruction is what MIPROv2 starts
-                # from (Instruction 0 in its candidate set). Without this
-                # the optimizer silently rebuilds a default-signature
-                # program and any system_instruction override is lost.
-                program=baseline_program,
-                student_lm=runtime.dspy_lm,
-                judge_lm=runtime.dspy_lm,
-                optimizer="MIPROv2",
-                # PR6+: surface the search budget as ``mipro_auto`` via
-                # StageContext + --mipro-auto CLI flag.
-                # ``light`` (~3 candidates) is the default; bump to
-                # ``medium`` (~10-20) when the seed needs serious
-                # competition, or ``heavy`` (~30+) for a deep sweep.
-                optimizer_kwargs={
-                    "auto": getattr(ctx, "mipro_auto", "light"),
-                    "num_threads": runtime.llm_max_concurrent,
-                },
-                # PR6+: when the user (or the default rule) picks
-                # ``ragas``, swap DSPy's saturating llm_judge metric for
-                # the ragas composite. ``custom_metric=None`` lets DSPy
-                # fall back to its mode-based default.
-                custom_metric=custom_metric,
+        else:
+            logger.info("[DSPy/%s] (b) MIPROv2 optimisation", ctx.label)
+            capture = _MIPROTrialScoreCapture()
+            capture.setLevel(logging.INFO)
+            mipro_logger = logging.getLogger(
+                "dspy.teleprompt.mipro_optimizer_v2"
             )
-        finally:
-            mipro_logger.removeHandler(capture)
-            mipro_logger.setLevel(prior)
-            if _patch_installed:
-                _mipro_mod.MIPROv2._propose_instructions = _orig_propose
+            mipro_logger.addHandler(capture)
+            prior = mipro_logger.level
+            mipro_logger.setLevel(logging.INFO)
 
-        logger.info("[DSPy/%s] (c) optimised re-run", ctx.label)
-        optimised_answered = _run_program(opt_result["optimized_program"])
-        opt_eval = _evaluate_with_ragas(
-            optimised_answered,
-            runtime.ragas_judge,
-            runtime.ragas_embeddings,
-            ctx.metrics,
-            run_config=runtime.ragas_run_config,
-        )
+            # Capture the proposed candidate instructions. MIPROv2's
+            # ``_propose_instructions`` returns a
+            # ``{predictor_name: [instruction_str, ...]}`` dict, but it's a
+            # local variable inside ``compile`` and not stored on self -- so
+            # we monkey-patch the method for the duration of the call,
+            # restore after. This lets the visualization show "what prompts
+            # did MIPROv2 actually try", not just the final winner.
+            proposed_capture: dict[str, list[str]] = {}
+            try:
+                import dspy.teleprompt.mipro_optimizer_v2 as _mipro_mod
+                _orig_propose = _mipro_mod.MIPROv2._propose_instructions
+
+                def _patched_propose(self, *args, **kwargs):
+                    result = _orig_propose(self, *args, **kwargs)
+                    try:
+                        proposed_capture.update({
+                            str(k): [str(s) for s in v]
+                            for k, v in dict(result).items()
+                        })
+                    except Exception:  # pragma: no cover
+                        pass
+                    return result
+
+                _mipro_mod.MIPROv2._propose_instructions = _patched_propose
+                _patch_installed = True
+            except Exception as exc:  # pragma: no cover - dspy API drift
+                logger.warning(
+                    "[DSPy/%s] could not patch MIPROv2._propose_instructions: %s",
+                    ctx.label, exc,
+                )
+                _patch_installed = False
+
+            try:
+                opt_result = adapter.optimize(
+                    records_with_ctxs,
+                    program=baseline_program,
+                    student_lm=runtime.dspy_lm,
+                    judge_lm=runtime.dspy_lm,
+                    optimizer="MIPROv2",
+                    optimizer_kwargs={
+                        "auto": getattr(ctx, "mipro_auto", "light"),
+                        "num_threads": runtime.llm_max_concurrent,
+                    },
+                    custom_metric=custom_metric,
+                )
+            finally:
+                mipro_logger.removeHandler(capture)
+                mipro_logger.setLevel(prior)
+                if _patch_installed:
+                    _mipro_mod.MIPROv2._propose_instructions = _orig_propose
+
+            # Save phase (b) outcome so a phase-(c) crash doesn't lose
+            # the multi-trial MIPROv2 result.
+            _winner_for_save = next(
+                iter(dict(opt_result["instructions"]).values()), ""
+            )
+            _save_phase(
+                "miprov2",
+                winning_instruction=_winner_for_save,
+                opt_instructions=dict(opt_result["instructions"]),
+                opt_demos={
+                    n: [dict(d) for d in (demos or [])]
+                    for n, demos in (opt_result.get("demos") or {}).items()
+                },
+                proposed_instructions_by_predictor=dict(proposed_capture),
+                trial_scores=list(capture.scores_so_far),
+                best_score_progression=list(capture.best_scores),
+                trial_log=list(capture.trials),
+            )
+
+        # ----- Phase (c): optimised re-run --------------------------
+        if phase_done == "re_eval":
+            logger.info(
+                "[DSPy/%s] (c) optimised re-run -- replayed from checkpoint",
+                ctx.label,
+            )
+            optimised_records_payload = artifacts.get(
+                "optimised_records_payload", []
+            )
+            optimised_answered = [
+                DatasetRecord(
+                    question=r.get("question", ""),
+                    ground_truth=r.get("ground_truth"),
+                    contexts=list(r.get("contexts") or []),
+                    answer=r.get("answer", ""),
+                )
+                for r in optimised_records_payload
+            ]
+            opt_eval = {
+                "scores": artifacts.get("optimised_scores", {}),
+                "skipped": [],
+            }
+        else:
+            logger.info("[DSPy/%s] (c) optimised re-run", ctx.label)
+            optimised_answered = _run_program(opt_result["optimized_program"])
+            opt_eval = _evaluate_with_ragas(
+                optimised_answered,
+                runtime.ragas_judge,
+                runtime.ragas_embeddings,
+                ctx.metrics,
+                run_config=runtime.ragas_run_config,
+            )
+            _save_phase(
+                "re_eval",
+                optimised_scores=dict(opt_eval.get("scores", {}) or {}),
+                optimised_records_payload=[
+                    {
+                        "question": r.question,
+                        "ground_truth": r.ground_truth,
+                        "contexts": list(r.contexts or []),
+                        "answer": r.answer or "",
+                    }
+                    for r in optimised_answered
+                ],
+            )
 
         baseline_scores = baseline_eval.get("scores", {}) or {}
         optimised_scores = opt_eval.get("scores", {}) or {}

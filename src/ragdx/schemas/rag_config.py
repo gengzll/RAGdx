@@ -222,11 +222,16 @@ class RAGConfig(BaseModel):
         """Write the config to ``path`` (YAML). Returns the target path."""
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            yaml.safe_dump(self.model_dump(mode="json"), sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
+        target.write_text(self.to_yaml_string(), encoding="utf-8")
         return target
+
+    def to_yaml_string(self) -> str:
+        """Render the config as a YAML ``str``. Used by the checkpoint
+        store so a resumable in-memory config doesn't need to round-trip
+        through the filesystem."""
+        return yaml.safe_dump(
+            self.model_dump(mode="json"), sort_keys=False, allow_unicode=True,
+        )
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> RAGConfig:
