@@ -313,6 +313,7 @@ class DSPyAdapter:
         student_lm: Any | None = None,
         optimizer: str = "MIPROv2",
         optimizer_kwargs: dict[str, Any] | None = None,
+        compile_kwargs: dict[str, Any] | None = None,
         custom_metric: Callable[[Any, Any], float] | None = None,
         mode: GTMode | None = None,
     ) -> dict[str, Any]:
@@ -330,6 +331,11 @@ class DSPyAdapter:
             optimisation.
         optimizer: ``"MIPROv2"`` (default), ``"COPRO"``, or ``"BootstrapFewShot"``.
         optimizer_kwargs: passed through to the teleprompter constructor.
+        compile_kwargs: extra kwargs forwarded to ``teleprompter.compile()``.
+            COPRO requires ``eval_kwargs={"display_progress": ..., "num_threads": ...}``;
+            BootstrapFewShot ignores it; MIPROv2 has its own kwargs.
+            When ``None`` and the optimizer is COPRO, we supply a sane
+            default so users don't have to.
         custom_metric: replaces the built-in metric entirely.
         mode: force GT mode; otherwise detected from the trainset.
         """
@@ -371,9 +377,15 @@ class DSPyAdapter:
 
         teleprompter = teleprompters[optimizer](**kwargs)
 
+        # COPRO requires eval_kwargs; supply a sensible default so the
+        # caller doesn't need to know DSPy's per-optimizer compile API.
+        compile_kw = dict(compile_kwargs or {})
+        if optimizer == "COPRO" and "eval_kwargs" not in compile_kw:
+            compile_kw["eval_kwargs"] = {"display_progress": False, "num_threads": 1}
+
         ctx = dspy.context(lm=student_lm) if student_lm is not None else _noop_ctx()
         with ctx:
-            optimized = teleprompter.compile(prog, trainset=trainset)
+            optimized = teleprompter.compile(prog, trainset=trainset, **compile_kw)
 
         # Extract instructions + demos so callers don't need to know DSPy internals.
         instructions: dict[str, str] = {}

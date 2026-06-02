@@ -337,6 +337,7 @@ class GenerationOptimizer(StageOptimizer):
             # Map ctx.dspy_optimizer to DSPyAdapter's optimizer string
             # + the right optimizer_kwargs for each algorithm.
             _opt_choice = getattr(ctx, "dspy_optimizer", "mipro")
+            _dspy_compile_kwargs: dict[str, Any] = {}
             if _opt_choice == "mipro":
                 _dspy_opt_str = "MIPROv2"
                 _dspy_opt_kwargs = {
@@ -353,6 +354,15 @@ class GenerationOptimizer(StageOptimizer):
                     "depth": 3,
                     "init_temperature": 1.4,
                     "track_stats": True,
+                }
+                # COPRO requires eval_kwargs at compile time. Pass the
+                # runtime's concurrency budget so it parallelises like
+                # MIPROv2 does.
+                _dspy_compile_kwargs = {
+                    "eval_kwargs": {
+                        "display_progress": False,
+                        "num_threads": runtime.llm_max_concurrent,
+                    },
                 }
             elif _opt_choice == "bootstrap_fewshot":
                 # BootstrapFewShot: demo-only generation. Runs the
@@ -381,6 +391,7 @@ class GenerationOptimizer(StageOptimizer):
                     judge_lm=runtime.dspy_lm,
                     optimizer=_dspy_opt_str,
                     optimizer_kwargs=_dspy_opt_kwargs,
+                    compile_kwargs=_dspy_compile_kwargs,
                     custom_metric=custom_metric,
                 )
             finally:
