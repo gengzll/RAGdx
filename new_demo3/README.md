@@ -389,6 +389,83 @@ The 2026-06-02 run with `--mipro-auto medium --dspy-metric ragas`:
 The winning prompt adds **chain-of-thought-style reasoning** and
 explicit step-by-step structure. Substantively different content.
 
+### Heavy budget breakthrough (2026-06-02): no regression, real win
+
+Re-running with `--mipro-auto heavy --dspy-metric ragas` produced
+**28 trials** (vs medium's 13) and found a winner that's both
+strictly higher than the seed at minibatch eval AND matches the
+seed on full ragas eval — no minibatch overfit this time:
+
+```bash
+ragdx tune --stage generation --from-run d84762c9da44 \
+    --mipro-auto heavy --dspy-metric ragas \
+    --output new_demo3/G_heavy_tune.json --save --name "demo3-generation-heavy"
+```
+
+Bundle: [`G_heavy_tune.json`](G_heavy_tune.json) · HTML:
+[`G_heavy_report.html`](G_heavy_report.html) (38 KB). Saved run
+`9fd2d342acef`. Full console log:
+[`G_heavy_console.log`](G_heavy_console.log).
+
+**Result**:
+
+| Metric | Baseline (Instr 0) | Heavy winner | Δ |
+|---|---|---|---|
+| context_precision | 0.5556 | 0.5556 | 0.0 |
+| faithfulness | **1.0** | **1.0** | **0.0** |
+| composite (weighted) | 1.6667 | 1.6667 | 0.0 |
+
+**`Best score so far: 247.75`** (vs default's `240.97`) — strictly
+higher → MIPROv2 picks a non-seed winner on the inner BO loop AND
+that winner also matches the baseline on the full ragas re-eval.
+
+**Winning prompt** (539 chars, substantively different from the 189-char seed):
+
+> "You are an ESG sustainability analyst **specializing in the
+> analysis of Industry 4.0 concepts and digital transformation in
+> electronics manufacturing**. Your task is to review passages from
+> ASMPT's 2024 report and **extract meaningful insights**. For each
+> question provided, quote exact wording from the context when
+> possible, and if the answer is not present in the context, reply
+> 'Not in report'. Based on the context, generate a reasoning that
+> outlines the **step-by-step thought process** leading to the
+> answer, and then provide the answer itself."
+
+Added: **domain specialization** (Industry 4.0 + electronics
+manufacturing), **insight extraction**, **explicit reasoning
+structure**. Kept: **persona** (ESG analyst), **safety net** ("Not
+in report"), **fidelity discipline** (exact wording).
+
+### Three runs at three budgets — the full picture
+
+| Run | budget | trials | Winner | full-eval faithfulness | Wall |
+|---|---|---|---|---|---|
+| previous-1 | `light` + `llm_judge` | 11 | Instr 0 (seed) — tie-break | 1.0 (no change) | ~12 min |
+| previous-2 | `medium` + `ragas` | 13 (of 18) | Instr 3 — strict win on minibatch | **0.91 (regressed!)** | ~75 min |
+| **current** | **`heavy` + `ragas`** | **28** (of 27 planned, 1 retry) | New Industry-4.0-themed prompt | **1.0 (no regression)** | **~73 min** |
+
+The pattern:
+1. `light` + `llm_judge` couldn't even discriminate candidates.
+2. `medium` + `ragas` discriminated, picked a winner, but the
+   winner overfit the minibatch (Method F / Hold-out validation
+   would have caught this).
+3. `heavy` + `ragas` discriminated better (more candidates + more
+   trials reduce the per-trial-sampling noise), found a winner
+   that doesn't overfit.
+
+**The structural fix to MIPROv2's tie-to-seed problem is `ragas`
+metric. The structural fix to minibatch overfit is `heavy` budget
+(or full-set eval, or hold-out validation as Method F would
+implement).**
+
+Also: **3 ragas calls timed out at 90s during this run** (see "ragas
+faithfulness scoring hit 90s timeout" in `G_heavy_console.log`).
+Each timeout was treated as score=0 for that one metric/sample
+combination (visible as the 172.45 / 165.97 / 172.45 outliers in
+`Scores so far`). Without the PR6+ `_PER_CALL_TIMEOUT_S = 90` fix in
+`_ragas_dspy_metric.py`, each of those would have hung indefinitely
+and a 73-minute run would have become an unfinishable run.
+
 ### Honest follow-up finding: winner ≠ better on full eval
 
 We re-evaluated the winner (Instruction 3) on the same 3 questions
