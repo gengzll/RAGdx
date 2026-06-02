@@ -90,6 +90,24 @@ def tune(
         help="Random initialisation rounds for BO.",
     ),
     seed: int = typer.Option(7, "--seed"),
+    mipro_auto: str = typer.Option(
+        "light", "--mipro-auto",
+        help="DSPy MIPROv2 search budget for ``--stage generation``: "
+        "``light`` (~3 candidates, ~5 min), ``medium`` (~10-20 "
+        "candidates, ~30 min), ``heavy`` (~30+ candidates, ~90 min). "
+        "Bigger budgets give the proposer more room to find a prompt "
+        "that beats the seed. Ignored for non-generation stages.",
+    ),
+    dspy_metric: str = typer.Option(
+        "auto", "--dspy-metric",
+        help="Inner-loop metric for ``--stage generation``: "
+        "``auto`` (default: ``token_f1`` with GT, ``ragas`` without), "
+        "``ragas`` (ragas composite — context_precision + faithfulness + "
+        "answer_relevancy — even in no-GT mode), "
+        "``llm_judge`` (legacy single-LLM faithfulness; cheap but "
+        "saturates on permissive judges like GLM-4-Flash), "
+        "``token_f1`` (token-F1 vs GT; requires GT-populated records).",
+    ),
     output: str = typer.Option(
         "tune_result.json", "--output", "-o",
         help="Where to write the stage result bundle.",
@@ -166,6 +184,17 @@ def tune(
     if stage != "auto" and stage not in _STAGE_CHOICES:
         raise typer.BadParameter(
             f"--stage must be one of {_STAGE_CHOICES} or 'auto', got {stage!r}."
+        )
+    _MIPRO_AUTO_CHOICES = ("light", "medium", "heavy")
+    if mipro_auto not in _MIPRO_AUTO_CHOICES:
+        raise typer.BadParameter(
+            f"--mipro-auto must be one of {_MIPRO_AUTO_CHOICES}, got {mipro_auto!r}."
+        )
+    _DSPY_METRIC_CHOICES = ("auto", "ragas", "llm_judge", "token_f1")
+    if dspy_metric not in _DSPY_METRIC_CHOICES:
+        raise typer.BadParameter(
+            f"--dspy-metric must be one of {_DSPY_METRIC_CHOICES}, "
+            f"got {dspy_metric!r}."
         )
     if use_llm and use_both:
         raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
@@ -420,6 +449,8 @@ def tune(
         seed=seed,
         re_chunk_fn=re_chunk_fn,
         label=mode_label,
+        mipro_auto=mipro_auto,
+        dspy_metric=dspy_metric,
     )
     # When --from-run inherited a planned experiment, thread its
     # search_space into the BO axes the StageContext exposes. The plan

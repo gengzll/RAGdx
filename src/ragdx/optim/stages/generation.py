@@ -116,6 +116,46 @@ class GenerationOptimizer(StageOptimizer):
             run_config=runtime.ragas_run_config,
         )
 
+        # ----- Pick the inner-loop DSPy metric (PR6+) -----------------
+        # Default: ragas composite for no-GT (where ``llm_judge``
+        # saturates), token-F1 for with-GT (where it has a discriminative
+        # GT to compare against). Users override via ``--dspy-metric``.
+        dspy_metric_choice = getattr(ctx, "dspy_metric", "auto")
+        if dspy_metric_choice == "auto":
+            dspy_metric_choice = "ragas" if ctx.label == "no_gt" else "token_f1"
+        custom_metric = None
+        if dspy_metric_choice == "ragas":
+            from ragdx.optim._ragas_dspy_metric import make_ragas_metric
+            try:
+                custom_metric = make_ragas_metric(
+                    judge=runtime.ragas_judge,
+                    embeddings=runtime.ragas_embeddings,
+                )
+                logger.info(
+                    "[DSPy/%s] using ragas composite (context_precision + "
+                    "faithfulness + answer_relevancy) as inner-loop metric",
+                    ctx.label,
+                )
+            except ImportError:
+                logger.warning(
+                    "[DSPy/%s] ragas not available; falling back to "
+                    "DSPy's llm_judge metric (saturates on permissive LMs)",
+                    ctx.label,
+                )
+                dspy_metric_choice = "llm_judge"
+        elif dspy_metric_choice == "token_f1":
+            # DSPyAdapter.build_metric_function handles with_gt mode
+            # natively. Nothing to pre-build.
+            logger.info(
+                "[DSPy/%s] using token-F1 vs GT as inner-loop metric",
+                ctx.label,
+            )
+        else:
+            logger.info(
+                "[DSPy/%s] using DSPy llm_judge (faithfulness) as inner-loop metric",
+                ctx.label,
+            )
+
         logger.info("[DSPy/%s] (b) MIPROv2 optimisation", ctx.label)
         capture = _MIPROTrialScoreCapture()
         capture.setLevel(logging.INFO)
@@ -170,10 +210,20 @@ class GenerationOptimizer(StageOptimizer):
                 student_lm=runtime.dspy_lm,
                 judge_lm=runtime.dspy_lm,
                 optimizer="MIPROv2",
+                # PR6+: surface the search budget as ``mipro_auto`` via
+                # StageContext + --mipro-auto CLI flag.
+                # ``light`` (~3 candidates) is the default; bump to
+                # ``medium`` (~10-20) when the seed needs serious
+                # competition, or ``heavy`` (~30+) for a deep sweep.
                 optimizer_kwargs={
-                    "auto": "light",
+                    "auto": getattr(ctx, "mipro_auto", "light"),
                     "num_threads": runtime.llm_max_concurrent,
                 },
+                # PR6+: when the user (or the default rule) picks
+                # ``ragas``, swap DSPy's saturating llm_judge metric for
+                # the ragas composite. ``custom_metric=None`` lets DSPy
+                # fall back to its mode-based default.
+                custom_metric=custom_metric,
             )
         finally:
             mipro_logger.removeHandler(capture)
@@ -243,6 +293,13 @@ class GenerationOptimizer(StageOptimizer):
             },
             "trial_scores": list(capture.scores_so_far),
             "best_score_progression": list(capture.best_scores),
+            # Configuration knobs the user picked for this run --
+            # recorded so the bundle is self-describing and the HTML
+            # report can show "this was run at auto=medium with
+            # metric=ragas, hence the prompts vary widely / scores are
+            # discriminative".
+            "mipro_auto": getattr(ctx, "mipro_auto", "light"),
+            "dspy_metric_used": dspy_metric_choice,
             # Every candidate instruction MIPROv2 proposed, keyed by
             # predictor name. The winning instruction (in ``instructions``
             # above) is one of these. Empty {} when the monkey-patch

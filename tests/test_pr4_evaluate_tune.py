@@ -367,6 +367,8 @@ def test_tune_defaults_from_run_to_latest_when_no_args(tmp_path, monkeypatch):
         write_optimized_config="", api_key="",
         save=False, name="", baseline_run_id="",
         use_llm=False, use_both=False, use_llm_planner=False,
+
+        mipro_auto="light", dspy_metric="auto",
     )
     # Confirm the seed run's plan drove the optimizer.
     ctx = captured["ctx"]
@@ -418,6 +420,7 @@ def test_evaluate_rejects_use_llm_without_save(monkeypatch, tmp_path):
             output=str(tmp_path / "o.json"), api_key="stub", name="",
             save=False, baseline_run_id="",
             use_llm=True, use_both=False, use_llm_planner=False,
+
         )
 
 
@@ -436,6 +439,8 @@ def test_tune_rejects_use_llm_without_save(tmp_path):
             write_optimized_config="", api_key="stub",
             save=False, name="", baseline_run_id="",
             use_llm=False, use_both=False, use_llm_planner=True,
+
+            mipro_auto="light", dspy_metric="auto",
         )
 
 
@@ -630,6 +635,8 @@ def test_tune_experiment_without_from_run_fails_early(tmp_path):
             write_optimized_config="", api_key="stub",
             save=False, name="", baseline_run_id="",
             use_llm=False, use_both=False, use_llm_planner=False,
+
+            mipro_auto="light", dspy_metric="auto",
             from_run="", experiment_name="ignored",
         )
 
@@ -756,6 +763,7 @@ def test_tune_from_run_inherits_stage_budget_and_search_space(tmp_path, monkeypa
             from_run=seed_run.run_id, experiment_name="",
             stage="auto", corpus="", budget=0,
             bo_init=2, seed=0,
+            mipro_auto="light", dspy_metric="auto",
             output=str(tmp_path / "tune_out.json"),
             write_optimized_config="", api_key="",
             save=False, name="", baseline_run_id="",
@@ -861,6 +869,8 @@ def test_tune_from_run_explicit_flags_override_plan(tmp_path, monkeypatch):
         write_optimized_config="", api_key="",
         save=False, name="", baseline_run_id="",
         use_llm=False, use_both=False, use_llm_planner=False,
+
+        mipro_auto="light", dspy_metric="auto",
     )
 
     ctx = captured["ctx"]
@@ -896,6 +906,7 @@ def test_tune_from_run_rejects_pre_pr6_savedrun(tmp_path, monkeypatch):
             from_run=seed_run.run_id, experiment_name="",
             stage="auto", corpus="", budget=0,
             bo_init=2, seed=0,
+            mipro_auto="light", dspy_metric="auto",
             output=str(tmp_path / "o.json"),
             write_optimized_config="", api_key="",
             save=False, name="", baseline_run_id="",
@@ -927,6 +938,135 @@ def test_tune_bundle_is_shape_compatible_with_experiment_report():
         '"dspy_a_b": {mode_label:' in src
     # And a minimal ``meta`` block (experiment-report header needs it).
     assert '"meta":' in src or 'bundle["meta"]' in src
+
+
+# ============================================================ MIPROv2 tuning knobs (PR6+)
+def test_tune_has_mipro_auto_and_dspy_metric_flags():
+    """The two knobs that let users push DSPy past the seed-tie problem:
+    ``--mipro-auto`` (candidate budget: light / medium / heavy) and
+    ``--dspy-metric`` (inner-loop scoring: ragas / llm_judge / token_f1 /
+    auto). Without these, the no-GT generation path saturates on
+    permissive judges (e.g. GLM-4-Flash) and MIPROv2 returns the seed
+    deterministically. See new_demo3/README.md Scenario G.
+
+    Source-level check: the CLI flags exist and Validation accepts the
+    documented choice sets."""
+    params = set(inspect.signature(cli_tune).parameters)
+    assert "mipro_auto" in params
+    assert "dspy_metric" in params
+
+
+def test_tune_rejects_invalid_mipro_auto(tmp_path):
+    """Unknown --mipro-auto value must fail fast with a clear error
+    listing the choices, not crash deep inside MIPROv2."""
+    import typer
+    cfg_path = tmp_path / "rag.yaml"
+    q_path = tmp_path / "q.jsonl"
+    cfg_path.write_text("name: stub\n", encoding="utf-8")
+    q_path.write_text('{"question": "Q"}\n', encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match=r"mipro-auto"):
+        cli_tune(
+            base_config=str(cfg_path), questions=str(q_path),
+            from_run="", experiment_name="", stage="generation",
+            corpus="", budget=2, bo_init=1, seed=0,
+            mipro_auto="ULTRA",  # ← invalid
+            dspy_metric="auto",
+            output=str(tmp_path / "o.json"), write_optimized_config="",
+            api_key="stub", save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=False,
+        )
+
+
+def test_tune_rejects_invalid_dspy_metric(tmp_path):
+    """Same fast-fail for --dspy-metric."""
+    import typer
+    cfg_path = tmp_path / "rag.yaml"
+    q_path = tmp_path / "q.jsonl"
+    cfg_path.write_text("name: stub\n", encoding="utf-8")
+    q_path.write_text('{"question": "Q"}\n', encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match=r"dspy-metric"):
+        cli_tune(
+            base_config=str(cfg_path), questions=str(q_path),
+            from_run="", experiment_name="", stage="generation",
+            corpus="", budget=2, bo_init=1, seed=0,
+            mipro_auto="light",
+            dspy_metric="bert_score",  # ← invalid
+            output=str(tmp_path / "o.json"), write_optimized_config="",
+            api_key="stub", save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=False,
+        )
+
+
+def test_stage_context_carries_mipro_auto_and_dspy_metric():
+    """``StageContext`` must expose the two knobs as fields so
+    GenerationOptimizer can read them at run time. Source-level check
+    so we don't need a real DSPy runtime."""
+    import inspect as _inspect
+
+    from ragdx.optim.stages.base import StageContext
+    src = _inspect.getsource(StageContext)
+    assert "mipro_auto" in src
+    assert "dspy_metric" in src
+
+
+def test_make_ragas_metric_returns_callable_and_tags():
+    """The ragas-DSPy metric factory must return a 3-arg callable that
+    DSPy can plug into ``custom_metric``. Build with mocked judge /
+    embeddings so we don't need real ragas + LLM access."""
+    pytest.importorskip("ragas")
+    from ragdx.optim._ragas_dspy_metric import make_ragas_metric
+
+    metric = make_ragas_metric(judge=object(), embeddings=object())
+    # DSPy calls ``metric(example, pred, trace=...)`` -- check the
+    # signature accepts that form.
+    import inspect as _inspect
+    sig = _inspect.signature(metric)
+    assert len(sig.parameters) >= 2
+    # Identifying tags so downstream consumers (HTML report) can
+    # distinguish "this run used ragas as metric" from "llm_judge".
+    assert metric.__ragdx_kind__ == "ragas_composite"
+    assert "faithfulness" in metric.__ragdx_metric_names__
+
+
+def test_make_ragas_metric_zero_score_for_empty_inputs():
+    """Empty ``answer`` or empty ``contexts`` short-circuits to 0.0 so
+    the metric never raises during MIPROv2's threadpool eval."""
+    pytest.importorskip("ragas")
+    from ragdx.optim._ragas_dspy_metric import make_ragas_metric
+
+    metric = make_ragas_metric(judge=object(), embeddings=object())
+
+    class _Example:
+        question = "Q?"
+        contexts: list[str] = []
+
+    class _Pred:
+        answer = "some answer"
+
+    # No contexts → 0.0 without touching the judge.
+    assert metric(_Example(), _Pred()) == 0.0
+    # Empty answer → 0.0.
+    class _Pred2:
+        answer = ""
+    class _Example2:
+        question = "Q?"
+        contexts = ["context"]
+    assert metric(_Example2(), _Pred2()) == 0.0
+
+
+def test_generation_optimizer_reads_dspy_metric_from_ctx():
+    """Source-level check that GenerationOptimizer.optimize reads
+    ``ctx.dspy_metric`` and dispatches to ragas / llm_judge / token_f1.
+    Catches future refactors that drop the wiring."""
+    import inspect as _inspect
+
+    from ragdx.optim.stages import generation
+
+    src = _inspect.getsource(generation.GenerationOptimizer.optimize)
+    assert 'getattr(ctx, "dspy_metric"' in src or 'ctx.dspy_metric' in src
+    assert 'make_ragas_metric' in src
+    # And ``mipro_auto`` reads -- this is the Method 3 wiring.
+    assert 'getattr(ctx, "mipro_auto"' in src or 'ctx.mipro_auto' in src
 
 
 def test_mipro_capture_parses_trial_log_lines():

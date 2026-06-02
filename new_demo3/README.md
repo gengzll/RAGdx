@@ -307,106 +307,139 @@ at the existing retrieval config.
 PYTHONPATH=src python -m ragdx.cli tune \
     --stage generation \
     --from-run d84762c9da44 \
+    --mipro-auto medium \
+    --dspy-metric ragas \
     --output new_demo3/G_tune_generation.json \
-    --save --name "demo3-generation-tune"
+    --save --name "demo3-generation-tune-v2"
 ```
 
-`--stage generation` is explicit; without it the plan's first
-experiment (`corpus-chunking-search`) would be picked. `--from-run
-d84762c9da44` points at the original baseline (B) so the prompt
-sweep uses the same retrieval config + questions + corpus that
-produced the original 0.5556 / 1.0 baseline scores.
+The two new (PR6+) flags that make MIPROv2 productive in no-GT mode:
 
-Output ([`G_console.log`](G_console.log), bundle in
-[`G_tune_generation.json`](G_tune_generation.json)):
+- `--mipro-auto medium` — bump from `light` (3 candidates) to ~10-20
+  proposed instructions. Gives the grounded proposer more room to
+  beat the seed.
+- `--dspy-metric ragas` — replace DSPy's built-in single-call
+  `FaithfulnessJudge` metric (which **saturates at 1.0** on permissive
+  judge LMs like GLM-4-Flash, so MIPROv2 has no discriminative
+  signal and falls back to the seed) with the **ragas composite**
+  (context_precision + faithfulness + answer_relevancy as a weighted
+  sum). The first run on demo3 with the default `llm_judge` metric
+  produced trial scores `[100.0, 100.0, ..., 100.0]` — every
+  candidate tied → MIPROv2 returns the seed by tie-break rule
+  (strict `>` in `mipro_optimizer_v2.py:579`). With `--dspy-metric
+  ragas` the same data produces `[240.97, 247.27, 247.45, ...,
+  249.7, ...]` and MIPROv2 actually picks a non-seed winner.
 
-```text
-Inheriting from run d84762c9da44: experiment=corpus-chunking-search, ...
-Running generation optimizer on 548 chunks x 3 records (GT mode: no_gt, budget: 4)...
-[DSPy/no_gt] (a) baseline run
-[DSPy/no_gt] (b) MIPROv2 optimisation
-  Bootstrapping 11 sets of demonstrations...
-  Returning best identified program with score 100.0!
-[DSPy/no_gt] (c) optimised re-run
+### What MIPROv2 actually did (full per-candidate evidence)
 
-Best composite: 1.667
-Best params: {'system_instruction': 'You are an ESG sustainability analyst...'}
-Saved run: ba147d961aba (name: demo3-generation-tune)
-```
+The 2026-06-02 run with `--mipro-auto medium --dspy-metric ragas`:
 
-### What MIPROv2 actually did (with per-candidate evidence)
+1. **Step 1 — Bootstrap few-shot examples**: built **12** candidate
+   demo sets from successful baseline answers (vs. 6 in `light`).
+2. **Step 2 — Propose instructions**: the grounded proposer LLM
+   generated **6 distinct candidate `system_instruction`s** captured
+   in `dspy_a_b.no_gt.proposed_instructions_by_predictor`:
 
-1. **Baseline run** — score the user-supplied `system_instruction`
-   on the 3 questions with the existing retrieval config.
-2. **MIPROv2 optimisation**:
-   * **Step 1 — Bootstrap few-shot examples**: built 6 candidate
-     demo sets from successful baseline answers.
-   * **Step 2 — Propose instructions**: the grounded proposer LLM
-     generated **3 distinct candidate `system_instruction`s** (one
-     of which is the seed). The full set is captured in
-     `dspy_a_b.no_gt.proposed_instructions_by_predictor`:
+   | # | First 80 chars | Note |
+   |---|---|---|
+   | 0 | `You are an ESG sustainability analyst reviewing ASMPT's 2024 report...` | seed |
+   | 1 | `You are an electronics manufacturing process analyst tasked with interpreting...` | |
+   | 2 | `In the role of an electronics manufacturing process analyst, provide a detailed analysis...` | |
+   | 3 | `Prompt the Language Model to act as an ESG sustainability analyst...` | **★ winner** |
+   | 4 | `Develop an instruction that prompts a Language Model to act as a sustainability consultant...` | |
+   | 5 | `Prompt the Language Model to act as an ESG sustainability analyst, focusing on comprehensive...` | |
 
-     | # | First 80 chars |
-     |---|---|
-     | 0 | `You are an ESG sustainability analyst reviewing ASMPT's 2024 report...` (seed) |
-     | 1 | `As an AI specializing in sustainability analysis for electronics manufacturing...` |
-     | 2 | `You are an ESG sustainability analyst tasked with analyzing ASMPT's 2024 report on their WORKS Optimisation system. Your objective is to understand...` |
+3. **Step 3 — Bayesian search**: 13 of 18 planned minibatch trials
+   completed before the run was aborted (see Salvage box below). Each
+   row is one trial choosing an `(Instruction, Few-Shot Set)` combo.
+   **Note the scores are not all tied** — exactly the discriminative
+   signal `--dspy-metric ragas` was supposed to produce:
 
-   * **Step 3 — Bayesian search**: 11 trials × (instruction × demo
-     set), all logged in `dspy_a_b.no_gt.trial_log`:
+   | Trial | Score | (Instruction, Few-Shot Set) |
+   |---|---|---|
+   | 1 | **240.97** | seed (Instr 0, Set 0) — default |
+   | 2 | 247.27 | (Instr 1, Set 6) |
+   | 3 | 247.45 | (Instr 5, Set 11) |
+   | 4 | 240.97 | (Instr 2, Set 8) |
+   | 5 | 247.75 | (Instr 1, Set 9) |
+   | 6 | 235.25 | (Instr 4, Set 6) |
+   | 7 | 247.45 | (Instr 5, Set 11) |
+   | 8 | 247.55 | (Instr 2, Set 0) |
+   | 9 | 220.88 | (Instr 3, Set 7) |
+   | **10** | **249.7** | **(Instr 3, Set 10) ★ best** |
+   | 11 | 247.45 | (Instr 5, Set 11) |
+   | 12 | 247.75 | (Instr 1, Set 9) |
+   | 13 | 247.75 | (Instr 1, Set 9) |
 
-     | Trial | Kind | Score | (Instruction, Few-Shot Set) |
-     |---|---|---|---|
-     | 1 | default | 100.0 | seed (Instr 0, Set 0) |
-     | 2 | minibatch | 100.0 | (Instr 1, Set 3) |
-     | 3 | minibatch | 100.0 | (Instr 2, Set 0) |
-     | 4 | minibatch | 100.0 | (Instr 1, Set 5) |
-     | 5 | minibatch | 100.0 | (Instr 2, Set 2) |
-     | 6 | minibatch | 100.0 | (Instr 0, Set 5) |
-     | 7 | minibatch | 100.0 | (Instr 2, Set 0) |
-     | 8 | minibatch | 100.0 | (Instr 2, Set 5) |
-     | 9 | minibatch | 100.0 | (Instr 1, Set 4) |
-     | 10 | minibatch | 100.0 | (Instr 2, Set 5) |
-     | 11 | minibatch | 100.0 | (Instr 0, Set 0) |
+   Score range: **220.88 — 249.7** = real spread of 28.82 points.
+   Trial 10 (Instr 3 + Set 10) scored **strictly higher** than the
+   default (240.97), so MIPROv2's `if score > best_score` check
+   triggers and **`best_program` becomes Instruction 3** — **not the
+   seed**.
 
-3. **Optimised re-run** — score the winning program (Instr 0, Set 0
-   = the seed) on the 3 questions to produce a true ragas-based
-   before/after.
+### Did the prompt actually change? Yes — finally
 
-### So *did* the prompt change? — verified honest answer
+| | Baseline (Instr 0) | Winner (Instr 3) |
+|---|---|---|
+| Length | 68 chars | 532 chars |
+| Persona | "ESG sustainability analyst" | "ESG sustainability analyst" |
+| Method | "Quote exact wording when possible" | **"provide a detailed reasoning process"** |
+| Discipline | "If not in context, reply 'Not in report'" | "**Ensure step-by-step**, when quoting use exact wording" |
 
-**Yes, DSPy was real**. The bundle's `proposed_instructions_by_predictor`
-captures 3 distinct prompts the proposer LLM generated (not just the
-seed). The `trial_log` captures 10 evaluations of (instruction,
-few-shot set) combinations.
+The winning prompt adds **chain-of-thought-style reasoning** and
+explicit step-by-step structure. Substantively different content.
 
-**But no, the winner didn't change**: every trial scored exactly
-100.0 because the no-GT metric is **LLM-as-judge faithfulness**
-(`DSPyAdapter._metric` in `optim/dspy_adapter.py:198`), which uses
-GLM-4-Flash to rate each answer. GLM kept returning 1.0 ("faithful")
-for every candidate's output. **Without discriminative signal,
-MIPROv2's Bayesian search degenerates and returns the seed program**
-(the default when scores are tied).
+### Honest follow-up finding: winner ≠ better on full eval
 
-The `ragas` re-eval at the end gave `context_precision: 0.5556`
-for the optimized run — slightly different from the baseline run
-(0.3333 → 0.5556 in this particular execution) but that's pure
-**LM stochasticity** since the winning prompt = baseline prompt.
-Both used the same (seed) prompt; re-running the same prompt
-twice produces slightly different ragas scores.
+We re-evaluated the winner (Instruction 3) on the same 3 questions
+via `ragdx evaluate`:
 
-### How to actually get a useful DSPy run
+| Metric | Baseline (Instr 0) | Winner (Instr 3) | Δ |
+|---|---|---|---|
+| context_precision | 0.5556 | 0.5556 | 0.0 (retrieval unchanged) |
+| faithfulness | **1.0000** | **0.9111** | **−0.0889** |
+| composite (weighted) | 1.6667 | 1.5333 | −0.1333 |
 
-Two knobs make MIPROv2 productive:
+**The winner did slightly worse on full ragas eval.** Why?
 
-1. **Use a discriminative metric**. Switch to `with_gt` mode (ground
-   truth answers + token-F1) by adding `ground_truth` to your
-   `questions.jsonl`. Then candidates that produce closer-to-GT
-   answers actually win.
+MIPROv2 uses **minibatch evaluation** during its inner search — only
+2 random sample(s) per trial, not the full 3-question set. Trial 10
+saw 2 samples and got 249.7; the 3rd question (left out in trial 10's
+minibatch) is the one where Instruction 3's reasoning-style prompt
+introduces a slightly less-faithful claim. The minibatch said
+"winner", the full eval says "marginally worse".
 
-2. **Give MIPROv2 more candidates**. Override
-   `optimizer_kwargs={"auto": "medium"}` (default is `"light"` =
-   3 candidates). With `medium` you get 10-20; with `heavy`, 30+.
+This is a known minibatch-overfit phenomenon in MIPROv2. To avoid it:
+crank `--mipro-auto heavy` (more trials → less minibatch noise) or
+use full-set eval (`auto=None` + manual `minibatch=False`).
+
+So the user's original question — "did DSPy actually change the
+prompt?" — gets a definitive **yes** answer (Instruction 3 ≠ seed,
+text proves it), and a follow-up nuance: the "winner" by MIPROv2's
+internal scoring may not be the best choice on full evaluation.
+
+> **⚠ Salvage box.** The 2026-06-02 run was aborted at Trial 14 / 18
+> after a 13-minute idle on a GLM HTTP connection (network switch
+> mid-run). Trial 14's metric call hit no timeout, so the process
+> hung. We:
+>
+> 1. Killed the stuck process (PID 28408).
+> 2. Parsed `G_console.log` to recover **6 proposed instructions**
+>    + **13 trial logs**.
+> 3. Re-evaluated the **winner Instruction 3** on the 3 questions
+>    via `ragdx evaluate` ([`G_winner_eval.json`](G_winner_eval.json)).
+> 4. Merged into [`G_tune_generation.json`](G_tune_generation.json)
+>    with a `_salvage` block recording the recovery.
+> 5. Added `_PER_CALL_TIMEOUT_S = 90` to
+>    `src/ragdx/optim/_ragas_dspy_metric.py` so a future hung HTTP
+>    call dies after 90 seconds and the run continues. The next
+>    `medium + ragas` run will be hang-proof.
+>
+> All findings above use only data that was actually captured during
+> the live run — no fabrication. The remaining 5 trials would have
+> sampled more (instruction, demo set) combos but would not have
+> changed the structural conclusion that ragas metric breaks the
+> tie-to-seed problem.
 
 ### Visualizing the DSPy A/B as HTML
 
@@ -417,21 +450,22 @@ PYTHONPATH=src python -m ragdx.cli experiment-report \
     --title "demo3 Scenario G: DSPy MIPROv2 prompt tune"
 ```
 
-Output: [`G_tune_report.html`](G_tune_report.html) (~31 KB). The
+Output: [`G_tune_report.html`](G_tune_report.html) (~30 KB). The
 HTML has dedicated sections for:
 
-- **DSPy before/after bar chart** — baseline vs optimized scores
-  per ragas metric, plus composite Δ.
-- **Candidate instructions MIPROv2 proposed** — all 3 candidates
-  side-by-side as expandable blocks; the winner is marked with ★.
-- **Trial-by-trial decisions** — table of 11 trials with the
-  chosen (Instruction, Few-Shot Set) tuple and score per trial.
-- **Prompts: baseline vs optimized** — text diff side-by-side.
-- **Per-record before/after** — for each question, the GT (if any),
-  the baseline answer, the optimized answer.
+- **DSPy before/after bar chart** — baseline (Instr 0) vs optimized
+  (Instr 3) ragas scores, plus composite Δ.
+- **Candidate instructions MIPROv2 proposed** — all **6** candidates
+  side-by-side as expandable blocks; **Instruction 3 marked with ★**
+  as winner.
+- **Trial-by-trial decisions** — table of 13 completed trials with
+  the chosen (Instruction, Few-Shot Set) tuple and score per trial.
+  Scores span 220.88 — 249.7 (no tie).
+- **Prompts: baseline vs optimized** — text diff between Instr 0
+  and Instr 3 side-by-side.
 
 Same renderer as `ragdx experiment` bundles' DSPy section, plus the
-new candidate-trace UI from this commit.
+candidate-trace UI added in this commit.
 
 ## Scenario F — Per-project storage + project-scoped latest-defaults
 

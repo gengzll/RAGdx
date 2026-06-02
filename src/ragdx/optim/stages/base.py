@@ -81,6 +81,28 @@ class StageContext:
     chunk_overlaps: list[int] = field(default_factory=lambda: [0, 50, 100])
     top_ks: list[int] = field(default_factory=lambda: [1, 3, 5, 7])
 
+    # --- GenerationOptimizer (DSPy MIPROv2) knobs --------------------
+    mipro_auto: str = "light"
+    """``optimizer_kwargs["auto"]`` for MIPROv2: ``"light"`` (~3
+    candidates, ~5 min), ``"medium"`` (~10-20 candidates, ~30 min), or
+    ``"heavy"`` (~30+ candidates, ~90 min). Larger budgets give the
+    grounded proposer more room to find a prompt that beats the seed."""
+
+    dspy_metric: str = "auto"
+    """Which DSPy-side inner-loop metric to use for the MIPROv2 search.
+
+    ``"auto"`` (default): pick ``token_f1`` when records carry ground
+    truth, ``ragas`` otherwise (PR6+).
+    ``"ragas"``: use the ragas composite (context_precision +
+    faithfulness + answer_relevancy) as a single weighted score per
+    example. Discriminative even in no-GT mode where ``llm_judge`` saturates.
+    ``"llm_judge"``: legacy single-call LLM faithfulness judge from
+    :class:`DSPyAdapter` (pre-PR6 default). Cheap but saturates on
+    permissive judge LMs (e.g. GLM-4-Flash returns 1.0 for everything).
+    ``"token_f1"``: token-overlap F1 against ground truth. Requires
+    GT-populated records.
+    """
+
 
 @dataclass
 class StageTrial:

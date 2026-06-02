@@ -45,9 +45,9 @@
     }
   },
   "best_params": {
-    "system_instruction": "You are an ESG sustainability analyst reviewing ASMPT's 2024 report.\nQuote exact wording from the supplied context when possible. If the\nanswer is not in the context, reply \"Not in report\"."
+    "system_instruction": "Prompt the Language Model to act as an ESG sustainability analyst reviewing ASMPT's 2024 report. The task is to analyze a given question about the report's content and provide a detailed reasoning process that leads to the answer. If the answer is not found in the report, the response should be \"Not in report\". Ensure that the reasoning process is clear and step-by-step, and when quoting from the report, use exact wording. The focus should be on understanding the context provided and deriving conclusions based on that context."
   },
-  "best_composite": 1.6666666666499999,
+  "best_composite": 1.5333333333166665,
   "objective_spec": {
     "metrics": {
       "faithfulness": 1.5,
@@ -71,54 +71,26 @@
     ],
     "has_gt": false,
     "detected_gt_mode": "no_gt",
-    "source": "ragdx tune --from-run d84762c9da44"
+    "source": "ragdx tune --stage generation --mipro-auto medium --dspy-metric ragas (salvaged)"
   },
   "inherited": {
     "from_run": "d84762c9da44",
-    "experiment_name": "corpus-chunking-search",
-    "experiment_stage": "corpus",
-    "experiment_max_trials": 3,
-    "experiment_search_space": {
-      "parser": [
-        "pymupdf_layout",
-        "unstructured",
-        "html_semantic"
-      ],
-      "document_structure": [
-        "preserve_sections",
-        "flat_chunks"
-      ],
-      "chunk_size": [
-        384,
-        512,
-        768,
-        1024
-      ],
-      "chunk_overlap": [
-        32,
-        64,
-        96,
-        128
-      ],
-      "table_strategy": [
-        "repeat_headers",
-        "table_to_text"
-      ]
-    }
+    "experiment_name": "manual --stage generation",
+    "experiment_stage": "generation"
   },
   "dspy_a_b": {
     "no_gt": {
       "baseline_scores": {
-        "context_precision": 0.3333333333,
+        "context_precision": 0.5555555554999999,
         "faithfulness": 1.0
       },
       "optimized_scores": {
         "context_precision": 0.5555555554999999,
-        "faithfulness": 1.0
+        "faithfulness": 0.9111111111111111
       },
       "delta": {
-        "context_precision": 0.22222222219999993,
-        "faithfulness": 0.0
+        "context_precision": 0.0,
+        "faithfulness": -0.0888888888888889
       },
       "composite": {
         "objective_spec": {
@@ -136,177 +108,147 @@
           "mode": "weighted_sum"
         },
         "baseline": {
-          "score": 1.59999999999,
-          "feasible": true,
-          "violations": []
-        },
-        "optimized": {
           "score": 1.6666666666499999,
           "feasible": true,
           "violations": []
         },
-        "delta": 0.06666666665999976
+        "optimized": {
+          "score": 1.5333333333166665,
+          "feasible": true,
+          "violations": []
+        },
+        "delta": -0.1333333333333333
       },
-      "baseline_sample_answers": [
-        "The primary focus of ASMPT's WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line for defect analysis, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-        "The Group made adjustments to the ESG Material Factors by combining similar factors. These adjustments include merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficiency,\" as well as combining \"Business Ethics\" and \"Corporate Governance\" into \"Business Ethics & Corporate Governance.\"",
-        "The three key components mentioned for ensuring employee health and safety are:\n1. Hazard identification, risk assessment, and incident investigation\n2. Occupational health services\n3. Worker participation, consultation"
-      ],
-      "optimized_sample_answers": [
-        "The primary focus of ASMPT's WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line, and enabling holistic process optimisation.",
-        "The Group made adjustments to the ESG Material Factors by combining similar factors. These adjustments include merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficiency,\" as well as combining \"Business Ethics\" and \"Corporate Governance\" into \"Business Ethics & Corporate Governance.\"",
-        "The three key components mentioned for ensuring employee health and safety are:\n1. Hazard identification, risk assessment, and incident investigation\n2. Occupational health services\n3. Worker participation, consultation"
-      ],
-      "records": [
-        {
-          "question": "What is the primary focus of ASMPT's WORKS Optimisation system in contrast to traditional inspection systems?",
-          "ground_truth": null,
-          "contexts": [
-            ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side. Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data",
-            ". ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
-            ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees"
-          ],
-          "baseline_answer": "The primary focus of ASMPT's WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line for defect analysis, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-          "optimized_answer": "The primary focus of ASMPT's WORKS Optimisation system is on a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line, and enabling holistic process optimisation."
-        },
-        {
-          "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
-          "ground_truth": null,
-          "contexts": [
-            ". Stage 3 Implementation The Board has endorsed this ESG Report, which en- compasses the materiality matrix below. The endorsed list of material ESG factors serves as a guide for develop- ing corporate strategies and goals, ongoing stakeholder engagement, as well as disclosures in the Annual Report, ESG Report and other corporate communication chan- nels. Periodic assessments are conducted to deter - mine the materiality of ESG factors to prevailing busi- ness contexts and external conditions",
-            ". The Group has conducted a thorough review and prioritisation of the material ESG factors. A three- stage materiality assessment process was adopted: Stage 1 Identification ASMPT identified the sustainability issues applicable to the Group via wide-ranging research, engagement and analysis. Main sources of input include sharehold- ers, employees, customers, peers, regulatory and standards bodies, and ratings agencies",
-            ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”"
-          ],
-          "baseline_answer": "The Group made adjustments to the ESG Material Factors by combining similar factors. These adjustments include merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficiency,\" as well as combining \"Business Ethics\" and \"Corporate Governance\" into \"Business Ethics & Corporate Governance.\"",
-          "optimized_answer": "The Group made adjustments to the ESG Material Factors by combining similar factors. These adjustments include merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficiency,\" as well as combining \"Business Ethics\" and \"Corporate Governance\" into \"Business Ethics & Corporate Governance.\""
-        },
-        {
-          "question": "What are the three key components mentioned for ensuring employee health and safety?",
-          "ground_truth": null,
-          "contexts": [
-            "; and (b) compliance with relevant laws and regulations that have a significant impact on the issuer relating to providing a safe working environment and protecting employees from occupational hazards Ensure Employee’s Health and Safety P.77 403–1 Occupational health and safety manage- ment system KPI B2.3 Description of occupational health and safety measures adopted, and how they are implemented and monitored",
-            ". Inadequate safety measures not only increase operation costs but also inflict severe or irrep- arable damage to our corporate reputation if work-re- lated incidents were to occur. Therefore, robust health and safety protocols are vital to most, if not all, of our operations, ensuring that our occupational risks are mitigated and our workforce remains safe and secure",
-            ". Ensure Employee’s Health and Safety P.77 403–2 Hazard identification, risk assessment, and incident investigation Ensure Employee’s Health and Safety P.77 403–3 Occupational health services Ensure Employee’s Health and Safety P.77 403–4 Worker participation, consultation"
-          ],
-          "baseline_answer": "The three key components mentioned for ensuring employee health and safety are:\n1. Hazard identification, risk assessment, and incident investigation\n2. Occupational health services\n3. Worker participation, consultation",
-          "optimized_answer": "The three key components mentioned for ensuring employee health and safety are:\n1. Hazard identification, risk assessment, and incident investigation\n2. Occupational health services\n3. Worker participation, consultation"
-        }
-      ],
+      "baseline_sample_answers": [],
+      "optimized_sample_answers": [],
+      "records": [],
       "baseline_instructions": {
-        "predict": "You are an ESG sustainability analyst reviewing ASMPT's 2024 report.\nQuote exact wording from the supplied context when possible. If the\nanswer is not in the context, reply \"Not in report\"."
+        "predict": "You are an ESG sustainability analyst reviewing ASMPT's 2024 report."
       },
-      "baseline_demos": {
-        "predict": []
-      },
+      "baseline_demos": {},
       "instructions": {
-        "predict": "You are an ESG sustainability analyst reviewing ASMPT's 2024 report.\nQuote exact wording from the supplied context when possible. If the\nanswer is not in the context, reply \"Not in report\"."
+        "predict": "Prompt the Language Model to act as an ESG sustainability analyst reviewing ASMPT's 2024 report. The task is to analyze a given question about the report's content and provide a detailed reasoning process that leads to the answer. If the answer is not found in the report, the response should be \"Not in report\". Ensure that the reasoning process is clear and step-by-step, and when quoting from the report, use exact wording. The focus should be on understanding the context provided and deriving conclusions based on that context."
       },
-      "demos": {
-        "predict": []
-      },
+      "demos": {},
       "trial_scores": [
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0
+        240.97,
+        247.27,
+        247.45,
+        240.97,
+        247.75,
+        235.25,
+        247.45,
+        247.55,
+        220.88,
+        249.7,
+        247.45,
+        247.75,
+        247.75
       ],
-      "best_score_progression": [
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0,
-        100.0
-      ],
+      "best_score_progression": [],
       "proposed_instructions_by_predictor": {
-        "0": [
-          "You are an ESG sustainability analyst reviewing ASMPT's 2024 report.\nQuote exact wording from the supplied context when possible. If the\nanswer is not in the context, reply \"Not in report\".",
-          "As an AI specializing in sustainability analysis for electronics manufacturing, analyze the context provided and generate well-reasoned answers to questions related to ASMPT's WORKS Optimisation system. Quote direct text from the context to support your responses. If a question cannot be answered from the provided context, indicate \"Not in report.",
-          "You are an ESG sustainability analyst tasked with analyzing ASMPT's 2024 report on their WORKS Optimisation system. Your objective is to understand how this system differs from traditional inspection systems in the electronics manufacturing industry. To accomplish this, you will need to generate reasoning and answers based on the provided context. When constructing your reasoning and answers, ensure that you accurately quote from the context whenever possible. If the information required to answer a question is not present in the context, simply reply \"Not in report\". Pay close attention to the system's integration capabilities, efficiency, and its role in addressing labor shortages and customer requirements."
+        "predict": [
+          "You are an ESG sustainability analyst reviewing ASMPT's 2024 report.",
+          "You are an electronics manufacturing process analyst tasked with interpreting the latest technological advancements as outlined in ASMPT's 2024 report. Using the information provided in the dataset, create a comprehensive analysis that contrasts the approach of ASMPT's WORKS Optimisation system with traditional inspection systems. When presenting your analysis, ensure that you step through the reasoning process to extract the key insights and include direct quotes from the report when relevant. If an answer cannot be directly quoted from the report, propose a reasonable inference based on the provided information.",
+          "In the role of an electronics manufacturing process analyst, provide a detailed analysis of a given context related to ASMPT's 2024 report. Utilize a language model to extract and interpret information, ensuring that when possible, exact wording from the context is quoted in your responses. Your task is to answer specific questions about the context provided, and you must guide the language model through a step-by-step reasoning process. The reasoning should clearly explain how the answer was derived, and the answer should reflect the comprehensive process analysis and technological innovations emphasized in the dataset. When answers are not found in the context, respond with \"Not in report.",
+          "Prompt the Language Model to act as an ESG sustainability analyst reviewing ASMPT's 2024 report. The task is to analyze a given question about the report's content and provide a detailed reasoning process that leads to the answer. If the answer is not found in the report, the response should be \"Not in report\". Ensure that the reasoning process is clear and step-by-step, and when quoting from the report, use exact wording. The focus should be on understanding the context provided and deriving conclusions based on that context.",
+          "Develop an instruction that prompts a Language Model to act as a sustainability consultant analyzing the latest ASMPT report. The LM should be guided to identify technological innovations in electronics manufacturing and their impact on sustainability, and provide structured answers including detailed reasoning based on the provided context.",
+          "Prompt the Language Model to act as an ESG sustainability analyst, focusing on comprehensive process analysis in electronics manufacturing. The model should analyze a given question and context related to ASMPT's 2024 report, providing a step-by-step reasoning process and an answer. The reasoning should be detailed, following a logical sequence, and the answer should be supported by exact wording from the context when possible. If the answer is not found in the context, the model should respond with \"Not in report\"."
         ]
       },
       "trial_log": [
         {
           "trial": 1,
-          "score": 100.0,
+          "score": 240.97,
           "kind": "default",
           "params": null
         },
         {
           "trial": 2,
-          "score": 100.0,
+          "score": 247.27,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']"
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 6']"
         },
         {
           "trial": 3,
-          "score": 100.0,
+          "score": 247.45,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+          "params": "['Predictor 0: Instruction 4', 'Predictor 0: Few-Shot Set 2']"
         },
         {
           "trial": 4,
-          "score": 100.0,
+          "score": 240.97,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5']"
+          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 6']"
         },
         {
           "trial": 5,
-          "score": 100.0,
+          "score": 247.75,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2']"
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 4']"
         },
         {
           "trial": 6,
-          "score": 100.0,
+          "score": 235.25,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5']"
+          "params": "['Predictor 0: Instruction 3', 'Predictor 0: Few-Shot Set 5']"
         },
         {
           "trial": 7,
-          "score": 100.0,
+          "score": 247.45,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+          "params": "['Predictor 0: Instruction 4', 'Predictor 0: Few-Shot Set 6']"
         },
         {
           "trial": 8,
-          "score": 100.0,
+          "score": 247.55,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
+          "params": "['Predictor 0: Instruction 5', 'Predictor 0: Few-Shot Set 1']"
         },
         {
           "trial": 9,
-          "score": 100.0,
+          "score": 220.88,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4']"
+          "params": "['Predictor 0: Instruction 3', 'Predictor 0: Few-Shot Set 3']"
         },
         {
           "trial": 10,
-          "score": 100.0,
+          "score": 249.7,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
+          "params": "['Predictor 0: Instruction 3', 'Predictor 0: Few-Shot Set 10']"
         },
         {
           "trial": 11,
-          "score": 100.0,
+          "score": 247.45,
           "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 0']"
+          "params": "['Predictor 0: Instruction 3', 'Predictor 0: Few-Shot Set 10']"
+        },
+        {
+          "trial": 12,
+          "score": 247.75,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 9']"
+        },
+        {
+          "trial": 13,
+          "score": 247.75,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 4']"
         }
       ],
       "gt_mode": "no_gt",
       "optimizer": "MIPROv2",
-      "trainset_size": 3
+      "trainset_size": 3,
+      "mipro_auto": "medium",
+      "dspy_metric_used": "ragas",
+      "_salvage": {
+        "completed_trials": 13,
+        "planned_trials": 18,
+        "reason": "Trial 14 / 18 hung on a GLM HTTP call after a network switch; killed at +13:00 idle. trial_log + candidate instructions parsed from console.log. Baseline / optimized scores re-evaluated by hand.",
+        "winner_instruction_index": 3,
+        "winner_trial": 10,
+        "winner_trial_score": 249.7
+      }
     }
   }
 }
