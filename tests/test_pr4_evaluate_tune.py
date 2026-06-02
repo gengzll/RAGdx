@@ -368,13 +368,191 @@ def test_tune_defaults_from_run_to_latest_when_no_args(tmp_path, monkeypatch):
         save=False, name="", baseline_run_id="",
         use_llm=False, use_both=False, use_llm_planner=False,
 
-        mipro_auto="light", dspy_metric="auto",
+        mipro_auto="light", dspy_metric="auto", dspy_optimizer="mipro",
     )
     # Confirm the seed run's plan drove the optimizer.
     ctx = captured["ctx"]
     assert ctx.base_config.name == "auto-latest-test"
     assert ctx.top_ks == [3, 5]
     assert ctx.n_bo_trials == 4
+
+
+# ============================================================ FewShotDemo + RAGPipeline rendering
+def test_few_shot_demo_schema_round_trips():
+    """The new ``FewShotDemo`` schema must JSON/YAML round-trip and
+    forbid extra fields (so typos in saved configs fail loud)."""
+    import pydantic
+
+    from ragdx.schemas.rag_config import FewShotDemo, GeneratorSpec
+
+    d = FewShotDemo(
+        question="What is ASMPT's WORKS Optimisation?",
+        answer="A comprehensive view of the operational process...",
+        reasoning="The context highlights that WORKS Optimisation...",
+        context="...retrieved chunk text...",
+    )
+    j = d.model_dump_json()
+    d2 = FewShotDemo.model_validate_json(j)
+    assert d2.question == d.question
+    assert d2.reasoning == d.reasoning
+    # Extra field rejected.
+    with pytest.raises(pydantic.ValidationError):
+        FewShotDemo.model_validate({"question": "Q", "answer": "A", "bogus": "x"})
+
+    # GeneratorSpec defaults to empty demos list (backward compat).
+    g = GeneratorSpec()
+    assert g.few_shot_demos == []
+    # Demos persist through GeneratorSpec round-trip.
+    g.few_shot_demos = [d]
+    g2 = GeneratorSpec.model_validate_json(g.model_dump_json())
+    assert g2.few_shot_demos[0].question == d.question
+
+
+def test_rag_pipeline_render_demos_helper():
+    """The prompt-template helper must:
+      * return '' for empty demos (so zero-shot prompts stay byte-identical),
+      * include all demo fields when present,
+      * survive demos missing optional fields (reasoning / context)."""
+    from ragdx.runtime.pipeline import _render_few_shot_demos
+    from ragdx.schemas.rag_config import FewShotDemo
+
+    assert _render_few_shot_demos([]) == ""
+
+    demos = [
+        FewShotDemo(question="Q1?", answer="A1.", reasoning="R1.", context="C1."),
+        FewShotDemo(question="Q2?", answer="A2."),  # no reasoning / context
+    ]
+    rendered = _render_few_shot_demos(demos)
+    assert "example responses for reference" in rendered
+    assert "## Example 1" in rendered and "## Example 2" in rendered
+    # Optional fields rendered only when present.
+    assert "Reasoning: R1." in rendered
+    assert "Context: C1." in rendered
+    # Demo 2 has no reasoning/context -> those labels don't appear for it.
+    # Crude check: only one "Reasoning:" line total.
+    assert rendered.count("Reasoning:") == 1
+
+
+def test_rag_pipeline_generate_includes_demos_in_prompt():
+    """End-to-end: when ``GeneratorSpec.few_shot_demos`` is non-empty,
+    ``RAGPipeline.generate`` must include them in the assembled prompt."""
+    from ragdx.runtime.pipeline import RAGPipeline
+    from ragdx.schemas.rag_config import FewShotDemo, GeneratorSpec, RAGConfig
+
+    captured: dict = {}
+    cfg = RAGConfig(
+        generator=GeneratorSpec(
+            system_instruction="You are an ESG analyst.",
+            few_shot_demos=[
+                FewShotDemo(question="Q1?", answer="A1.", reasoning="R1."),
+            ],
+        ),
+    )
+    pipe = RAGPipeline(
+        config=cfg, vstore=object(),
+        llm_callable=lambda p: captured.update({"prompt": p}) or "stub",
+        n_chunks=0,
+    )
+    pipe.generate("What now?", ["context chunk"])
+    prompt = captured["prompt"]
+    # Instruction + demo + question all present.
+    assert "ESG analyst" in prompt
+    assert "## Example 1" in prompt
+    assert "Q1?" in prompt and "A1." in prompt and "R1." in prompt
+    assert "What now?" in prompt
+
+
+def test_rag_pipeline_generate_no_demos_is_zero_shot_compatible():
+    """Empty ``few_shot_demos`` -> prompt structure unchanged from
+    pre-PR7 behaviour (no 'Example' header, no demo block)."""
+    from ragdx.runtime.pipeline import RAGPipeline
+    from ragdx.schemas.rag_config import RAGConfig
+
+    captured: dict = {}
+    pipe = RAGPipeline(
+        config=RAGConfig(),  # default: no demos
+        vstore=object(),
+        llm_callable=lambda p: captured.update({"prompt": p}) or "stub",
+        n_chunks=0,
+    )
+    pipe.generate("What?", ["ctx"])
+    assert "Example" not in captured["prompt"]
+    assert "example responses for reference" not in captured["prompt"]
+
+
+# ============================================================ --dspy-optimizer
+def test_tune_has_dspy_optimizer_flag():
+    """The new optimizer-choice flag must be present."""
+    params = set(inspect.signature(cli_tune).parameters)
+    assert "dspy_optimizer" in params
+
+
+def test_tune_rejects_invalid_dspy_optimizer(tmp_path):
+    """Unknown --dspy-optimizer must fast-fail with the choices listed."""
+    import typer
+    cfg_path = tmp_path / "rag.yaml"
+    q_path = tmp_path / "q.jsonl"
+    cfg_path.write_text("name: stub\n", encoding="utf-8")
+    q_path.write_text('{"question": "Q"}\n', encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match=r"dspy-optimizer"):
+        cli_tune(
+            base_config=str(cfg_path), questions=str(q_path),
+            from_run="", experiment_name="", stage="generation",
+            corpus="", budget=2, bo_init=1, seed=0,
+            mipro_auto="light", dspy_metric="auto",
+            dspy_optimizer="gradient_descent",  # invalid
+            resume="", no_checkpoint=True,
+            output=str(tmp_path / "o.json"), write_optimized_config="",
+            api_key="stub", save=False, name="", baseline_run_id="",
+            use_llm=False, use_both=False, use_llm_planner=False,
+        )
+
+
+def test_generation_optimizer_dispatches_on_dspy_optimizer():
+    """Source-level: GenerationOptimizer.optimize must read ``ctx.dspy_optimizer``
+    and gate the algorithm + which fields get written to ``best_config``."""
+    from ragdx.optim.stages import generation
+    src = inspect.getsource(generation.GenerationOptimizer.optimize)
+    assert 'dspy_optimizer' in src
+    # COPRO writes instruction only; bootstrap_fewshot writes demos only.
+    assert '"COPRO"' in src
+    assert '"BootstrapFewShot"' in src
+    # The best_params payload is gated.
+    assert "few_shot_demos" in src
+    assert "system_instruction" in src
+
+
+def test_generation_optimizer_build_trial_config_demos_field():
+    """build_trial_config must accept few_shot_demos and write them to
+    GeneratorSpec without wiping system_instruction (and vice versa)."""
+    from ragdx.optim.stages.generation import GenerationOptimizer
+    from ragdx.schemas.rag_config import FewShotDemo, GeneratorSpec
+
+    base = RAGConfig(generator=GeneratorSpec(
+        system_instruction="Original SI",
+        few_shot_demos=[FewShotDemo(question="orig", answer="orig-ans")],
+    ))
+    opt = GenerationOptimizer()
+
+    # 1) MIPROv2-shape params: both fields written.
+    c1 = opt.build_trial_config(base, {
+        "system_instruction": "New SI",
+        "few_shot_demos": [{"question": "new-q", "answer": "new-a"}],
+    })
+    assert c1.generator.system_instruction == "New SI"
+    assert c1.generator.few_shot_demos[0].question == "new-q"
+
+    # 2) COPRO-shape params: only instruction. Demos stay from base.
+    c2 = opt.build_trial_config(base, {"system_instruction": "Only SI"})
+    assert c2.generator.system_instruction == "Only SI"
+    assert c2.generator.few_shot_demos[0].question == "orig"  # unchanged
+
+    # 3) BootstrapFewShot-shape: only demos. Instruction stays.
+    c3 = opt.build_trial_config(base, {
+        "few_shot_demos": [{"question": "boot-q", "answer": "boot-a"}],
+    })
+    assert c3.generator.system_instruction == "Original SI"
+    assert c3.generator.few_shot_demos[0].question == "boot-q"
 
 
 # ============================================================ RunStore wiring (follow-up)
@@ -440,7 +618,7 @@ def test_tune_rejects_use_llm_without_save(tmp_path):
             save=False, name="", baseline_run_id="",
             use_llm=False, use_both=False, use_llm_planner=True,
 
-            mipro_auto="light", dspy_metric="auto",
+            mipro_auto="light", dspy_metric="auto", dspy_optimizer="mipro",
         )
 
 
@@ -636,7 +814,7 @@ def test_tune_experiment_without_from_run_fails_early(tmp_path):
             save=False, name="", baseline_run_id="",
             use_llm=False, use_both=False, use_llm_planner=False,
 
-            mipro_auto="light", dspy_metric="auto",
+            mipro_auto="light", dspy_metric="auto", dspy_optimizer="mipro",
             from_run="", experiment_name="ignored",
         )
 
@@ -763,7 +941,7 @@ def test_tune_from_run_inherits_stage_budget_and_search_space(tmp_path, monkeypa
             from_run=seed_run.run_id, experiment_name="",
             stage="auto", corpus="", budget=0,
             bo_init=2, seed=0,
-            mipro_auto="light", dspy_metric="auto",
+            mipro_auto="light", dspy_metric="auto", dspy_optimizer="mipro",
             output=str(tmp_path / "tune_out.json"),
             write_optimized_config="", api_key="",
             save=False, name="", baseline_run_id="",
@@ -870,7 +1048,7 @@ def test_tune_from_run_explicit_flags_override_plan(tmp_path, monkeypatch):
         save=False, name="", baseline_run_id="",
         use_llm=False, use_both=False, use_llm_planner=False,
 
-        mipro_auto="light", dspy_metric="auto",
+        mipro_auto="light", dspy_metric="auto", dspy_optimizer="mipro",
     )
 
     ctx = captured["ctx"]
@@ -906,7 +1084,7 @@ def test_tune_from_run_rejects_pre_pr6_savedrun(tmp_path, monkeypatch):
             from_run=seed_run.run_id, experiment_name="",
             stage="auto", corpus="", budget=0,
             bo_init=2, seed=0,
-            mipro_auto="light", dspy_metric="auto",
+            mipro_auto="light", dspy_metric="auto", dspy_optimizer="mipro",
             output=str(tmp_path / "o.json"),
             write_optimized_config="", api_key="",
             save=False, name="", baseline_run_id="",

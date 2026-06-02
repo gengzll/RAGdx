@@ -42,15 +42,42 @@ class GenerationOptimizer(StageOptimizer):
     def build_trial_config(
         self, base: RAGConfig, params: dict[str, Any]
     ) -> RAGConfig:
-        # Override the generator's system_instruction with whatever
-        # MIPROv2 returned.
+        """Build the winning config from MIPROv2 / COPRO / BootstrapFewShot output.
+
+        ``params`` keys depend on the optimizer that ran:
+
+        * MIPROv2 → both ``system_instruction`` (str) and
+          ``few_shot_demos`` (list[dict]).
+        * COPRO → only ``system_instruction``; demos absent.
+        * BootstrapFewShot → only ``few_shot_demos``; instruction absent.
+
+        Absent keys leave the corresponding field on ``base`` unchanged
+        (so a COPRO winner doesn't accidentally wipe base.generator
+        .few_shot_demos and vice versa).
+        """
+        from ragdx.schemas.rag_config import FewShotDemo
+
+        new_instruction = params.get(
+            "system_instruction", base.generator.system_instruction,
+        )
+        demos_payload = params.get("few_shot_demos")
+        if demos_payload is None:
+            new_demos = list(base.generator.few_shot_demos)
+        else:
+            # Accept either list[dict] (from raw DSPy output) or
+            # list[FewShotDemo] (when callers pre-build them).
+            new_demos = [
+                d if isinstance(d, FewShotDemo) else FewShotDemo(**d)
+                for d in demos_payload
+            ]
         return base.with_override(
             generator=GeneratorSpec(
                 provider=base.generator.provider,
                 model=base.generator.model,
                 api_base=base.generator.api_base,
                 api_key=base.generator.api_key,
-                system_instruction=params.get("system_instruction"),
+                system_instruction=new_instruction,
+                few_shot_demos=new_demos,
                 temperature=base.generator.temperature,
                 max_tokens=base.generator.max_tokens,
                 timeout=base.generator.timeout,
@@ -307,17 +334,53 @@ class GenerationOptimizer(StageOptimizer):
                 )
                 _patch_installed = False
 
+            # Map ctx.dspy_optimizer to DSPyAdapter's optimizer string
+            # + the right optimizer_kwargs for each algorithm.
+            _opt_choice = getattr(ctx, "dspy_optimizer", "mipro")
+            if _opt_choice == "mipro":
+                _dspy_opt_str = "MIPROv2"
+                _dspy_opt_kwargs = {
+                    "auto": getattr(ctx, "mipro_auto", "light"),
+                    "num_threads": runtime.llm_max_concurrent,
+                }
+            elif _opt_choice == "copro":
+                # COPRO: instruction-only iterative rewrite.
+                # breadth=candidates per round; depth=rounds; ~30-50
+                # LLM calls total for the defaults.
+                _dspy_opt_str = "COPRO"
+                _dspy_opt_kwargs = {
+                    "breadth": 10,
+                    "depth": 3,
+                    "init_temperature": 1.4,
+                    "track_stats": True,
+                }
+            elif _opt_choice == "bootstrap_fewshot":
+                # BootstrapFewShot: demo-only generation. Runs the
+                # seed program on the trainset, keeps successful
+                # (q, a) pairs as few-shot demos. No instruction change.
+                _dspy_opt_str = "BootstrapFewShot"
+                _dspy_opt_kwargs = {
+                    "max_bootstrapped_demos": 4,
+                    "max_labeled_demos": 4,
+                    "max_rounds": 1,
+                }
+            else:  # pragma: no cover - validated at CLI layer
+                raise ValueError(
+                    f"Unknown dspy_optimizer={_opt_choice!r}; expected "
+                    "mipro / copro / bootstrap_fewshot."
+                )
+            logger.info(
+                "[DSPy/%s] running %s with kwargs=%s",
+                ctx.label, _dspy_opt_str, _dspy_opt_kwargs,
+            )
             try:
                 opt_result = adapter.optimize(
                     records_with_ctxs,
                     program=baseline_program,
                     student_lm=runtime.dspy_lm,
                     judge_lm=runtime.dspy_lm,
-                    optimizer="MIPROv2",
-                    optimizer_kwargs={
-                        "auto": getattr(ctx, "mipro_auto", "light"),
-                        "num_threads": runtime.llm_max_concurrent,
-                    },
+                    optimizer=_dspy_opt_str,
+                    optimizer_kwargs=_dspy_opt_kwargs,
                     custom_metric=custom_metric,
                 )
             finally:
@@ -412,13 +475,63 @@ class GenerationOptimizer(StageOptimizer):
                 "optimized_answer": o.answer or "",
             })
 
-        # MIPROv2's "winner" prompt is the system_instruction we'll
-        # report. Pick the first predictor's instruction (typically the
-        # only one in a single-step RAG program).
+        # The winner's "instruction" + "demos" come from opt_result.
+        # Pick the first predictor (typical for single-step RAG).
         opt_instructions = dict(opt_result["instructions"])
         winning_instruction = next(iter(opt_instructions.values()), None)
+        opt_demos_raw = (opt_result.get("demos") or {})
+        winning_demos_raw = next(
+            iter(opt_demos_raw.values()), []
+        ) if opt_demos_raw else []
+
+        # Convert DSPy ``Example`` objects to ragdx FewShotDemo dicts.
+        # DSPy stores demos as ``dspy.Example`` which behaves like a
+        # dict (``.toDict()`` or ``dict(example)``). We only keep the
+        # fields ragdx's :class:`FewShotDemo` knows about.
+        def _demo_to_dict(d: Any) -> dict:
+            try:
+                payload = dict(d)
+            except (TypeError, ValueError):
+                payload = {}
+                for attr in ("question", "answer", "reasoning", "context"):
+                    val = getattr(d, attr, None)
+                    if val is not None:
+                        payload[attr] = val
+            return {
+                "question": str(payload.get("question") or ""),
+                "answer": str(payload.get("answer") or ""),
+                "reasoning": (
+                    str(payload["reasoning"]) if payload.get("reasoning") else None
+                ),
+                "context": (
+                    str(payload["context"]) if payload.get("context") else None
+                ),
+            }
+
+        winning_demos_dicts = [
+            _demo_to_dict(d) for d in winning_demos_raw
+        ] if winning_demos_raw else []
+        # Filter out demos missing question/answer (defensive).
+        winning_demos_dicts = [
+            d for d in winning_demos_dicts if d["question"] and d["answer"]
+        ]
+
+        # Gate which fields land in ``best_config`` based on the
+        # optimizer that actually ran. PR7+ deliberate design:
+        # COPRO writes instruction only; BootstrapFewShot writes
+        # demos only; MIPROv2 writes both.
+        _opt_choice = getattr(ctx, "dspy_optimizer", "mipro")
+        if _opt_choice == "copro":
+            best_params_payload = {"system_instruction": winning_instruction}
+        elif _opt_choice == "bootstrap_fewshot":
+            best_params_payload = {"few_shot_demos": winning_demos_dicts}
+        else:  # mipro (default) or unrecognised fallback
+            best_params_payload = {
+                "system_instruction": winning_instruction,
+                "few_shot_demos": winning_demos_dicts,
+            }
         best_config = self.build_trial_config(
-            ctx.base_config, {"system_instruction": winning_instruction}
+            ctx.base_config, best_params_payload,
         )
 
         extras = {
@@ -450,6 +563,8 @@ class GenerationOptimizer(StageOptimizer):
             # discriminative".
             "mipro_auto": getattr(ctx, "mipro_auto", "light"),
             "dspy_metric_used": dspy_metric_choice,
+            "dspy_optimizer_used": _opt_choice,
+            "winning_demos": winning_demos_dicts,
             # Every candidate instruction MIPROv2 proposed, keyed by
             # predictor name. The winning instruction (in ``instructions``
             # above) is one of these. Empty {} when the monkey-patch
@@ -471,7 +586,7 @@ class GenerationOptimizer(StageOptimizer):
             stage_name=self.name,
             search_space=self.search_space(ctx),
             trials=[],  # MIPROv2 trials live in extras["trial_scores"]
-            best_params={"system_instruction": winning_instruction},
+            best_params=dict(best_params_payload),
             best_config=best_config,
             best_composite=composite_optimized["score"],
             objective_spec=ctx.objective.to_dict(),

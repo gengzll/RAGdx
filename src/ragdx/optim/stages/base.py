@@ -99,6 +99,25 @@ class StageContext:
     """Optional :class:`ragdx.checkpoint.CheckpointStore` for the
     per-trial save. Ignored when ``checkpoint`` is ``None``."""
 
+    dspy_optimizer: str = "mipro"
+    """Which DSPy teleprompter ``--stage generation`` should run:
+
+    * ``"mipro"`` (default): MIPROv2 — Bayesian search over
+      (instruction x few-shot demo) candidates. Strongest but
+      slowest; writes BOTH ``system_instruction`` AND
+      ``few_shot_demos`` to ``best_config``.
+    * ``"copro"``: COPRO — iterative LLM-driven instruction
+      rewriting. Demos unchanged. Writes ONLY ``system_instruction``.
+      Fastest. Best fit when production deployment ignores demos.
+    * ``"bootstrap_fewshot"``: BootstrapFewShot — generates few-shot
+      demos by running the seed program on the trainset. Instruction
+      unchanged. Writes ONLY ``few_shot_demos``.
+
+    The chosen optimizer determines which fields of the winning
+    ``RAGConfig`` get populated. See PR7's
+    ``GenerationOptimizer.optimize`` for the dispatch.
+    """
+
     dspy_metric: str = "auto"
     """Which DSPy-side inner-loop metric to use for the MIPROv2 search.
 

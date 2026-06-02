@@ -122,6 +122,40 @@ class RetrieverSpec(BaseModel):
     reranker: Literal["none", "cohere", "bge"] = "none"
 
 
+class FewShotDemo(BaseModel):
+    """A single few-shot demonstration to splice into the prompt.
+
+    Mirrors the shape of a DSPy ``Example`` (question + answer +
+    optional reasoning + optional context). ragdx renders them
+    between the system instruction and the user's question at
+    ``RAGPipeline.generate`` time.
+
+    PR7+: produced by ``ragdx tune --stage generation`` when the
+    chosen DSPy optimizer (MIPROv2 / BootstrapFewShot / SIMBA / ...)
+    actually evolves demos. Empty list for COPRO (instruction-only
+    optimizers) and for users who don't want demos in production.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str
+    """Sample question. Rendered as ``Question: <q>`` in the prompt."""
+
+    answer: str
+    """The ground-truth or program-generated answer to ``question``."""
+
+    reasoning: str | None = None
+    """Optional chain-of-thought trace for the demo. When present,
+    rendered as ``Reasoning: <r>`` between the question and the
+    answer. Helps the LLM imitate the reasoning style."""
+
+    context: str | None = None
+    """Optional retrieved-context snippet to render with this demo.
+    Useful when demos and retrieved contexts share structure (RAG
+    demos that show ``context -> answer`` are more aligned with what
+    the LLM sees at inference)."""
+
+
 class GeneratorSpec(BaseModel):
     """The generator LLM + how it's prompted."""
 
@@ -142,6 +176,15 @@ class GeneratorSpec(BaseModel):
     """RAG system prompt. ``None`` -> the package default
     (:data:`ragdx.experiments.DEFAULT_SYSTEM_INSTRUCTION`). Override
     for domain-specific guidance; MIPROv2 may evolve this further."""
+
+    few_shot_demos: list[FewShotDemo] = Field(default_factory=list)
+    """Optional few-shot examples spliced into every prompt. PR7+:
+    populated by ``ragdx tune --stage generation`` when the chosen
+    DSPy optimizer evolves demos (MIPROv2 / BootstrapFewShot /
+    SIMBA). Empty by default -- many production RAGs prefer
+    zero-shot to keep per-query tokens cheap. See
+    :meth:`ragdx.runtime.pipeline.RAGPipeline.generate` for the
+    rendering format."""
 
     temperature: float = 0.01
     max_tokens: int = 350

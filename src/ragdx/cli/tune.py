@@ -108,6 +108,18 @@ def tune(
         "saturates on permissive judges like GLM-4-Flash), "
         "``token_f1`` (token-F1 vs GT; requires GT-populated records).",
     ),
+    dspy_optimizer: str = typer.Option(
+        "mipro", "--dspy-optimizer",
+        help="Which DSPy teleprompter to use for ``--stage generation``: "
+        "``mipro`` (default; MIPROv2 — BO over instruction x demos, "
+        "writes BOTH system_instruction AND few_shot_demos to the "
+        "winning config), "
+        "``copro`` (COPRO — iterative LLM-driven instruction rewrite; "
+        "writes ONLY system_instruction; fastest), "
+        "``bootstrap_fewshot`` (BootstrapFewShot — produces few-shot "
+        "demos from the seed program; writes ONLY few_shot_demos; "
+        "no instruction change). Ignored for non-generation stages.",
+    ),
     resume: str = typer.Option(
         "", "--resume",
         help="Resume a previously-interrupted tune. Pass a specific "
@@ -211,6 +223,12 @@ def tune(
         raise typer.BadParameter(
             f"--dspy-metric must be one of {_DSPY_METRIC_CHOICES}, "
             f"got {dspy_metric!r}."
+        )
+    _DSPY_OPTIMIZER_CHOICES = ("mipro", "copro", "bootstrap_fewshot")
+    if dspy_optimizer not in _DSPY_OPTIMIZER_CHOICES:
+        raise typer.BadParameter(
+            f"--dspy-optimizer must be one of {_DSPY_OPTIMIZER_CHOICES}, "
+            f"got {dspy_optimizer!r}."
         )
     if use_llm and use_both:
         raise typer.BadParameter("Use either --use-llm or --use-both, not both.")
@@ -528,6 +546,7 @@ def tune(
         label=mode_label,
         mipro_auto=mipro_auto,
         dspy_metric=dspy_metric,
+        dspy_optimizer=dspy_optimizer,
         checkpoint=checkpoint_obj,
         checkpoint_store=checkpoint_store,
     )

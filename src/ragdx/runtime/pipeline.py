@@ -53,6 +53,46 @@ a per-call override is supplied. Kept in sync with
 collapse these into a single import."""
 
 
+def _render_few_shot_demos(demos: list) -> str:
+    """Format ``GeneratorSpec.few_shot_demos`` for splicing into the
+    prompt between the system instruction and the retrieved contexts.
+
+    Returns the empty string when ``demos`` is empty so the
+    zero-shot prompt template is byte-identical to the pre-PR7
+    behaviour.
+
+    Layout::
+
+        Here are example responses for reference:
+
+        ## Example 1
+        Question: <q1>
+        Reasoning: <r1>            (omitted when no reasoning)
+        Answer: <a1>
+
+        ## Example 2
+        ...
+        <blank line before context block>
+
+    The ``## Example N`` headers make demos easy to spot in
+    long prompts and discourage the LLM from copying their question
+    text verbatim into the answer.
+    """
+    if not demos:
+        return ""
+    parts = ["Here are example responses for reference:\n"]
+    for i, d in enumerate(demos, 1):
+        parts.append(f"## Example {i}")
+        if getattr(d, "context", None):
+            parts.append(f"Context: {d.context}")
+        parts.append(f"Question: {d.question}")
+        if getattr(d, "reasoning", None):
+            parts.append(f"Reasoning: {d.reasoning}")
+        parts.append(f"Answer: {d.answer}")
+        parts.append("")  # blank line between demos
+    return "\n".join(parts) + "\n"
+
+
 @dataclass
 class RAGAnswer:
     """Output of one full :meth:`RAGPipeline.answer` round-trip."""
@@ -209,8 +249,10 @@ class RAGPipeline:
             or DEFAULT_SYSTEM_INSTRUCTION
         )
         ctx_str = "\n---\n".join(contexts) if contexts else "(no context)"
+        demos_text = _render_few_shot_demos(self.config.generator.few_shot_demos)
         prompt = (
             f"{instr}\n\n"
+            f"{demos_text}"
             f"Context:\n{ctx_str}\n\nQuestion: {question}\n\nAnswer:"
         )
         try:
@@ -332,8 +374,10 @@ class LlamaIndexRAGPipeline:
             or DEFAULT_SYSTEM_INSTRUCTION
         )
         ctx_str = "\n---\n".join(contexts) if contexts else "(no context)"
+        demos_text = _render_few_shot_demos(self.config.generator.few_shot_demos)
         prompt = (
             f"{instr}\n\n"
+            f"{demos_text}"
             f"Context:\n{ctx_str}\n\nQuestion: {question}\n\nAnswer:"
         )
         try:
