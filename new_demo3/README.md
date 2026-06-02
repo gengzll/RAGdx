@@ -518,6 +518,46 @@ internal scoring may not be the best choice on full evaluation.
 > changed the structural conclusion that ragas metric breaks the
 > tie-to-seed problem.
 
+### Picking a different optimizer (PR7+): COPRO / BootstrapFewShot
+
+`--dspy-optimizer [mipro|copro|bootstrap_fewshot]` switches the
+underlying DSPy teleprompter. **Each writes a different shape of
+optimized config**, aligned with what it actually optimizes:
+
+| Optimizer | What it optimizes | What writes to `optimized.yaml` |
+|---|---|---|
+| `mipro` (default) | (instruction × demos) | both `system_instruction` AND `few_shot_demos` |
+| `copro` | instruction only | only `system_instruction`; `few_shot_demos: []` |
+| `bootstrap_fewshot` | demos only | only `few_shot_demos: [...]`; `system_instruction` unchanged |
+
+This closes the architecture gap noted earlier: previously every
+run wrote only `system_instruction` even when the optimizer found
+demos. Now the schema field that gets populated reflects what the
+algorithm actually evolved.
+
+#### Side-by-side: same baseline, three optimizers
+
+| Run | Optimizer | Wall | What was written | Outcome |
+|---|---|---|---|---|
+| `9fd2d342acef` | `mipro` heavy | 73 min | `system_instruction` (new Industry-4.0 prompt) + `few_shot_demos` populated | full eval matched baseline (1.0 / 1.0) |
+| `7083a760fdfb` | `copro` | 17 min | only `system_instruction` (returned seed — no improvement) | no change |
+| `9797f4e99a43` | `bootstrap_fewshot` | 9 min | only `few_shot_demos: [3 demos]` | demos available at deploy time |
+
+Inspect the three `rag_config.*_winner.yaml` files in this directory
+to see exactly what each optimizer wrote.
+
+#### When to use which
+
+| Production deployment | Optimizer |
+|---|---|
+| Static system prompt, no few-shot | **`copro`** — fastest, single field to deploy |
+| Static prompt, dynamic few-shot examples | **`bootstrap_fewshot`** — produces a clean demos list |
+| Both knobs available, want max performance | **`mipro`** (default) — searches the full grid |
+
+The renderer (`ragdx experiment-report`) handles all three bundle
+shapes — see `G_copro_report.html` (18 KB), `G_bootstrap_report.html`
+(~21 KB), `G_heavy_report.html` (38 KB).
+
 ### Visualizing the DSPy A/B as HTML
 
 ```bash
