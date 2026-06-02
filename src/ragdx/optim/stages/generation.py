@@ -374,10 +374,34 @@ class GenerationOptimizer(StageOptimizer):
                     "max_labeled_demos": 4,
                     "max_rounds": 1,
                 }
+            elif _opt_choice == "gepa":
+                # GEPA (Genetic-Pareto reflective evolution, paper
+                # arXiv:2507.19457): uses LLM reflection on execution
+                # traces to evolve text components (instructions).
+                # Marked experimental in DSPy; same auto budget knob
+                # as MIPROv2 (light/medium/heavy).
+                _dspy_opt_str = "GEPA"
+                _dspy_opt_kwargs = {
+                    "auto": getattr(ctx, "mipro_auto", "light"),
+                    # reflection_lm: the (typically stronger) LM that
+                    # GEPA uses to propose new instructions from
+                    # execution traces. We share the student LM by
+                    # default; for production use a stronger model
+                    # via a dedicated factory hook later.
+                    "reflection_lm": runtime.dspy_lm,
+                    "num_threads": runtime.llm_max_concurrent,
+                    "track_stats": True,
+                    # Our ragas composite tops out at ~2.8 (weighted
+                    # sum), so the [0, 1] default convergence range
+                    # GEPA expects doesn't match. We just turn off the
+                    # "skip if score == perfect_score" shortcut so
+                    # GEPA runs the full budget regardless.
+                    "skip_perfect_score": False,
+                }
             else:  # pragma: no cover - validated at CLI layer
                 raise ValueError(
                     f"Unknown dspy_optimizer={_opt_choice!r}; expected "
-                    "mipro / copro / bootstrap_fewshot."
+                    "mipro / copro / bootstrap_fewshot / gepa."
                 )
             logger.info(
                 "[DSPy/%s] running %s with kwargs=%s",
@@ -532,7 +556,9 @@ class GenerationOptimizer(StageOptimizer):
         # COPRO writes instruction only; BootstrapFewShot writes
         # demos only; MIPROv2 writes both.
         _opt_choice = getattr(ctx, "dspy_optimizer", "mipro")
-        if _opt_choice == "copro":
+        if _opt_choice in {"copro", "gepa"}:
+            # Both COPRO and GEPA evolve only the instruction text;
+            # demos are not part of their search space.
             best_params_payload = {"system_instruction": winning_instruction}
         elif _opt_choice == "bootstrap_fewshot":
             best_params_payload = {"few_shot_demos": winning_demos_dicts}

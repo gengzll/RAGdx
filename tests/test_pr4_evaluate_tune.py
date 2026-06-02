@@ -487,6 +487,36 @@ def test_tune_has_dspy_optimizer_flag():
     assert "dspy_optimizer" in params
 
 
+def test_tune_dspy_optimizer_includes_gepa():
+    """``--dspy-optimizer gepa`` must be accepted alongside the other
+    three. GEPA is an experimental DSPy 3.x reflective-evolution
+    optimizer (arXiv 2507.19457)."""
+    import inspect as _inspect
+
+    from ragdx.cli.tune import tune as _tune_fn
+    src = _inspect.getsource(_tune_fn)
+    assert '"gepa"' in src
+    # The 5-arg metric adapter for GEPA's signature contract.
+    from ragdx.optim.dspy_adapter import DSPyAdapter
+    adapter_src = _inspect.getsource(DSPyAdapter.optimize)
+    assert "GEPA" in adapter_src
+    assert "pred_name" in adapter_src and "pred_trace" in adapter_src
+
+
+def test_generation_optimizer_gepa_dispatch():
+    """Source-level: GenerationOptimizer.optimize must branch on
+    ``ctx.dspy_optimizer == "gepa"`` and pass ``reflection_lm`` +
+    ``skip_perfect_score=False``."""
+    import inspect as _inspect
+
+    from ragdx.optim.stages import generation
+    src = _inspect.getsource(generation.GenerationOptimizer.optimize)
+    assert '"gepa"' in src
+    assert 'GEPA' in src
+    assert 'reflection_lm' in src
+    assert 'skip_perfect_score' in src
+
+
 def test_tune_rejects_invalid_dspy_optimizer(tmp_path):
     """Unknown --dspy-optimizer must fast-fail with the choices listed."""
     import typer

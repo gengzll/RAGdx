@@ -118,7 +118,11 @@ def tune(
         "writes ONLY system_instruction; fastest), "
         "``bootstrap_fewshot`` (BootstrapFewShot — produces few-shot "
         "demos from the seed program; writes ONLY few_shot_demos; "
-        "no instruction change). Ignored for non-generation stages.",
+        "no instruction change), "
+        "``gepa`` (GEPA — reflective text-based evolution, arXiv "
+        "2507.19457; writes ONLY system_instruction; "
+        "EXPERIMENTAL — DSPy 3.x ``gepa`` package required). "
+        "Ignored for non-generation stages.",
     ),
     resume: str = typer.Option(
         "", "--resume",
@@ -224,7 +228,7 @@ def tune(
             f"--dspy-metric must be one of {_DSPY_METRIC_CHOICES}, "
             f"got {dspy_metric!r}."
         )
-    _DSPY_OPTIMIZER_CHOICES = ("mipro", "copro", "bootstrap_fewshot")
+    _DSPY_OPTIMIZER_CHOICES = ("mipro", "copro", "bootstrap_fewshot", "gepa")
     if dspy_optimizer not in _DSPY_OPTIMIZER_CHOICES:
         raise typer.BadParameter(
             f"--dspy-optimizer must be one of {_DSPY_OPTIMIZER_CHOICES}, "

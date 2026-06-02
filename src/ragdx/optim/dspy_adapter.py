@@ -364,6 +364,39 @@ class DSPyAdapter:
             "COPRO": COPRO,
             "BootstrapFewShot": BootstrapFewShot,
         }
+        # GEPA is gated behind an optional ``gepa`` package + DSPy 3.x.
+        # Loading it lazily means MIPROv2 / COPRO / BootstrapFewShot
+        # callers don't pay for a failing import on installs that
+        # don't have gepa.
+        if optimizer == "GEPA":
+            try:
+                from dspy.teleprompt import GEPA  # type: ignore[import-not-found]
+                teleprompters["GEPA"] = GEPA
+            except Exception as exc:  # pragma: no cover - optional dep
+                raise ImportError(
+                    "GEPA requires DSPy 3.x and the optional ``gepa`` "
+                    "package. Install with `pip install gepa`."
+                ) from exc
+
+            # GEPA's metric must accept 5 positional args:
+            #   (gold, pred, trace, pred_name, pred_trace) -> float
+            # Our build_metric_function returns a 3-arg
+            #   (example, pred, trace) -> float
+            # so we wrap it. Defined as a real function (not a lambda)
+            # so ``inspect.signature(metric).bind(None, None, None, None, None)``
+            # in GEPA's constructor succeeds.
+            _inner_metric = metric
+
+            def _gepa_metric_adapter(
+                gold: Any,
+                pred: Any,
+                trace: Any = None,
+                pred_name: Any = None,
+                pred_trace: Any = None,
+            ) -> float:
+                return float(_inner_metric(gold, pred, trace))
+
+            metric = _gepa_metric_adapter
         if optimizer not in teleprompters:
             raise ValueError(
                 f"Unknown optimizer {optimizer!r}; expected one of {sorted(teleprompters)}."
