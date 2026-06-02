@@ -77,14 +77,23 @@ class RagdxRuntime:
 # =====================================================================
 # Temperature clamp (idempotent, applied once at build_runtime time)
 # =====================================================================
-def apply_litellm_temperature_clamp(min_temp: float = 0.01) -> None:
-    """Clamp every outgoing temperature to ``min_temp`` across all
-    plausible call paths.
+def apply_litellm_temperature_clamp(
+    min_temp: float = 0.01, max_temp: float = 1.0,
+) -> None:
+    """Clamp every outgoing temperature to ``[min_temp, max_temp]``
+    across all plausible call paths.
 
-    GLM-4-Flash rejects ``temperature < 0.01``; DSPy / ragas internally
-    override the temperature to ~1e-8 for deterministic output. We
-    intercept at three layers so the clamp survives no matter which
-    library makes the call:
+    Two clamps, two reasons:
+
+    * Lower: GLM-4-Flash rejects ``temperature < 0.01``; DSPy / ragas
+      internally override the temperature to ~1e-8 for deterministic
+      output.
+    * Upper: GLM-4-Flash rejects ``temperature > 1.0`` (OpenAI tops
+      out at 2.0 but GLM is stricter); DSPy's COPRO ships
+      ``init_temperature=1.4`` for the instruction proposer.
+
+    We intercept at three layers so the clamp survives no matter
+    which library makes the call:
 
     1. ``litellm.completion`` / ``batch_completion`` (DSPy + our
        own ``llm_callable``).
@@ -99,8 +108,12 @@ def apply_litellm_temperature_clamp(min_temp: float = 0.01) -> None:
 
     def _clamp(kw):
         t = kw.get("temperature")
-        if t is not None and 0 < t < min_temp:
+        if t is None:
+            return kw
+        if 0 < t < min_temp:
             kw["temperature"] = min_temp
+        elif t > max_temp:
+            kw["temperature"] = max_temp
         return kw
 
     if not getattr(litellm.completion, "_ragdx_clamped", False):

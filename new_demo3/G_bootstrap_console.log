@@ -1,0 +1,118 @@
+Inheriting from run d84762c9da44: experiment=corpus-chunking-search, 
+stage=corpus, max_trials=3, search_space={'parser': ['pymupdf_layout', 
+'unstructured', 'html_semantic'], 'document_structure': ['preserve_sections', 
+'flat_chunks'], 'chunk_size': [384, 512, 768, 1024], 'chunk_overlap': [32, 64, 
+96, 128], 'table_strategy': ['repeat_headers', 'table_to_text']}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Checkpoint: ckpt_040a163f (resumable via `ragdx tune --resume ckpt_040a163f`)
+Running generation optimizer on 548 chunks x 3 records (GT mode: no_gt, budget:
+3)...
+2026-06-02 16:12:28 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (a) baseline run
+2026-06-02 16:14:01 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:07<00:56,  7.06s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:30<01:58, 16.87s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:50<01:47, 17.96s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:55<01:04, 12.87s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [01:01<00:41, 10.39s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:14<00:34, 11.40s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:21<00:19,  9.87s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:32<00:10, 10.40s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:40<00:00,  9.45s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:40<00:00, 11.12s/it]
+2026-06-02 16:15:41 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] using ragas composite (context_precision + faithfulness + answer_relevancy) as inner-loop metric
+2026-06-02 16:15:41 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (b) MIPROv2 optimisation
+2026-06-02 16:15:41 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] running BootstrapFewShot with kwargs={'max_bootstrapped_demos': 4, 'max_labeled_demos': 4, 'max_rounds': 1}
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|¨€¨€¨€¨†      | 1/3 [01:10<02:21, 70.59s/it] 67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:46<00:50, 50.33s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [02:36<00:00, 49.97s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [02:36<00:00, 52.10s/it]
+2026-06-02 16:18:18 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (c) optimised re-run
+2026-06-02 16:19:00 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Bootstrapped 3 full traces after 2 examples for up to 1 rounds, amounting to 3 attempts.
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:05<00:46,  5.81s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:25<01:37, 14.00s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:58<02:15, 22.57s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:59<01:10, 14.14s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [01:02<00:41, 10.27s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:20<00:38, 12.89s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:24<00:19,  9.99s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:35<00:10, 10.09s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:45<00:00, 10.21s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:45<00:00, 11.74s/it]
+Wrote new_demo3\G_bootstrap_tune.json
+Wrote optimized config new_demo3\rag_config.bootstrap_winner.yaml (credentials 
+scrubbed)
+Best composite: 1.611
+Best params: {'few_shot_demos': [{'question': "What is the primary focus of 
+ASMPT's WORKS Optimisation system in contrast to traditional inspection 
+systems?", 'answer': "The primary focus of ASMPT's WORKS Optimisation system in
+contrast to traditional inspection systems is its comprehensive view of the 
+entire operational process on the software side, integrating and visualising 
+data from all machines on the line for defect analysis, and supporting the 
+Industry 4.0 concept of the Intelligent Factory.", 'reasoning': "The primary 
+focus of ASMPT's WORKS Optimisation system is contrasted with traditional 
+inspection systems by considering the entire operational process on the 
+software side, rather than focusing on individual products and manufacturing 
+stations. The context provided highlights that WORKS Optimisation uses a 
+comprehensive approach, integrating and visualising data from all machines on 
+the line for defect analysis, and supports the Industry 4.0 concept of the 
+Intelligent Factory.", 'context': '. In contrast to prevailing inspection 
+systems that focus on individual products and manufacturing stations, ASMPT¡¯s 
+intelligent inline system, WORKS Optimisation, takes a comprehensive view of 
+the entire operational process on the software side. Using the standardised 
+IPC-2591-CFX interface, the intelligent application from the WORKS Software 
+Suite includes all machines on the line in its defect analysis as it integrates
+and visualises the data\n. ASMPT¡¯s solutions support this development and help 
+customers to realise the full potential of their pro- duction equipment and the
+required resources. With the Industry 4.0 concept of the Intelligent Factory, 
+ASMPT optimises manufacturing processes and en- sures that they remain 
+adaptable. This increases efficiency and also helps to conserve valuable 
+resources\n. In-depth analysis of the three application fields ¡°Time¡±, 
+¡°Condition¡± and ¡°Material¡± on placement, machine, line and facility level 
+enables resource efficiency through holistic process optimisation. One of 
+ASMPT¡¯s innovations Intelligent Software Solutions Supports Operators and 
+Technical Teams In times of skilled labour shortages and steadily rising 
+customer requirements there is no way around the digital transformation for 
+electronics manufacturers if they want to support their em- ployees'}, 
+{'question': 'What adjustments were made to the ESG Material Factors by the 
+Group to enhance clarity and consistency?', 'answer': 'The Group made 
+adjustments to the ESG Material Factors by combining similar factors. These 
+adjustments include merging "Energy Management" and "Product Energy Efficiency"
+into "Energy Management & Product Energy Efficiency," as well as combining 
+"Business Ethics" and "Corporate Governance" into "Business Ethics & Corporate 
+Governance."', 'reasoning': 'The question asks for the adjustments made to the 
+ESG Material Factors by the Group. The context provides information on the 
+review and prioritization process of the material ESG factors and specifically 
+mentions the adjustments made to enhance clarity, consistency, and alignment 
+with recognized standards and practices.', 'context': '. Stage 3 Implementation
+The Board has endorsed this ESG Report, which en- compasses the materiality 
+matrix below. The endorsed list of material ESG factors serves as a guide for 
+develop- ing corporate strategies and goals, ongoing stakeholder engagement, as
+well as disclosures in the Annual Report, ESG Report and other corporate 
+communication chan- nels. Periodic assessments are conducted to deter - mine 
+the materiality of ESG factors to prevailing busi- ness contexts and external 
+conditions\n. The Group has conducted a thorough review and prioritisation of 
+the material ESG factors. A three- stage materiality assessment process was 
+adopted: Stage 1 Identification ASMPT identified the sustainability issues 
+applicable to the Group via wide-ranging research, engagement and analysis. 
+Main sources of input include sharehold- ers, employees, customers, peers, 
+regulatory and standards bodies, and ratings agencies\n. To enhance clarity, 
+consistency and alignment with recognised standards and practices in the 
+industry and ESG arena, the Group has made some adjust- ments to the ESG 
+Material Factors. Similar factors have been combined - they include combining 
+¡°Ener- gy Management¡± and ¡°Product Energy Efficiency¡± into ¡°Energy Management &
+Product Energy Efficiency¡± as well as ¡°Business Ethics¡± and ¡°Corporate 
+Governance¡± into ¡°Business Ethics & Corporate Governance¡±'}, {'question': 'What
+are the three key components mentioned for ensuring employee health and 
+safety?', 'answer': 'The three key components mentioned for ensuring employee 
+health and safety are:\n1. Hazard identification, risk assessment, and incident
+investigation\n2. Occupational health services\n3. Worker participation, 
+consultation', 'reasoning': "The question asks for the three key components 
+mentioned for ensuring employee health and safety in ASMPT's 2024 report. The 
+context provided includes several points related to health and safety, and the 
+answer can be found by identifying the specific components listed.", 'context':
+'; and (b) compliance with relevant laws and regulations that have a 
+significant impact on the issuer relating to providing a safe working 
+environment and protecting employees from occupational hazards Ensure 
+Employee¡¯s Health and Safety P.77 403¨C1 Occupational health and safety manage- 
+ment system KPI B2.3 Description of occupational health and safety measures 
+adopted, and how they are implemented and monitored\n. Inadequate safety 
+measures not only increase operation costs but also inflict severe or irrep- 
+arable damage to our corporate reputation if work-re- lated incidents were to 
+occur. Therefore, robust health and safety protocols are vital to most, if not 
+all, of our operations, ensuring that our occupational risks are mitigated and 
+our workforce remains safe and secure\n. Ensure Employee¡¯s Health and Safety 
+P.77 403¨C2 Hazard identification, risk assessment, and incident investigation 
+Ensure Employee¡¯s Health and Safety P.77 403¨C3 Occupational health services 
+Ensure Employee¡¯s Health and Safety P.77 403¨C4 Worker participation, 
+consultation'}]}
+2026-06-02 16:20:45 INFO    ragdx.storage.run_store :: Saved run 9797f4e99a43 name=demo3-generation-bootstrap
+Saved run: 9797f4e99a43 (name: demo3-generation-bootstrap)
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 9797f4e99a43 
+report.md`.

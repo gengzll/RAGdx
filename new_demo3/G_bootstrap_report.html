@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>demo3 Scenario G: DSPy BootstrapFewShot (demos-only)</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root { --fg:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#ffffff;
+        --accent:#1a73e8; --warn:#b45309; --ok:#15803d; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                          Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 14px; line-height: 1.55; }
+.page { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+h1 { font-size: 28px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 12px; padding-top: 16px;
+     border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 20px 0 8px; color: #111827; }
+h4 { font-size: 14px; margin: 14px 0 6px; color: #374151; }
+.subtle { color: var(--muted); font-size: 13px; }
+.caption { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }
+.metric-row { display: flex; gap: 16px; margin: 12px 0 20px; flex-wrap: wrap; }
+.metric { flex: 1 1 180px; padding: 12px 16px; background: #f9fafb;
+          border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
+.metric .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase;
+               letter-spacing: 0.05em; }
+.metric .val { font-size: 18px; font-weight: 600; margin-top: 2px;
+               word-break: break-all; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px;
+        font-size: 13px; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px;
+         text-align: left; vertical-align: top; }
+th { background: #f3f4f6; font-weight: 600; }
+tr:hover td { background: #fafbfc; }
+pre, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 12px; }
+pre { background: #f3f4f6; padding: 10px 12px; border-radius: 6px;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+.box { border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px;
+       margin: 12px 0; background: #fafbfc; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two-col > div { min-width: 0; }
+details { margin: 8px 0; border: 1px solid var(--line); border-radius: 6px;
+          padding: 8px 12px; background: #fafbfc; }
+details > summary { cursor: pointer; font-weight: 500; color: #374151; }
+details[open] > summary { margin-bottom: 10px; }
+.warn { color: var(--warn); }
+.ok { color: var(--ok); }
+.tag { display: inline-block; padding: 2px 8px; background: #eef2ff;
+       color: #3730a3; border-radius: 4px; font-size: 12px; }
+.tag.warn { background: #fef3c7; color: #92400e; }
+.tag.ok { background: #d1fae5; color: #065f46; }
+.divider { border-top: 1px dashed var(--line); margin: 16px 0; }
+@media print {
+  .page { max-width: none; margin: 0; padding: 12mm; }
+  h2 { page-break-before: auto; }
+  details { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body><div class="page">
+<header>
+  <h1>demo3 Scenario G: DSPy BootstrapFewShot (demos-only)</h1>
+  <div class="subtle">Generated 2026-06-02 16:21:33 · ragdx schema v1</div>
+</header>
+<h2>Run metadata</h2>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Experiment mode</div><div class="val">generation</div></div>
+<div class="metric"><div class="lbl">Modes run</div><div class="val">no_gt</div></div>
+<div class="metric"><div class="lbl">Has GT</div><div class="val">No</div></div>
+<div class="metric"><div class="lbl">Detected GT</div><div class="val">no_gt</div></div>
+</div>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Model</div><div class="val">openai/glm-4-flash</div></div>
+<div class="metric"><div class="lbl">Endpoint</div><div class="val">https://open.bigmodel.cn/api/paas/v4</div></div>
+</div>
+<details open><summary>Corpus source</summary><pre>&quot;ragdx tune --from-run d84762c9da44&quot;</pre><p class="caption">PDF <code>initial_load_*</code> fields reflect the chunking used at load-time for question synthesis. The Bayesian search below explores alternate chunk_size / chunk_overlap values; see <strong>Bayesian search → best_params</strong> for the winner.</p></details>
+<h2>DSPy before/after (at BO winner config)</h2>
+<h3>Mode: <code>no_gt</code></h3>
+<div>                            <div id="8997794f-0af2-44f4-8b7a-4cb93035614b" class="plotly-graph-div" style="height:420px; width:100%;"></div>            <script type="text/javascript">                                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("8997794f-0af2-44f4-8b7a-4cb93035614b")) {                    Plotly.newPlot(                        "8997794f-0af2-44f4-8b7a-4cb93035614b",                        [{"alignmentgroup":"True","hovertemplate":"phase=baseline\u003cbr\u003emetric=%{x}\u003cbr\u003escore_display=%{y}\u003cbr\u003etext=%{text}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"baseline","marker":{"color":"#9aa0a6","pattern":{"shape":""}},"name":"baseline","offsetgroup":"baseline","orientation":"v","showlegend":true,"text":["0.556","1.000"],"textposition":"outside","x":["context_precision","faithfulness"],"xaxis":"x","y":[0.5555555554999999,1.0],"yaxis":"y","type":"bar"},{"alignmentgroup":"True","hovertemplate":"phase=optimized\u003cbr\u003emetric=%{x}\u003cbr\u003escore_display=%{y}\u003cbr\u003etext=%{text}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"optimized","marker":{"color":"#1a73e8","pattern":{"shape":""}},"name":"optimized","offsetgroup":"optimized","orientation":"v","showlegend":true,"text":["0.556","0.963"],"textposition":"outside","x":["context_precision","faithfulness"],"xaxis":"x","y":[0.5555555554999999,0.9629629629629629],"yaxis":"y","type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"xaxis":{"anchor":"y","domain":[0.0,1.0],"title":{"text":"metric"},"tickangle":-25},"yaxis":{"anchor":"x","domain":[0.0,1.0],"title":{"text":"score"},"range":[0,1.05]},"legend":{"title":{},"tracegroupgap":0},"title":{"text":"DSPy baseline vs optimized — no_gt"},"barmode":"group","margin":{"t":60,"b":80},"height":420},                        {"responsive": true}                    )                };                            </script>        </div>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Composite baseline</div><div class="val">1.667</div></div>
+<div class="metric"><div class="lbl">Composite optimized</div><div class="val">1.611</div></div>
+<div class="metric"><div class="lbl">Composite Δ</div><div class="val">-0.056</div></div>
+</div>
+<table><thead><tr><th>metric</th><th>baseline</th><th>optimized</th><th>delta</th></tr></thead><tbody><tr><td>context_precision</td><td>0.556</td><td>0.556</td><td>→ +0.000</td></tr><tr><td>faithfulness</td><td>1.000</td><td>0.963</td><td>↓ -0.037</td></tr></tbody></table>
+<h4>Prompts: baseline vs MIPROv2-optimized</h4>
+<p class="caption"><strong>Baseline</strong> = the DSPy signature's instruction at run start (your <code>--system-instruction</code> if set, else ragdx default). <strong>Optimized</strong> = what MIPROv2 picked after its inner-loop search. Identical columns = MIPROv2 found no improvement and kept the seed (the right default when scores are tied).</p>
+<details open><summary>Predictor `predict`</summary><div class="two-col"><div><h4>Baseline instruction</h4><pre>You are an ESG sustainability analyst reviewing ASMPT&#x27;s 2024 report.
+Quote exact wording from the supplied context when possible. If the
+answer is not in the context, reply &quot;Not in report&quot;.</pre></div><div><h4>Optimized instruction</h4><pre>You are an ESG sustainability analyst reviewing ASMPT&#x27;s 2024 report.
+Quote exact wording from the supplied context when possible. If the
+answer is not in the context, reply &quot;Not in report&quot;.</pre></div></div><p class="caption">Few-shot demos: baseline = 0 · optimized = 3</p></details>
+<details open><summary>Per-record before/after (first 3 of 3)</summary><h4>Record 1</h4><table><thead><tr><th>field</th><th>content</th></tr></thead><tbody><tr><td>question</td><td>What is the primary focus of ASMPT&#x27;s WORKS Optimisation system in contrast to traditional inspection systems?</td></tr><tr><td>baseline answer</td><td>The primary focus of ASMPT&#x27;s WORKS Optimisation system in contrast to traditional inspection systems is its comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line for defect analysis, and supporting the Industry 4.0 concept of the Intelligent Factory.</td></tr><tr><td>optimized answer</td><td>The primary focus of ASMPT&#x27;s WORKS Optimisation system in contrast to traditional inspection systems is its comprehensive view of the entire operational process on the software side, which includes all machines on the line in its defect analysis and integrates and visualises data using the standardised IPC-2591-CFX interface.</td></tr></tbody></table><h4>Record 2</h4><table><thead><tr><th>field</th><th>content</th></tr></thead><tbody><tr><td>question</td><td>What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?</td></tr><tr><td>baseline answer</td><td>The Group made adjustments to the ESG Material Factors by combining similar factors. These adjustments include merging &quot;Energy Management&quot; and &quot;Product Energy Efficiency&quot; into &quot;Energy Management &amp; Product Energy Efficiency,&quot; as well as combining &quot;Business Ethics&quot; and &quot;Corporate Governance&quot; into &quot;Business Ethics &amp; Corporate Governance.&quot;</td></tr><tr><td>optimized answer</td><td>The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include combining similar factors. These adjustments are:
+- Combining &quot;Energy Management&quot; and &quot;Product Energy Efficiency&quot; into &quot;Energy Management &amp; Product Energy Efficiency.&quot;
+- Combining &quot;Business Ethics&quot; and &quot;Corporate Governance&quot; into &quot;Business Ethics &amp; Corporate Governance.&quot;</td></tr></tbody></table><h4>Record 3</h4><table><thead><tr><th>field</th><th>content</th></tr></thead><tbody><tr><td>question</td><td>What are the three key components mentioned for ensuring employee health and safety?</td></tr><tr><td>baseline answer</td><td>The three key components mentioned for ensuring employee health and safety are:
+1. Hazard identification, risk assessment, and incident investigation
+2. Occupational health services
+3. Worker participation, consultation</td></tr><tr><td>optimized answer</td><td>The three key components mentioned for ensuring employee health and safety are:
+1. Hazard identification, risk assessment, and incident investigation
+2. Occupational health services
+3. Worker participation, consultation</td></tr></tbody></table></details>
+</div></body></html>
