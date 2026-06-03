@@ -630,6 +630,24 @@ def _render_dspy_a_b(bundle: dict) -> str:
                 }]
                 if gt:
                     qa_rows.append({"field": "ground_truth", "content": gt})
+                # Retrieved contexts: shared by baseline and optimized
+                # answers in DSPy stages (the retriever is held fixed).
+                # Rendering them lets the reader judge "did the
+                # optimised answer use the same evidence" -- the most
+                # frequent followup question after seeing a delta.
+                ctxs = r.get("contexts") or []
+                if ctxs:
+                    if len(ctxs) == 1:
+                        ctx_payload = ctxs[0]
+                    else:
+                        ctx_payload = "\n\n---\n\n".join(
+                            f"[Context {i}]\n{c}"
+                            for i, c in enumerate(ctxs, 1)
+                        )
+                    qa_rows.append({
+                        "field": f"retrieved contexts ({len(ctxs)})",
+                        "content": ctx_payload,
+                    })
                 qa_rows.append({"field": "baseline answer",
                                 "content": r.get("baseline_answer", "")})
                 qa_rows.append({"field": "optimized answer",
