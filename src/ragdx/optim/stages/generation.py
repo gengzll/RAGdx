@@ -302,6 +302,19 @@ class GenerationOptimizer(StageOptimizer):
             prior = mipro_logger.level
             mipro_logger.setLevel(logging.INFO)
 
+            # GEPA logs to its own logger; attach the GEPA capture too
+            # so when ``--dspy-optimizer gepa`` runs the renderer
+            # gets the candidate / trial sections filled in. For
+            # MIPROv2 / COPRO / BootstrapFewShot the GEPA capture
+            # sees nothing and stays empty -- harmless.
+            from ragdx.experiments import _GEPATrialScoreCapture
+            gepa_capture = _GEPATrialScoreCapture()
+            gepa_capture.setLevel(logging.INFO)
+            gepa_logger = logging.getLogger("dspy.teleprompt.gepa.gepa")
+            gepa_logger.addHandler(gepa_capture)
+            gepa_prior = gepa_logger.level
+            gepa_logger.setLevel(logging.INFO)
+
             # Capture the proposed candidate instructions. MIPROv2's
             # ``_propose_instructions`` returns a
             # ``{predictor_name: [instruction_str, ...]}`` dict, but it's a
@@ -440,8 +453,27 @@ class GenerationOptimizer(StageOptimizer):
             finally:
                 mipro_logger.removeHandler(capture)
                 mipro_logger.setLevel(prior)
+                gepa_logger.removeHandler(gepa_capture)
+                gepa_logger.setLevel(gepa_prior)
                 if _patch_installed:
                     _mipro_mod.MIPROv2._propose_instructions = _orig_propose
+
+            # GEPA-specific extras: seed text + N proposed instruction
+            # candidates + a trial_log matching the MIPROv2 shape so
+            # ``_render_dspy_a_b`` picks them up without a GEPA branch.
+            if _opt_choice == "gepa":
+                proposed_capture = dict(proposed_capture or {})
+                # Build the predictor->[texts] list. Include the seed
+                # at index 0 so users can compare against it; then each
+                # GEPA-proposed text in iteration order.
+                seed_text = baseline_instructions.get("predict", "") or ""
+                proposed_texts = [seed_text] + [
+                    p["text"] for p in gepa_capture.proposed_per_iter
+                ]
+                proposed_capture["predict"] = proposed_texts
+                # Re-use the MIPROv2 trial_log shape; the GEPA capture
+                # already matches it.
+                capture.trials = list(gepa_capture.trials)
 
             # Save phase (b) outcome so a phase-(c) crash doesn't lose
             # the multi-trial MIPROv2 result.

@@ -397,7 +397,20 @@ def _render_dspy_a_b(bundle: dict) -> str:
     ab = bundle.get("dspy_a_b") or {}
     if not ab:
         return ""
-    parts = ['<h2>DSPy before/after (at BO winner config)</h2>']
+    # Algorithm-aware label: MIPROv2 / COPRO / BootstrapFewShot / GEPA.
+    # Falls back to a neutral "DSPy" when the bundle's pre-PR8 and
+    # doesn't record which optimizer ran.
+    _algo_label_map = {
+        "mipro": "MIPROv2",
+        "copro": "COPRO",
+        "bootstrap_fewshot": "BootstrapFewShot",
+        "gepa": "GEPA",
+    }
+    # Inspect the first mode's extras for ``dspy_optimizer_used``.
+    _first_payload = next(iter(ab.values()), {}) or {}
+    _algo_key = _first_payload.get("dspy_optimizer_used") or "mipro"
+    _algo_label = _algo_label_map.get(_algo_key, "DSPy")
+    parts = [f'<h2>DSPy before/after (at {_esc(_algo_label)} winner config)</h2>']
 
     for mode, payload in ab.items():
         payload = payload or {}
@@ -517,7 +530,7 @@ def _render_dspy_a_b(bundle: dict) -> str:
         opt_instr = payload.get("instructions") or {}
         trial_log = payload.get("trial_log") or []
         if proposed:
-            parts.append('<h4>Candidate instructions MIPROv2 proposed</h4>')
+            parts.append(f'<h4>Candidate instructions {_esc(_algo_label)} proposed</h4>')
             parts.append(
                 '<p class="caption">MIPROv2 generates N candidate '
                 '<code>system_instruction</code>s (via its grounded '
@@ -577,7 +590,7 @@ def _render_dspy_a_b(bundle: dict) -> str:
         base_demos = payload.get("baseline_demos") or {}
         opt_demos = payload.get("demos") or {}
         if base_instr or opt_instr:
-            parts.append('<h4>Prompts: baseline vs MIPROv2-optimized</h4>')
+            parts.append(f'<h4>Prompts: baseline vs {_esc(_algo_label)}-optimized</h4>')
             parts.append(
                 '<p class="caption"><strong>Baseline</strong> = the DSPy '
                 'signature\'s instruction at run start (your '

@@ -205,14 +205,74 @@
       "demos": {
         "predict": []
       },
-      "trial_scores": [],
+      "trial_scores": [
+        2.3642663291124464,
+        5.566650509440426,
+        7.28433829908125,
+        7.280651342444586,
+        5.78433829908125,
+        7.19032739242165,
+        2.3967757974738833
+      ],
       "best_score_progression": [],
       "mipro_auto": "light",
       "dspy_metric_used": "ragas",
       "dspy_optimizer_used": "gepa",
       "winning_demos": [],
-      "proposed_instructions_by_predictor": {},
-      "trial_log": [],
+      "proposed_instructions_by_predictor": {
+        "predict": [
+          "You are an ESG sustainability analyst reviewing ASMPT's 2024 report.\nQuote exact wording from the supplied context when possible. If the\nanswer is not in the context, reply \"Not in report\".",
+          "## Instruction for Assistant\r\n\r\nAs an ESG sustainability analyst, you are tasked with reviewing ASMPT's 2024 sustainability report. Your primary focus is to extract and summarize key information related to the company's environmental, social, and governance (ESG) practices and performance. The following are specific tasks and guidelines for your analysis:\r\n\r\n### Task 1: Key Components of Employee Health and Safety\r\n- **Objective**: Identify and quote the exact wording from the report that outlines the three key components ASMPT mentions for ensuring employee health and safety.\r\n- **Guidance**: Use the provided context or refer to the report directly if the context is insufficient.\r\n\r\n### Task 2: WORKS Optimisation System Focus\r\n- **Objective**: Compare and contrast the primary focus of ASMPT's WORKS Optimisation system with traditional inspection systems, using exact wording from the report.\r\n- **Guidance**: Focus on the comprehensive view of the operational process and the integration of data from all machines on the line.\r\n\r\n### Task 3: Adjustments to ESG Material Factors\r\n- **Objective**: Summarize the adjustments made by ASMPT to enhance clarity and consistency in their ESG Material Factors, quoting exact wording from the report.\r\n- **Guidance**: Pay attention to the merging of similar factors and the alignment with recognized standards and practices.\r\n\r\n### Additional Guidelines\r\n- **Contextual Understanding**: When answering questions, demonstrate an understanding of the context by referencing specific sections of the report.\r\n- **Domain-Specific Factual Information**: Utilize factual information specific to ESG reporting and sustainability practices, as provided in the examples.\r\n- **Generalizable Strategy**: Apply a strategy that can be used for similar tasks, such as identifying key components, comparing systems, or summarizing adjustments.\r\n- **Feedback Incorporation**: Consider the feedback provided for previous tasks to improve the accuracy and relevance of your responses.\r\n\r\n### Note\r\n- Ensure that your responses are concise and directly address the questions.\r\n- If a specific answer is\r\n2026-06-03 10:08:51 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.\r\n2026/06/03 10:08:56 INFO dspy.evaluate.evaluate: Average Metric: 5.566650509440426 / 3 (185.6%)",
+          "## Instructions for Assistant\r\n\r\nWhen provided with a specific context, such as a sustainability report, you are to extract and quote exact wording from the context to answer questions related to the report. The context will be a document that contains information on a company's environmental, social, and governance (ESG) practices and performance. Your task is to:\r\n\r\n1. **Identify Key Phrases**: When answering a question, quote exact wording from the context when possible. If the answer is not in the context, reply \"Not in report\".\r\n\r\n2. **Understand Contextual Nuances**: Pay attention to the specific sections or headings within the context that pertain to the question. For instance, if the question is about a company's environmental policies, focus on the sections labeled \"Environmental Policy\" or \"Sustainability Initiatives\".\r\n\r\n3. **Generalizable Strategy**: Use a systematic approach to locate information within the context. This includes scanning headings, subheadings, and bullet points to quickly identify relevant sections. When a question is asked, use these headings as a guide to find the answer.\r\n\r\n4. **Domain-Specific Factual Information**: Be aware of common terms and phrases used in ESG reports, such as \"materiality assessment\", \"stakeholder engagement\", \"carbon footprint\", \"resource efficiency\", \"occupational health and safety\", and \"compliance with regulations\". These terms are crucial for understanding the context and answering questions accurately.\r\n\r\n5. **Feedback Incorporation**: Consider the feedback provided for previous responses. If a response was scored low, analyze the reasons and adjust your approach accordingly. For example, if feedback indicates that the response was not detailed enough, ensure that your answer includes all relevant information from the context.\r\n\r\n6. **Task Specifics**: For the task at hand, focus on the following:\r\n   - **ESG Report Review**: The context will be a sustainability report, so be familiar with the structure and content of such reports.\r\n   - **Exact W\r\n2026/06/03 10:15:42 INFO dspy.evaluate.evaluate: Average Metric: 7.28433829908125 / 3 (242.8%)",
+          "## Instructions for Assistant\r\n\r\nWhen provided with a specific context, such as a sustainability report, you are to extract and quote exact wording from the context to answer questions related to the report. The context will be a document that contains information on a company's environmental, social, and governance (ESG) practices and performance. Your task is to:\r\n\r\n1. **Identify Key Information**: Locate and quote exact wording from the context when the answer to a question is explicitly stated.\r\n2. **Synthesize Information**: If the answer is not directly quoted, synthesize the information from the context to provide a coherent and accurate response.\r\n3. **Use Domain-Specific Language**: When possible, use the exact terminology and phrases from the context to ensure accuracy.\r\n4. **Address Specific Questions**: Answer the questions as they are asked, focusing on the specific details requested.\r\n5. **Handle Absence of Information**: If the answer is not present in the context, clearly state \"Not in report.\"\r\n6. **Generalizable Strategy**: Utilize a strategy that involves scanning the context for relevant sections, identifying key terms and phrases, and then cross-referencing these with the question to find the most accurate answer.\r\n\r\n## Example of Detailed Task Description\r\n\r\nFor instance, if a question asks about a company's approach to energy efficiency, you should:\r\n- Look for sections in the context that discuss energy management or product energy efficiency.\r\n- Quote exact wording from these sections if they directly answer the question.\r\n- If the answer is not directly quoted, synthesize the information from the context, such as mentioning any specific initiatives or goals the company has set for improving energy efficiency.\r\n- If the context does not provide any information on energy efficiency, reply with \"Not in report.\"\r\n\r\n## Niche and Domain-Specific Factual Information\r\n\r\n- **ESG Factors**: Familiarize yourself with the common ESG factors such as environmental impact, social responsibility, and corporate governance.\r\n- **Materiality Assessment**: Understand\r\n2026/06/03 10:32:15 INFO dspy.evaluate.evaluate: Average Metric: 7.280651342444586 / 3 (242.7%)",
+          "## Instructions\r\n\r\nYou are an ESG sustainability analyst tasked with reviewing ASMPT's 2024 sustainability report. Your role is to extract specific information from the report and provide exact quotes when possible. The following are the details of the tasks you are to perform:\r\n\r\n1. **Material ESG Factors Adjustments**: Identify and quote the exact wording from the report regarding the adjustments made to the ESG Material Factors by ASMPT. Specifically, look for the combination of similar factors and mention any examples provided in the report.\r\n\r\n2. **WORKS Optimisation System Focus**: Quote the exact wording from the report that contrasts the primary focus of ASMPT's WORKS Optimisation system with traditional inspection systems. Focus on the comprehensive view and integration aspects mentioned.\r\n\r\n3. **Employee Health and Safety Components**: Extract and quote the exact wording from the report that lists the three key components for ensuring employee health and safety. These should be specific measures or strategies mentioned in the report.\r\n\r\n4. **Generalizable Strategy for Future Tasks**: Note any generalizable strategy or approach used by the assistant to solve the tasks. This could include how the assistant identified the relevant sections of the report, the process of extracting information, or any specific techniques used to ensure accuracy.\r\n\r\n5. **Domain-Specific Factual Information**: Identify any niche or domain-specific factual information that was used to answer the questions. This could include specific terms, concepts, or industry standards mentioned in the report.\r\n\r\nPlease ensure that your responses are concise and directly address the questions. If the answer is not in the report, reply with \"Not in report\". Use the provided examples as a guide for formatting your responses.\r\n2026-06-03 10:40:51 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.\r\n2026/06/03 10:40:57 INFO dspy.evaluate.evaluate: Average Metric: 5.78433829908125 / 3 (192.8%)",
+          "## Instruction for Assistant\r\n\r\nAs an ESG sustainability analyst, you are tasked with reviewing ASMPT's 2024 sustainability report. Your primary focus is to extract and summarize key information related to the company's sustainability strategies, performance, and challenges. The following are specific tasks you are to perform:\r\n\r\n1. **Extract Key Components of Employee Health and Safety Measures:**\r\n   - Identify and quote exact wording from the report for the three key components mentioned for ensuring employee health and safety.\r\n   - If the answer is not explicitly stated in the report, provide a summary of the relevant sections that discuss health and safety measures.\r\n\r\n2. **Analyze Adjustments Made to ESG Material Factors:**\r\n   - Quote exact wording from the report to describe the adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency.\r\n   - If the adjustments are not explicitly mentioned, summarize the changes in the context provided.\r\n\r\n3. **Compare WORKS Optimisation System with Traditional Inspection Systems:**\r\n   - Quote exact wording from the report to highlight the primary focus of ASMPT's WORKS Optimisation system in contrast to traditional inspection systems.\r\n   - If the comparison is not directly stated, summarize the differences based on the context provided.\r\n\r\n4. **Identify and Summarize Challenges and Opportunities:**\r\n   - Summarize the main challenges and opportunities ASMPT identifies in its sustainability report.\r\n   - Quote exact wording from the report when possible.\r\n\r\n5. **Generalizable Strategy for Future Analyses:**\r\n   - Utilize a generalizable strategy for analyzing sustainability reports, which includes:\r\n     - Identifying and summarizing key performance indicators (KPIs).\r\n     - Analyzing the company's goals and strategies for sustainability.\r\n     - Assessing the report's alignment with recognized sustainability standards and practices.\r\n\r\nRemember to provide clear, concise, and accurate information based on the report's content. Avoid making assumptions or interpretations that are not supported by the report. Your responses should be structured to\r\n2026/06/03 10:48:53 INFO dspy.evaluate.evaluate: Average Metric: 7.19032739242165 / 3 (239.7%)"
+        ]
+      },
+      "trial_log": [
+        {
+          "trial": 0,
+          "score": 2.3642663291124464,
+          "kind": "default (baseline program)",
+          "params": "Program 0 (seed)"
+        },
+        {
+          "trial": 1,
+          "score": 5.566650509440426,
+          "kind": "subsample (rejected)",
+          "params": "Iter 1: proposed score 5.57 vs prior best 7.09"
+        },
+        {
+          "trial": 2,
+          "score": 7.28433829908125,
+          "kind": "subsample (rejected)",
+          "params": "Iter 2: proposed score 7.28 vs prior best 7.31"
+        },
+        {
+          "trial": 3,
+          "score": 7.280651342444586,
+          "kind": "subsample (rejected)",
+          "params": "Iter 3: proposed score 7.28 vs prior best 7.31"
+        },
+        {
+          "trial": 4,
+          "score": 5.78433829908125,
+          "kind": "subsample (rejected)",
+          "params": "Iter 4: proposed score 5.78 vs prior best 7.09"
+        },
+        {
+          "trial": 5,
+          "score": 7.19032739242165,
+          "kind": "subsample (accepted)",
+          "params": "Iter 5: proposed score 7.19 vs prior best 5.59"
+        },
+        {
+          "trial": 5,
+          "score": 2.3967757974738833,
+          "kind": "full valset eval (accepted)",
+          "params": "Iter 5: added as program 1"
+        }
+      ],
       "gt_mode": "no_gt",
       "optimizer": "GEPA",
       "trainset_size": 3

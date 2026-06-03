@@ -326,6 +326,170 @@ _Runtime = RagdxRuntime
 _apply_litellm_temperature_clamp = apply_litellm_temperature_clamp
 
 
+# =====================================================================
+# DSPy GEPA log capture (PR8+)
+# =====================================================================
+class _GEPATrialScoreCapture(logging.Handler):
+    """Parse DSPy GEPA's per-iteration log so the HTML report can show
+    "what prompts did GEPA actually propose, on which iterations,
+    with what scores".
+
+    GEPA logs four shapes of interest, each as a single ``logger.info``
+    call (with ``Proposed new text`` carrying the **full multi-line**
+    instruction text -- ``record.getMessage()`` returns it verbatim):
+
+    * ``Iteration N: Base program full valset score: V over X / Y examples``
+      -- iteration 0 baseline.
+    * ``Iteration N: Selected program X score: V``
+      -- which earlier candidate this iteration is mutating.
+    * ``Iteration N: Proposed new text for predict: <multi-line text>``
+      -- the newly-proposed instruction.
+    * ``Iteration N: New subsample score V is (not )?better than old score W``
+      -- whether the proposal beat the prior best at minibatch scoring.
+    * ``Iteration N: Found a better program on the valset with score Z``
+      -- full-valset confirmation when subsample passed.
+
+    The accumulator surfaces two fields the existing renderer already
+    knows how to draw (we deliberately reuse the MIPROv2 shapes so
+    ``_render_dspy_a_b`` needs no GEPA-specific branch):
+
+    * ``proposed_per_iter: list[{"iter": int, "text": str}]`` -- aligned
+      with ``proposed_instructions_by_predictor["predict"]``.
+    * ``trials: list[{"trial": int, "kind": str, "score": float,
+                      "params": str}]`` -- aligned with the MIPROv2
+      ``trial_log`` shape.
+    """
+
+    # Number patterns avoid the trailing-period gotcha:
+    # ``5.592798987337338.`` (end of sentence) -> would otherwise be
+    # captured including the dot and crash ``float()``.
+    _NUM = r"[0-9]+(?:\.[0-9]+)?(?:[eE][+\-]?[0-9]+)?"
+    _BASE_RE = re.compile(
+        rf"Iteration\s+(\d+):\s+Base program full valset score:\s*({_NUM})",
+    )
+    _SELECTED_RE = re.compile(
+        rf"Iteration\s+(\d+):\s+Selected program\s+(\d+)\s+score:\s*({_NUM})",
+    )
+    _PROPOSED_RE = re.compile(
+        r"Iteration\s+(\d+):\s+Proposed new text for predict:\s+",
+    )
+    _SUBSAMPLE_RE = re.compile(
+        rf"Iteration\s+(\d+):\s+New subsample score\s+({_NUM})\s+"
+        rf"is\s+(not\s+)?better than old score\s+({_NUM})",
+    )
+    _FULLEVAL_RE = re.compile(
+        rf"Iteration\s+(\d+):\s+Found a better program on the valset "
+        rf"with score\s+({_NUM})",
+    )
+    _NEW_PROG_IDX_RE = re.compile(
+        r"Iteration\s+(\d+):\s+New program candidate index:\s+(\d+)",
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.proposed_per_iter: list[dict] = []
+        self.trials: list[dict] = []
+        # State carried between log lines (one iteration spans
+        # several records: Selected -> Proposed -> subsample [-> full]).
+        self._current: dict | None = None
+
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = record.getMessage()
+        if "dspy.teleprompt.gepa" not in record.name and "gepa" not in msg.lower():
+            # Belt-and-braces: we only attach to the gepa logger, but
+            # if a caller wires us elsewhere we'd rather drop the line
+            # than mis-attribute it.
+            if "Iteration" not in msg:
+                return
+
+        # Iter 0 baseline.
+        m = self._BASE_RE.search(msg)
+        if m is not None:
+            iter_num = int(m.group(1))
+            score = float(m.group(2))
+            self.trials.append({
+                "trial": iter_num,
+                "score": score,
+                "kind": "default (baseline program)",
+                "params": "Program 0 (seed)",
+            })
+            return
+
+        # Iteration X Selected program Y score Z -- starts a new iter.
+        m = self._SELECTED_RE.search(msg)
+        if m is not None:
+            iter_num = int(m.group(1))
+            parent_idx = int(m.group(2))
+            parent_score = float(m.group(3))
+            self._current = {
+                "iter": iter_num,
+                "parent_idx": parent_idx,
+                "parent_score": parent_score,
+            }
+            return
+
+        # Iteration X Proposed new text -- multi-line. record.getMessage()
+        # returns the full string. Strip the prefix and store.
+        m = self._PROPOSED_RE.search(msg)
+        if m is not None:
+            iter_num = int(m.group(1))
+            # The proposed text is everything after the prefix.
+            prefix_end = msg.find("Proposed new text for predict:")
+            text = msg[prefix_end + len("Proposed new text for predict:"):].strip()
+            self.proposed_per_iter.append({"iter": iter_num, "text": text})
+            return
+
+        # Iteration X New subsample score Y is (not )?better than Z.
+        m = self._SUBSAMPLE_RE.search(msg)
+        if m is not None:
+            iter_num = int(m.group(1))
+            sub_score = float(m.group(2))
+            rejected = bool(m.group(3))
+            old_score = float(m.group(4))
+            kind = "subsample (rejected)" if rejected else "subsample (accepted)"
+            params = (
+                f"Iter {iter_num}: proposed score {sub_score:.2f} vs prior best {old_score:.2f}"
+            )
+            self.trials.append({
+                "trial": iter_num,
+                "score": sub_score,
+                "kind": kind,
+                "params": params,
+            })
+            return
+
+        # Iteration X Found a better program on the valset with score Z.
+        m = self._FULLEVAL_RE.search(msg)
+        if m is not None:
+            iter_num = int(m.group(1))
+            full_score = float(m.group(2))
+            self.trials.append({
+                "trial": iter_num,
+                "score": full_score,
+                "kind": "full valset eval (accepted)",
+                "params": f"Iter {iter_num}: confirmed at full valset",
+            })
+            return
+
+        # Iteration X New program candidate index: I -- annotation only,
+        # logged for completeness so the renderer can show "added as
+        # program N" in a future revision.
+        m = self._NEW_PROG_IDX_RE.search(msg)
+        if m is not None:
+            iter_num = int(m.group(1))
+            new_idx = int(m.group(2))
+            # Adjust the latest "full valset eval (accepted)" trial.
+            for trial in reversed(self.trials):
+                if (
+                    trial.get("trial") == iter_num
+                    and trial.get("kind") == "full valset eval (accepted)"
+                ):
+                    trial["params"] = (
+                        f"Iter {iter_num}: added as program {new_idx}"
+                    )
+                    break
+
+
 def _build_runtime(cfg: ExperimentConfig) -> RagdxRuntime:
     """Build the runtime for an ``ExperimentConfig``.
 
