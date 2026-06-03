@@ -378,11 +378,30 @@ class GenerationOptimizer(StageOptimizer):
                 # GEPA (Genetic-Pareto reflective evolution, paper
                 # arXiv:2507.19457): uses LLM reflection on execution
                 # traces to evolve text components (instructions).
-                # Marked experimental in DSPy; same auto budget knob
-                # as MIPROv2 (light/medium/heavy).
+                # Marked experimental in DSPy.
+                #
+                # GEPA's ``auto`` setting assumes a fast LM (~30 calls
+                # per second) and budgets ~392 rollouts for "light".
+                # On slow / rate-limited LMs like GLM-4-Flash this
+                # turns into a 16+ hour run -- so we translate
+                # ``--mipro-auto`` into an explicit
+                # ``max_metric_calls`` instead, with budgets sized
+                # for production iteration speed (not paper-reproduction
+                # rigor):
+                #
+                #   light  -> 30  calls (~3-5 reflections, ~15-30 min)
+                #   medium -> 100 calls (~10-15 reflections, ~1 hour)
+                #   heavy  -> 300 calls (~30-50 reflections, ~3 hours)
+                #
+                # Users who want paper-faithful settings can hand-edit
+                # _dspy_opt_kwargs in code or use a custom dspy script.
+                _gepa_budget_map = {
+                    "light": 30, "medium": 100, "heavy": 300,
+                }
+                _mipro_auto = getattr(ctx, "mipro_auto", "light")
                 _dspy_opt_str = "GEPA"
                 _dspy_opt_kwargs = {
-                    "auto": getattr(ctx, "mipro_auto", "light"),
+                    "max_metric_calls": _gepa_budget_map.get(_mipro_auto, 30),
                     # reflection_lm: the (typically stronger) LM that
                     # GEPA uses to propose new instructions from
                     # execution traces. We share the student LM by
