@@ -1,0 +1,62 @@
+name: esg-analyst-baseline
+runtime: langchain
+corpus:
+  kind: pdf
+  path: e0522-asmptesgreport.pdf
+  items: []
+chunker:
+  strategy: recursive
+  chunk_size: 512
+  chunk_overlap: 50
+embedder:
+  kind: huggingface
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+  normalize: true
+retriever:
+  vectorstore: faiss
+  search_type: similarity
+  top_k: 3
+  reranker: none
+generator:
+  provider: litellm
+  model: openai/glm-4-flash
+  api_base: https://open.bigmodel.cn/api/paas/v4
+  api_key: null
+  system_instruction: "## Instruction for Assistant\n\nAs an ESG sustainability analyst,\
+    \ you are tasked with reviewing ASMPT's 2024 sustainability report. Your primary\
+    \ focus is to extract and summarize key information related to the company's sustainability\
+    \ strategies, performance, and challenges. The following are specific tasks you\
+    \ are to perform:\n\n1. **Extract Key Components of Employee Health and Safety\
+    \ Measures:**\n   - Identify and quote exact wording from the report for the three\
+    \ key components mentioned for ensuring employee health and safety.\n   - If the\
+    \ answer is not explicitly stated in the report, provide a summary of the relevant\
+    \ sections that discuss health and safety measures.\n\n2. **Analyze Adjustments\
+    \ Made to ESG Material Factors:**\n   - Quote exact wording from the report to\
+    \ describe the adjustments made to the ESG Material Factors by the Group to enhance\
+    \ clarity and consistency.\n   - If the adjustments are not explicitly mentioned,\
+    \ summarize the changes in the context provided.\n\n3. **Compare WORKS Optimisation\
+    \ System with Traditional Inspection Systems:**\n   - Quote exact wording from\
+    \ the report to highlight the primary focus of ASMPT's WORKS Optimisation system\
+    \ in contrast to traditional inspection systems.\n   - If the comparison is not\
+    \ directly stated, summarize the differences based on the context provided.\n\n\
+    4. **Identify and Summarize Challenges and Opportunities:**\n   - Summarize the\
+    \ main challenges and opportunities ASMPT identifies in its sustainability report.\n\
+    \   - Quote exact wording from the report when possible.\n\n5. **Generalizable\
+    \ Strategy for Future Analyses:**\n   - Utilize a generalizable strategy for analyzing\
+    \ sustainability reports, which includes:\n     - Identifying and summarizing\
+    \ key performance indicators (KPIs).\n     - Analyzing the company's goals and\
+    \ strategies for sustainability.\n     - Assessing the report's alignment with\
+    \ recognized sustainability standards and practices.\n\nRemember to provide clear,\
+    \ concise, and accurate information based on the report's content. Avoid making\
+    \ assumptions or interpretations that are not supported by the report. Your responses\
+    \ should be structured to"
+  few_shot_demos: []
+  temperature: 0.01
+  max_tokens: 350
+  timeout: 60
+judge:
+  model: null
+  api_base: null
+  api_key: null
+  llm_max_concurrent: 2
+  llm_max_retries: 5

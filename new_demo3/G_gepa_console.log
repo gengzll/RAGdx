@@ -1,0 +1,225 @@
+Inheriting from run d84762c9da44: experiment=corpus-chunking-search, 
+stage=corpus, max_trials=3, search_space={'parser': ['pymupdf_layout', 
+'unstructured', 'html_semantic'], 'document_structure': ['preserve_sections', 
+'flat_chunks'], 'chunk_size': [384, 512, 768, 1024], 'chunk_overlap': [32, 64, 
+96, 128], 'table_strategy': ['repeat_headers', 'table_to_text']}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Checkpoint: ckpt_283090ff (resumable via `ragdx tune --resume ckpt_283090ff`)
+Running generation optimizer on 548 chunks x 3 records (GT mode: no_gt, budget:
+3)...
+2026-06-03 09:56:36 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (a) baseline run
+2026-06-03 09:57:15 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:39,  4.99s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:29<01:56, 16.71s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [01:03<02:25, 24.20s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [01:04<01:16, 15.22s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [01:08<00:45, 11.29s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:24<00:38, 12.69s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:28<00:20, 10.02s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:38<00:09,  9.98s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:51<00:00, 10.73s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:51<00:00, 12.33s/it]
+2026-06-03 09:59:07 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] using ragas composite (context_precision + faithfulness + answer_relevancy) as inner-loop metric
+2026-06-03 09:59:07 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (b) MIPROv2 optimisation
+2026-06-03 09:59:07 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] running GEPA with kwargs={'max_metric_calls': 30, 'reflection_lm': <dspy.clients.lm.LM object at 0x00000255DF4BE960>, 'num_threads': 2, 'track_stats': True, 'skip_perfect_score': False}
+2026/06/03 09:59:07 INFO dspy.teleprompt.gepa.gepa: Running GEPA for approx 30 metric calls of the program. This amounts to 10.00 full evals on the train set.
+2026/06/03 09:59:07 WARNING dspy.teleprompt.gepa.gepa: No valset provided; Using trainset as valset. This is useful as an inference-time scaling strategy where you want GEPA to find the best solutions for the provided tasks in the trainset, as it makes GEPA overfit prompts to the provided trainset. In order to ensure generalization and perform well on unseen tasks, please provide separate trainset and valset. Provide the smallest valset that is just large enough to match the downstream task distribution, while keeping trainset as large as possible.
+2026/06/03 09:59:07 INFO dspy.teleprompt.gepa.gepa: Using 3 examples for tracking Pareto scores. You can consider using a smaller sample of the valset to allow GEPA to explore more diverse solutions within the same budget. GEPA requires you to provide the smallest valset that is just large enough to match your downstream task distribution, while providing as large trainset as possible.
+GEPA Optimization:   0%|          | 0/30 [00:00<?, ?rollouts/s]2026/06/03 10:01:01 INFO dspy.evaluate.evaluate: Average Metric: 7.092798987337339 / 3 (236.4%)
+2026/06/03 10:01:01 INFO dspy.teleprompt.gepa.gepa: Iteration 0: Base program full valset score: 2.3642663291124464 over 3 / 3 examples
+GEPA Optimization:  10%|¨€         | 3/30 [01:54<17:07, 38.07s/rollouts]2026/06/03 10:01:01 INFO dspy.teleprompt.gepa.gepa: Iteration 1: Selected program 0 score: 2.3642663291124464
+  0%|          | 0/3 [00:00<?, ?it/s]Average Metric: 2.49 / 1 (249.4%):   0%|          | 0/3 [00:49<?, ?it/s]Average Metric: 2.49 / 1 (249.4%):  33%|¨€¨€¨€¨†      | 1/3 [00:49<01:38, 49.12s/it]Average Metric: 4.77 / 2 (238.4%):  33%|¨€¨€¨€¨†      | 1/3 [01:00<01:38, 49.12s/it]Average Metric: 4.77 / 2 (238.4%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:00<00:27, 27.02s/it]Average Metric: 7.09 / 3 (236.4%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:44<00:27, 27.02s/it]Average Metric: 7.09 / 3 (236.4%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [01:44<00:00, 34.64s/it]Average Metric: 7.09 / 3 (236.4%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [01:44<00:00, 34.79s/it]2026/06/03 10:02:45 INFO dspy.evaluate.evaluate: Average Metric: 7.092798987337339 / 3 (236.4%)
+2026/06/03 10:06:16 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
+2026/06/03 10:06:16 INFO dspy.teleprompt.gepa.gepa: Iteration 1: Proposed new text for predict: ## Instruction for Assistant
+
+As an ESG sustainability analyst, you are tasked with reviewing ASMPT's 2024 sustainability report. Your primary focus is to extract and summarize key information related to the company's environmental, social, and governance (ESG) practices and performance. The following are specific tasks and guidelines for your analysis:
+
+### Task 1: Key Components of Employee Health and Safety
+- **Objective**: Identify and quote the exact wording from the report that outlines the three key components ASMPT mentions for ensuring employee health and safety.
+- **Guidance**: Use the provided context or refer to the report directly if the context is insufficient.
+
+### Task 2: WORKS Optimisation System Focus
+- **Objective**: Compare and contrast the primary focus of ASMPT's WORKS Optimisation system with traditional inspection systems, using exact wording from the report.
+- **Guidance**: Focus on the comprehensive view of the operational process and the integration of data from all machines on the line.
+
+### Task 3: Adjustments to ESG Material Factors
+- **Objective**: Summarize the adjustments made by ASMPT to enhance clarity and consistency in their ESG Material Factors, quoting exact wording from the report.
+- **Guidance**: Pay attention to the merging of similar factors and the alignment with recognized standards and practices.
+
+### Additional Guidelines
+- **Contextual Understanding**: When answering questions, demonstrate an understanding of the context by referencing specific sections of the report.
+- **Domain-Specific Factual Information**: Utilize factual information specific to ESG reporting and sustainability practices, as provided in the examples.
+- **Generalizable Strategy**: Apply a strategy that can be used for similar tasks, such as identifying key components, comparing systems, or summarizing adjustments.
+- **Feedback Incorporation**: Consider the feedback provided for previous tasks to improve the accuracy and relevance of your responses.
+
+### Note
+- Ensure that your responses are concise and directly address the questions.
+- If a specific answer is
+2026-06-03 10:08:51 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.
+2026/06/03 10:08:56 INFO dspy.evaluate.evaluate: Average Metric: 5.566650509440426 / 3 (185.6%)
+2026/06/03 10:08:56 INFO dspy.teleprompt.gepa.gepa: Iteration 1: New subsample score 5.566650509440426 is not better than old score 7.092798987337339, skipping
+GEPA Optimization:  30%|¨€¨€¨€       | 9/30 [09:49<24:00, 68.58s/rollouts]2026/06/03 10:08:56 INFO dspy.teleprompt.gepa.gepa: Iteration 2: Selected program 0 score: 2.3642663291124464
+
+  0%|          | 0/3 [00:00<?, ?it/s]Average Metric: 2.33 / 1 (232.5%):   0%|          | 0/3 [00:46<?, ?it/s]Average Metric: 2.33 / 1 (232.5%):  33%|¨€¨€¨€¨†      | 1/3 [00:46<01:33, 46.98s/it]Average Metric: 4.82 / 2 (240.9%):  33%|¨€¨€¨€¨†      | 1/3 [01:13<01:33, 46.98s/it]Average Metric: 4.82 / 2 (240.9%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:13<00:35, 35.09s/it]Average Metric: 7.31 / 3 (243.8%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [02:19<00:35, 35.09s/it]Average Metric: 7.31 / 3 (243.8%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [02:19<00:00, 49.26s/it]Average Metric: 7.31 / 3 (243.8%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [02:19<00:00, 46.62s/it]2026/06/03 10:11:16 INFO dspy.evaluate.evaluate: Average Metric: 7.312963552803762 / 3 (243.8%)
+2026-06-03 10:12:46 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.
+2026/06/03 10:12:50 WARNING dspy.teleprompt.gepa.gepa_utils: The score returned by the metric with pred_name is different from the overall metric score. This can indicate 2 things: Either the metric is non-deterministic (e.g., LLM-as-judge, Semantic score, etc.) or the metric returned a score specific to pred_name that differs from the module level score. Currently, GEPA does not support predictor level scoring (support coming soon), and only requires a feedback text to be provided, which can be specific to the predictor or program level. GEPA will ignore the differing score returned, and instead use module level score. You can safely ignore this warning if using a semantic metric, however, if this mismatch is caused due to predictor scoring, please return module-level scores. To disable this warning, set warn_on_score_mismatch=False.
+2026/06/03 10:14:07 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
+2026/06/03 10:14:07 INFO dspy.teleprompt.gepa.gepa: Iteration 2: Proposed new text for predict: ## Instructions for Assistant
+
+When provided with a specific context, such as a sustainability report, you are to extract and quote exact wording from the context to answer questions related to the report. The context will be a document that contains information on a company's environmental, social, and governance (ESG) practices and performance. Your task is to:
+
+1. **Identify Key Phrases**: When answering a question, quote exact wording from the context when possible. If the answer is not in the context, reply "Not in report".
+
+2. **Understand Contextual Nuances**: Pay attention to the specific sections or headings within the context that pertain to the question. For instance, if the question is about a company's environmental policies, focus on the sections labeled "Environmental Policy" or "Sustainability Initiatives".
+
+3. **Generalizable Strategy**: Use a systematic approach to locate information within the context. This includes scanning headings, subheadings, and bullet points to quickly identify relevant sections. When a question is asked, use these headings as a guide to find the answer.
+
+4. **Domain-Specific Factual Information**: Be aware of common terms and phrases used in ESG reports, such as "materiality assessment", "stakeholder engagement", "carbon footprint", "resource efficiency", "occupational health and safety", and "compliance with regulations". These terms are crucial for understanding the context and answering questions accurately.
+
+5. **Feedback Incorporation**: Consider the feedback provided for previous responses. If a response was scored low, analyze the reasons and adjust your approach accordingly. For example, if feedback indicates that the response was not detailed enough, ensure that your answer includes all relevant information from the context.
+
+6. **Task Specifics**: For the task at hand, focus on the following:
+   - **ESG Report Review**: The context will be a sustainability report, so be familiar with the structure and content of such reports.
+   - **Exact W
+2026/06/03 10:15:42 INFO dspy.evaluate.evaluate: Average Metric: 7.28433829908125 / 3 (242.8%)
+2026/06/03 10:15:42 INFO dspy.teleprompt.gepa.gepa: Iteration 2: New subsample score 7.28433829908125 is not better than old score 7.312963552803762, skipping
+GEPA Optimization:  50%|¨€¨€¨€¨€¨€     | 15/30 [16:35<17:01, 68.08s/rollouts]2026/06/03 10:15:42 INFO dspy.teleprompt.gepa.gepa: Iteration 3: Selected program 0 score: 2.3642663291124464
+
+  0%|          | 0/3 [00:00<?, ?it/s]Average Metric: 2.49 / 1 (249.4%):   0%|          | 0/3 [00:49<?, ?it/s]Average Metric: 2.49 / 1 (249.4%):  33%|¨€¨€¨€¨†      | 1/3 [00:49<01:38, 49.34s/it]Average Metric: 4.99 / 2 (249.4%):  33%|¨€¨€¨€¨†      | 1/3 [01:20<01:38, 49.34s/it]Average Metric: 4.99 / 2 (249.4%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:20<00:38, 38.89s/it]Average Metric: 7.31 / 3 (243.8%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:40<00:38, 38.89s/it]Average Metric: 7.31 / 3 (243.8%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [01:40<00:00, 30.13s/it]Average Metric: 7.31 / 3 (243.8%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [01:40<00:00, 33.54s/it]2026/06/03 10:17:23 INFO dspy.evaluate.evaluate: Average Metric: 7.312963552803762 / 3 (243.8%)
+2026-06-03 10:18:53 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.
+2026/06/03 10:30:43 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
+2026/06/03 10:30:43 INFO dspy.teleprompt.gepa.gepa: Iteration 3: Proposed new text for predict: ## Instructions for Assistant
+
+When provided with a specific context, such as a sustainability report, you are to extract and quote exact wording from the context to answer questions related to the report. The context will be a document that contains information on a company's environmental, social, and governance (ESG) practices and performance. Your task is to:
+
+1. **Identify Key Information**: Locate and quote exact wording from the context when the answer to a question is explicitly stated.
+2. **Synthesize Information**: If the answer is not directly quoted, synthesize the information from the context to provide a coherent and accurate response.
+3. **Use Domain-Specific Language**: When possible, use the exact terminology and phrases from the context to ensure accuracy.
+4. **Address Specific Questions**: Answer the questions as they are asked, focusing on the specific details requested.
+5. **Handle Absence of Information**: If the answer is not present in the context, clearly state "Not in report."
+6. **Generalizable Strategy**: Utilize a strategy that involves scanning the context for relevant sections, identifying key terms and phrases, and then cross-referencing these with the question to find the most accurate answer.
+
+## Example of Detailed Task Description
+
+For instance, if a question asks about a company's approach to energy efficiency, you should:
+- Look for sections in the context that discuss energy management or product energy efficiency.
+- Quote exact wording from these sections if they directly answer the question.
+- If the answer is not directly quoted, synthesize the information from the context, such as mentioning any specific initiatives or goals the company has set for improving energy efficiency.
+- If the context does not provide any information on energy efficiency, reply with "Not in report."
+
+## Niche and Domain-Specific Factual Information
+
+- **ESG Factors**: Familiarize yourself with the common ESG factors such as environmental impact, social responsibility, and corporate governance.
+- **Materiality Assessment**: Understand
+2026/06/03 10:32:15 INFO dspy.evaluate.evaluate: Average Metric: 7.280651342444586 / 3 (242.7%)
+2026/06/03 10:32:15 INFO dspy.teleprompt.gepa.gepa: Iteration 3: New subsample score 7.280651342444586 is not better than old score 7.312963552803762, skipping
+GEPA Optimization:  70%|¨€¨€¨€¨€¨€¨€¨€   | 21/30 [33:08<16:23, 109.30s/rollouts]2026/06/03 10:32:15 INFO dspy.teleprompt.gepa.gepa: Iteration 4: Selected program 0 score: 2.3642663291124464
+
+  0%|          | 0/3 [00:00<?, ?it/s]Average Metric: 2.33 / 1 (232.5%):   0%|          | 0/3 [00:48<?, ?it/s]Average Metric: 2.33 / 1 (232.5%):  33%|¨€¨€¨€¨†      | 1/3 [00:48<01:36, 48.40s/it]Average Metric: 4.60 / 2 (229.9%):  33%|¨€¨€¨€¨†      | 1/3 [01:15<01:36, 48.40s/it]Average Metric: 4.60 / 2 (229.9%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:15<00:35, 35.73s/it]Average Metric: 7.09 / 3 (236.4%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:32<00:35, 35.73s/it]Average Metric: 7.09 / 3 (236.4%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [01:32<00:00, 27.45s/it]Average Metric: 7.09 / 3 (236.4%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [01:32<00:00, 30.96s/it]2026/06/03 10:33:47 INFO dspy.evaluate.evaluate: Average Metric: 7.092798987337339 / 3 (236.4%)
+2026-06-03 10:36:09 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.
+2026/06/03 10:38:15 INFO dspy.teleprompt.gepa.gepa: Iteration 4: Proposed new text for predict: ## Instructions
+
+You are an ESG sustainability analyst tasked with reviewing ASMPT's 2024 sustainability report. Your role is to extract specific information from the report and provide exact quotes when possible. The following are the details of the tasks you are to perform:
+
+1. **Material ESG Factors Adjustments**: Identify and quote the exact wording from the report regarding the adjustments made to the ESG Material Factors by ASMPT. Specifically, look for the combination of similar factors and mention any examples provided in the report.
+
+2. **WORKS Optimisation System Focus**: Quote the exact wording from the report that contrasts the primary focus of ASMPT's WORKS Optimisation system with traditional inspection systems. Focus on the comprehensive view and integration aspects mentioned.
+
+3. **Employee Health and Safety Components**: Extract and quote the exact wording from the report that lists the three key components for ensuring employee health and safety. These should be specific measures or strategies mentioned in the report.
+
+4. **Generalizable Strategy for Future Tasks**: Note any generalizable strategy or approach used by the assistant to solve the tasks. This could include how the assistant identified the relevant sections of the report, the process of extracting information, or any specific techniques used to ensure accuracy.
+
+5. **Domain-Specific Factual Information**: Identify any niche or domain-specific factual information that was used to answer the questions. This could include specific terms, concepts, or industry standards mentioned in the report.
+
+Please ensure that your responses are concise and directly address the questions. If the answer is not in the report, reply with "Not in report". Use the provided examples as a guide for formatting your responses.
+2026-06-03 10:40:51 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.
+2026/06/03 10:40:57 INFO dspy.evaluate.evaluate: Average Metric: 5.78433829908125 / 3 (192.8%)
+2026/06/03 10:40:57 INFO dspy.teleprompt.gepa.gepa: Iteration 4: New subsample score 5.78433829908125 is not better than old score 7.092798987337339, skipping
+GEPA Optimization:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 27/30 [41:50<05:02, 100.90s/rollouts]2026/06/03 10:40:57 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Selected program 0 score: 2.3642663291124464
+
+  0%|          | 0/3 [00:00<?, ?it/s]Average Metric: 2.33 / 1 (232.5%):   0%|          | 0/3 [00:48<?, ?it/s]Average Metric: 2.33 / 1 (232.5%):  33%|¨€¨€¨€¨†      | 1/3 [00:48<01:37, 48.54s/it]Average Metric: 4.82 / 2 (241.0%):  33%|¨€¨€¨€¨†      | 1/3 [01:06<01:37, 48.54s/it]Average Metric: 4.82 / 2 (241.0%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [01:06<00:30, 30.80s/it]2026-06-03 10:43:29 WARNING ragdx.optim._ragas_dspy_metric :: ragas faithfulness scoring hit 90s timeout (treated as 0.0). Network hiccup or judge LM hang -- MIPROv2 will keep exploring.
+Average Metric: 5.59 / 3 (186.4%):  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 2/3 [02:38<00:30, 30.80s/it]Average Metric: 5.59 / 3 (186.4%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [02:38<00:00, 58.57s/it]Average Metric: 5.59 / 3 (186.4%): 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 3/3 [02:38<00:00, 52.84s/it]2026/06/03 10:43:35 INFO dspy.evaluate.evaluate: Average Metric: 5.592798987337338 / 3 (186.4%)
+2026/06/03 10:46:54 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
+2026/06/03 10:46:54 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Proposed new text for predict: ## Instruction for Assistant
+
+As an ESG sustainability analyst, you are tasked with reviewing ASMPT's 2024 sustainability report. Your primary focus is to extract and summarize key information related to the company's sustainability strategies, performance, and challenges. The following are specific tasks you are to perform:
+
+1. **Extract Key Components of Employee Health and Safety Measures:**
+   - Identify and quote exact wording from the report for the three key components mentioned for ensuring employee health and safety.
+   - If the answer is not explicitly stated in the report, provide a summary of the relevant sections that discuss health and safety measures.
+
+2. **Analyze Adjustments Made to ESG Material Factors:**
+   - Quote exact wording from the report to describe the adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency.
+   - If the adjustments are not explicitly mentioned, summarize the changes in the context provided.
+
+3. **Compare WORKS Optimisation System with Traditional Inspection Systems:**
+   - Quote exact wording from the report to highlight the primary focus of ASMPT's WORKS Optimisation system in contrast to traditional inspection systems.
+   - If the comparison is not directly stated, summarize the differences based on the context provided.
+
+4. **Identify and Summarize Challenges and Opportunities:**
+   - Summarize the main challenges and opportunities ASMPT identifies in its sustainability report.
+   - Quote exact wording from the report when possible.
+
+5. **Generalizable Strategy for Future Analyses:**
+   - Utilize a generalizable strategy for analyzing sustainability reports, which includes:
+     - Identifying and summarizing key performance indicators (KPIs).
+     - Analyzing the company's goals and strategies for sustainability.
+     - Assessing the report's alignment with recognized sustainability standards and practices.
+
+Remember to provide clear, concise, and accurate information based on the report's content. Avoid making assumptions or interpretations that are not supported by the report. Your responses should be structured to
+2026/06/03 10:48:53 INFO dspy.evaluate.evaluate: Average Metric: 7.19032739242165 / 3 (239.7%)
+2026/06/03 10:48:53 INFO dspy.teleprompt.gepa.gepa: Iteration 5: New subsample score 7.19032739242165 is better than old score 5.592798987337338. Continue to full eval and add to candidate pool.
+2026/06/03 10:50:36 INFO dspy.evaluate.evaluate: Average Metric: 7.19032739242165 / 3 (239.7%)
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Found a better program on the valset with score 2.3967757974738833.
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Valset score for new program: 2.3967757974738833 (coverage 3 / 3)
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Val aggregate for new program: 2.3967757974738833
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Individual valset scores for new program: {0: 2.3060865828843955, 1: 2.3842408095372547, 2: 2.4999999999999996}
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: New valset pareto front scores: {0: 2.3060865828843955, 1: 2.3842408095372547, 2: 2.4999999999999996}
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Valset pareto front aggregate score: 2.3967757974738833
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Updated valset pareto front programs: {0: {1}, 1: {1}, 2: {1}}
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Best valset aggregate score so far: 2.3967757974738833
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Best program as per aggregate score on valset: 1
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Best score on valset: 2.3967757974738833
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: Linear pareto front program index: 1
+2026/06/03 10:50:36 INFO dspy.teleprompt.gepa.gepa: Iteration 5: New program candidate index: 1
+GEPA Optimization:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 27/30 [51:29<05:43, 114.42s/rollouts]
+2026-06-03 10:50:36 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (c) optimised re-run
+2026-06-03 10:51:22 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
+
+Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:05<00:44,  5.52s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:28<01:51, 15.97s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [01:05<02:33, 25.58s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [01:07<01:21, 16.34s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [01:11<00:47, 11.80s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:28<00:39, 13.32s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:32<00:20, 10.37s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:44<00:11, 11.06s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:46<00:00,  8.23s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:46<00:00, 11.87s/it]
+Wrote new_demo3\G_gepa_tune.json
+Wrote optimized config new_demo3\rag_config.gepa_winner.yaml (credentials 
+scrubbed)
+Best composite: 1.604
+Best params: {'system_instruction': "## Instruction for Assistant\n\nAs an ESG 
+sustainability analyst, you are tasked with reviewing ASMPT's 2024 
+sustainability report. Your primary focus is to extract and summarize key 
+information related to the company's sustainability strategies, performance, 
+and challenges. The following are specific tasks you are to perform:\n\n1. 
+**Extract Key Components of Employee Health and Safety Measures:**\n   - 
+Identify and quote exact wording from the report for the three key components 
+mentioned for ensuring employee health and safety.\n   - If the answer is not 
+explicitly stated in the report, provide a summary of the relevant sections 
+that discuss health and safety measures.\n\n2. **Analyze Adjustments Made to 
+ESG Material Factors:**\n   - Quote exact wording from the report to describe 
+the adjustments made to the ESG Material Factors by the Group to enhance 
+clarity and consistency.\n   - If the adjustments are not explicitly mentioned,
+summarize the changes in the context provided.\n\n3. **Compare WORKS 
+Optimisation System with Traditional Inspection Systems:**\n   - Quote exact 
+wording from the report to highlight the primary focus of ASMPT's WORKS 
+Optimisation system in contrast to traditional inspection systems.\n   - If the
+comparison is not directly stated, summarize the differences based on the 
+context provided.\n\n4. **Identify and Summarize Challenges and 
+Opportunities:**\n   - Summarize the main challenges and opportunities ASMPT 
+identifies in its sustainability report.\n   - Quote exact wording from the 
+report when possible.\n\n5. **Generalizable Strategy for Future Analyses:**\n  
+- Utilize a generalizable strategy for analyzing sustainability reports, which 
+includes:\n     - Identifying and summarizing key performance indicators 
+(KPIs).\n     - Analyzing the company's goals and strategies for 
+sustainability.\n     - Assessing the report's alignment with recognized 
+sustainability standards and practices.\n\nRemember to provide clear, concise, 
+and accurate information based on the report's content. Avoid making 
+assumptions or interpretations that are not supported by the report. Your 
+responses should be structured to"}
+2026-06-03 10:53:10 INFO    ragdx.storage.run_store :: Saved run 8c4204179655 name=demo3-generation-gepa
+Saved run: 8c4204179655 (name: demo3-generation-gepa)
+Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 8c4204179655 
+report.md`.

@@ -529,19 +529,21 @@ optimized config**, aligned with what it actually optimizes:
 | `mipro` (default) | (instruction × demos) | both `system_instruction` AND `few_shot_demos` |
 | `copro` | instruction only | only `system_instruction`; `few_shot_demos: []` |
 | `bootstrap_fewshot` | demos only | only `few_shot_demos: [...]`; `system_instruction` unchanged |
+| `gepa` (experimental) | instruction only (reflective evolution) | only `system_instruction`; `few_shot_demos: []` |
 
 This closes the architecture gap noted earlier: previously every
 run wrote only `system_instruction` even when the optimizer found
 demos. Now the schema field that gets populated reflects what the
 algorithm actually evolved.
 
-#### Side-by-side: same baseline, three optimizers
+#### Side-by-side: same baseline, four optimizers
 
 | Run | Optimizer | Wall | What was written | Outcome |
 |---|---|---|---|---|
 | `9fd2d342acef` | `mipro` heavy | 73 min | `system_instruction` (new Industry-4.0 prompt) + `few_shot_demos` populated | full eval matched baseline (1.0 / 1.0) |
 | `7083a760fdfb` | `copro` | 17 min | only `system_instruction` (returned seed — no improvement) | no change |
 | `9797f4e99a43` | `bootstrap_fewshot` | 9 min | only `few_shot_demos: [3 demos]` | demos available at deploy time |
+| `8c4204179655` | `gepa` light (30 calls) | 53 min | only `system_instruction` (new 2136-char reflective prompt vs 189-char seed) | minibatch winner; full eval faithfulness 1.0 → 0.958 (minor regression) |
 
 Inspect the three `rag_config.*_winner.yaml` files in this directory
 to see exactly what each optimizer wrote.
@@ -553,10 +555,19 @@ to see exactly what each optimizer wrote.
 | Static system prompt, no few-shot | **`copro`** — fastest, single field to deploy |
 | Static prompt, dynamic few-shot examples | **`bootstrap_fewshot`** — produces a clean demos list |
 | Both knobs available, want max performance | **`mipro`** (default) — searches the full grid |
+| Want reflective per-trace LLM analysis | **`gepa`** — Pareto evolution + trace reflection (experimental; requires `gepa` package) |
 
-The renderer (`ragdx experiment-report`) handles all three bundle
+> **GEPA budget note.** DSPy GEPA's `auto="light"` plans ~392 rollouts —
+> reasonable on GPT-4 / Claude but produces 16+ hour runs on
+> rate-limited LMs like GLM-4-Flash. ragdx translates
+> `--mipro-auto {light, medium, heavy}` into explicit
+> `max_metric_calls = {30, 100, 300}` so production iteration stays
+> bounded. Power users can edit the mapping in
+> `src/ragdx/optim/stages/generation.py`.
+
+The renderer (`ragdx experiment-report`) handles all four bundle
 shapes — see `G_copro_report.html` (18 KB), `G_bootstrap_report.html`
-(~21 KB), `G_heavy_report.html` (38 KB).
+(~21 KB), `G_gepa_report.html` (~20 KB), `G_heavy_report.html` (38 KB).
 
 ### Visualizing the DSPy A/B as HTML
 
