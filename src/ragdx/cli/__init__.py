@@ -100,6 +100,7 @@ from ragdx.cli import (  # noqa: E402, I001
     evaluate as _evaluate_mod,
     experiment as _experiment_mod,
     optimize as _optimize_mod,
+    providers as _providers_mod,
     runs as _runs_mod,
     tune as _tune_mod,
 )
