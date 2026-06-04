@@ -67,8 +67,21 @@ def _logit(p: float) -> float:
 
 
 class RuleBasedRootCauseAnalyzer:
-    def __init__(self, thresholds: dict[str, float] | None = None, root: str = '.ragdx'):
+    def __init__(self, thresholds: dict[str, float] | None = None, root: str | None = None):
         self.thresholds = thresholds or DEFAULT_THRESHOLDS.copy()
+        # Resolve the storage root via the same settings the rest of
+        # ragdx uses so ``--project`` / ``RAGDX_PROJECT`` / ``RAGDX_ROOT``
+        # actually isolate causal priors per project. Without this, every
+        # diagnose call writes back to the global ``.ragdx/causal/priors.json``
+        # regardless of --project, so posteriors saturate to the 0.95
+        # clamp across all projects (observed in demo_diagnosis run on
+        # 2026-06-04: all 8 nodes prior=0.95 in a "fresh" project).
+        if root is None:
+            try:
+                from ragdx.config import get_settings
+                root = str(get_settings().storage.root)
+            except Exception:  # pragma: no cover - defensive
+                root = '.ragdx'
         self.store = RunStore(root)
         self.base_priors = {
             'corpus_chunking_defect': 0.10,

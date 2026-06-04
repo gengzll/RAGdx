@@ -23,6 +23,42 @@ from __future__ import annotations
 
 __version__ = "0.9.0"
 
+
+def _install_vertexai_shims() -> None:
+    """Pre-import shim for ragas 0.3.x on langchain-community 0.4.x.
+
+    Modern ``langchain-community`` (≥ 0.3.6) moved the Google Vertex
+    chat / completion classes out into the separate
+    ``langchain-google-vertexai`` package, but ragas 0.3.2 still does
+    a hard ``from langchain_community.chat_models.vertexai import
+    ChatVertexAI`` at import time. The class is only used inside ragas
+    when the caller explicitly picks Vertex as their judge LLM -- our
+    GLM / OpenAI flows never trigger it -- so a thin stub module that
+    ``ChatVertexAI`` / ``VertexAI`` resolve to satisfies the import
+    without pulling in google-cloud-aiplatform.
+
+    No-op when the real modules are present (don't shadow a real
+    install). No-op when ragas isn't being used.
+    """
+    import importlib.util
+    import sys
+    import types
+
+    for fullname, attr in (
+        ("langchain_community.chat_models.vertexai", "ChatVertexAI"),
+        ("langchain_community.llms.vertexai", "VertexAI"),
+    ):
+        if importlib.util.find_spec(fullname) is not None:
+            continue
+        if fullname in sys.modules:
+            continue
+        stub = types.ModuleType(fullname)
+        setattr(stub, attr, type(attr, (), {}))
+        sys.modules[fullname] = stub
+
+
+_install_vertexai_shims()
+
 from ragdx.config import (
     ExecutionSettings,
     LLMSettings,
