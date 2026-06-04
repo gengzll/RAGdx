@@ -180,6 +180,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]
+# ``src/ragdx/__init__.py`` deliberately calls
+# ``_install_vertexai_shims()`` *before* the public re-export imports
+# so the langchain-community ``vertexai`` stub is in place by the
+# time ragas tries to import it. Suppress E402 here to express the
+# intent ("imports must follow this call").
+"src/ragdx/__init__.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"

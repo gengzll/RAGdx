@@ -674,11 +674,11 @@ def tune(
     # Rule-based only, no LLM calls. ``ragdx diagnose --use-llm``
     # on the saved run still gives an LLM-refined view.
     try:
+        from ragdx.core.diagnosis import RAGDiagnosisEngine
         from ragdx.experiments import (  # type: ignore[attr-defined]
             _compare_diagnoses,
             _synth_eval_result,
         )
-        from ragdx.core.diagnosis import RAGDiagnosisEngine
 
         if eff_stage == "generation":
             _baseline_diag_scores = dict(

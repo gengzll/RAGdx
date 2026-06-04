@@ -484,7 +484,7 @@ def _render_one_comparison(mode: str, comp: dict) -> str:
     deltas = comp.get("metric_deltas") or {}
     lower_better = set(comp.get("lower_is_better_metrics") or [])
     if deltas:
-        parts.append('<h4>Metric deltas (optimized − baseline)</h4>')
+        parts.append('<h4>Metric deltas (optimized - baseline)</h4>')
         rows = []
         for m, d in sorted(deltas.items(), key=lambda kv: abs(kv[1]), reverse=True):
             if abs(d) < 1e-9:
