@@ -37,21 +37,37 @@ def _install_vertexai_shims() -> None:
     ``ChatVertexAI`` / ``VertexAI`` resolve to satisfies the import
     without pulling in google-cloud-aiplatform.
 
-    No-op when the real modules are present (don't shadow a real
-    install). No-op when ragas isn't being used.
+    No-op when:
+    * ``langchain_community`` isn't installed at all (no ragas user
+      flow possible from this env, so no shim needed).
+    * The real ``vertexai`` submodule is present (don't shadow a
+      real install).
     """
     import importlib.util
     import sys
     import types
 
+    # Bail early if ``langchain_community`` itself isn't installed.
+    # ``find_spec("langchain_community.x.y")`` imports the parent
+    # package as a side-effect, which would raise ModuleNotFoundError
+    # on a minimal install (e.g. ragdx[dev] CI without the langchain
+    # extras). Probing the top-level spec by itself is safe.
+    if importlib.util.find_spec("langchain_community") is None:
+        return
+
     for fullname, attr in (
         ("langchain_community.chat_models.vertexai", "ChatVertexAI"),
         ("langchain_community.llms.vertexai", "VertexAI"),
     ):
-        if importlib.util.find_spec(fullname) is not None:
-            continue
         if fullname in sys.modules:
             continue
+        try:
+            if importlib.util.find_spec(fullname) is not None:
+                continue
+        except (ImportError, ValueError):
+            # Defensive: a broken intermediate package shouldn't
+            # block ragdx from importing. Fall through to the stub.
+            pass
         stub = types.ModuleType(fullname)
         setattr(stub, attr, type(attr, (), {}))
         sys.modules[fullname] = stub
