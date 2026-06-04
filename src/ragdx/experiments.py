@@ -1020,6 +1020,312 @@ def _run_one_mode(
 SCHEMA_VERSION = 1
 
 
+def _winner_scores(bayes_bundle: dict) -> dict[str, float]:
+    """Pull per-metric scores from the BO winner trial.
+
+    The trials list is the source of truth; ``best_params`` identifies
+    the winning row. Falls back to the highest-composite trial if no
+    params match, and to ``{}`` if there are no trials. Used by the
+    diagnosis synthesis below -- we feed these into a synthetic
+    ``EvaluationResult`` so :class:`RAGDiagnosisEngine` can produce a
+    DiagnosisReport for the BO winner config.
+    """
+    trials = bayes_bundle.get("trials") or []
+    if not trials:
+        return {}
+    best_params = bayes_bundle.get("best_params") or {}
+    if best_params:
+        for t in trials:
+            if (t.get("params") or {}) == best_params:
+                return dict(t.get("scores") or {})
+    # Fallback: pick highest composite_score with finite value.
+    best = max(
+        trials,
+        key=lambda t: t.get("composite_score")
+        if isinstance(t.get("composite_score"), (int, float))
+        else float("-inf"),
+        default=None,
+    )
+    return dict((best or {}).get("scores") or {})
+
+
+# Metric -> EvaluationResult bucket. Mirrors the buckets used in
+# ``ragdx.workflows.evaluate``; keep in sync if new metrics are added.
+_RETRIEVAL_METRICS = {
+    "context_precision",
+    "context_recall",
+    "context_entities_recall",
+    "context_utilization",
+    "noise_sensitivity",
+}
+_GENERATION_METRICS = {
+    "faithfulness",
+    "answer_relevancy",
+    "response_relevancy",
+    "hallucination",
+    "citation_accuracy",
+}
+_E2E_METRICS = {"answer_correctness", "answer_accuracy", "answer_similarity"}
+
+
+def _synth_eval_result(
+    scores: dict[str, float],
+    *,
+    mode: str,
+    extra_metadata: dict[str, Any] | None = None,
+) -> Any:
+    """Build a synthetic ``EvaluationResult`` from a flat ``{metric: score}``
+    dict so we can run :class:`RAGDiagnosisEngine` against the BO
+    winner config without a second evaluator pass.
+
+    Bucketed by metric name; unknown metrics land in ``e2e`` so they
+    aren't silently dropped.
+    """
+    from ragdx.schemas.models import EvaluationResult
+
+    retrieval, generation, e2e = {}, {}, {}
+    for k, v in scores.items():
+        if k in _RETRIEVAL_METRICS:
+            retrieval[k] = v
+        elif k in _GENERATION_METRICS:
+            generation[k] = v
+        elif k in _E2E_METRICS:
+            e2e[k] = v
+        else:
+            e2e[k] = v
+    md = {"synthesized_from": "bo_winner", "gt_mode": mode}
+    if extra_metadata:
+        md.update(extra_metadata)
+    return EvaluationResult(
+        retrieval=retrieval, generation=generation, e2e=e2e, metadata=md
+    )
+
+
+def _baseline_scores_for_mode(payload: dict) -> dict[str, float]:
+    """Return the *pre-optimization* metric scores for one mode.
+
+    Diagnosis is a decision-making input -- it's meant to answer
+    "where are the bottlenecks in *this baseline* so we know what to
+    optimize". That logically precedes the optimization, so we
+    diagnose the baseline scores, not the BO winner.
+
+    Sources, in priority order:
+
+    1. ``dspy_a_b[mode].baseline_scores`` -- the GenerationOptimizer
+       evaluates the user's seed config (post-retrieval-BO, but with
+       the default unmodified prompt) before kicking off MIPROv2.
+       This is the most actionable "baseline" we have: it's what the
+       user would see if they ran ``ragdx evaluate`` on the BO winner
+       without any DSPy prompt tuning.
+    2. The first trial in ``bayes_search.trials`` -- a reasonable
+       proxy for the untouched config when the experiment skipped the
+       DSPy generation stage.
+    """
+    dspy_a_b = payload.get("dspy_a_b") or {}
+    baseline = dspy_a_b.get("baseline_scores")
+    if baseline:
+        return dict(baseline)
+    trials = (payload.get("bayes_search") or {}).get("trials") or []
+    if trials:
+        return dict(trials[0].get("scores") or {})
+    return {}
+
+
+def _hyp_key(h: dict) -> tuple[str, str]:
+    """Stable identity for a hypothesis (component + root_cause)."""
+    return (str(h.get("component") or ""), str(h.get("root_cause") or ""))
+
+
+def _compare_diagnoses(
+    baseline: dict | None,
+    optimized: dict | None,
+    *,
+    baseline_scores: dict[str, float] | None = None,
+    optimized_scores: dict[str, float] | None = None,
+    posterior_shift_threshold: float = 0.05,
+) -> dict:
+    """Compute a baseline vs optimized delta summary.
+
+    This is the "did the optimization actually fix what we set out to
+    fix?" layer. Without it the reader gets two adjacent diagnoses and
+    has to eyeball the difference; with it they get an explicit list
+    of what was resolved / persisted / emerged plus posterior shifts.
+
+    Returns a dict with:
+
+    * ``resolved_hypotheses``  -- in baseline, gone in optimized.
+    * ``persisted_hypotheses`` -- in both (still needs attention).
+    * ``emerged_hypotheses``   -- only in optimized (regression or
+       newly-exposed bottleneck, e.g. fixing recall exposes precision).
+    * ``posterior_shifts`` -- per causal node, ``{node, baseline,
+       optimized, delta, direction}``. ``direction`` is ``improved``
+       when posterior drops (the defect is less likely) and
+       ``regressed`` when it rises. Filtered to ``|delta| >= threshold``
+       to suppress noise.
+    * ``top_improvement`` / ``top_regression`` -- the single node with
+       the largest absolute shift in each direction (or ``None``).
+    * ``metric_deltas`` -- per-metric ``optimized - baseline`` (positive
+       = improved for higher-is-better metrics; LOWER_IS_BETTER
+       direction not flipped here -- consumers should know per metric).
+    * ``summary`` -- single-sentence narrative ("Optimization resolved
+       X, but Y regressed; head bottleneck shifted from A to B").
+    """
+    from ragdx.core.thresholds import LOWER_IS_BETTER
+
+    if not baseline and not optimized:
+        return {}
+
+    base_hyp = (baseline or {}).get("hypotheses") or []
+    opt_hyp = (optimized or {}).get("hypotheses") or []
+    base_keys = {_hyp_key(h): h for h in base_hyp}
+    opt_keys = {_hyp_key(h): h for h in opt_hyp}
+
+    resolved = [base_keys[k] for k in base_keys.keys() - opt_keys.keys()]
+    persisted = [opt_keys[k] for k in base_keys.keys() & opt_keys.keys()]
+    emerged = [opt_keys[k] for k in opt_keys.keys() - base_keys.keys()]
+
+    base_signals = {
+        s["node"]: s for s in ((baseline or {}).get("causal_signals") or [])
+    }
+    opt_signals = {
+        s["node"]: s for s in ((optimized or {}).get("causal_signals") or [])
+    }
+    posterior_shifts: list[dict] = []
+    for node in base_signals.keys() | opt_signals.keys():
+        bp = float((base_signals.get(node) or {}).get("posterior", 0.0))
+        op = float((opt_signals.get(node) or {}).get("posterior", 0.0))
+        delta = op - bp
+        if abs(delta) < posterior_shift_threshold:
+            continue
+        posterior_shifts.append({
+            "node": node,
+            "baseline": round(bp, 4),
+            "optimized": round(op, 4),
+            "delta": round(delta, 4),
+            # ``improved`` = the defect is less likely after optimization
+            # (posterior went down). ``regressed`` = posterior went up.
+            "direction": "improved" if delta < 0 else "regressed",
+        })
+    posterior_shifts.sort(key=lambda r: abs(r["delta"]), reverse=True)
+
+    improvements = [r for r in posterior_shifts if r["direction"] == "improved"]
+    regressions = [r for r in posterior_shifts if r["direction"] == "regressed"]
+    top_improvement = improvements[0] if improvements else None
+    top_regression = regressions[0] if regressions else None
+
+    metric_deltas: dict[str, float] = {}
+    if baseline_scores and optimized_scores:
+        for m in sorted(set(baseline_scores) | set(optimized_scores)):
+            bv = baseline_scores.get(m)
+            ov = optimized_scores.get(m)
+            if isinstance(bv, (int, float)) and isinstance(ov, (int, float)):
+                metric_deltas[m] = round(float(ov) - float(bv), 4)
+
+    # One-sentence story for the report header.
+    parts: list[str] = []
+    if resolved:
+        parts.append(f"resolved {len(resolved)} baseline hypothesis(es)")
+    if emerged:
+        parts.append(f"{len(emerged)} new hypothesis(es) emerged")
+    if persisted:
+        parts.append(f"{len(persisted)} still persisting")
+    if top_improvement:
+        parts.append(
+            f"top improvement: {top_improvement['node']} "
+            f"({top_improvement['baseline']:.2f}→{top_improvement['optimized']:.2f})"
+        )
+    if top_regression:
+        parts.append(
+            f"top regression: {top_regression['node']} "
+            f"({top_regression['baseline']:.2f}→{top_regression['optimized']:.2f})"
+        )
+    summary = "; ".join(parts) if parts else "no measurable diagnosis change."
+
+    # Flag noise-level changes ("answer-correctness moved 0.02" isn't a
+    # story). We surface raw deltas but a UI consumer can also use this
+    # to filter rows. We keep the LOWER_IS_BETTER set here so future
+    # consumers don't re-derive direction wrongly.
+    return {
+        "resolved_hypotheses": resolved,
+        "persisted_hypotheses": persisted,
+        "emerged_hypotheses": emerged,
+        "posterior_shifts": posterior_shifts,
+        "top_improvement": top_improvement,
+        "top_regression": top_regression,
+        "metric_deltas": metric_deltas,
+        "lower_is_better_metrics": sorted(LOWER_IS_BETTER),
+        "summary": summary,
+    }
+
+
+def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
+    """Run :class:`RAGDiagnosisEngine` (rule-based only) per mode.
+
+    For each mode returns ``{baseline, optimized, comparison}``:
+
+    * ``baseline``   -- diagnosis at the pre-optimization config; the
+       *driver* of the optimization narrative.
+    * ``optimized``  -- diagnosis at the optimized config; the
+       follow-up showing what (if anything) still needs work.
+    * ``comparison`` -- baseline-vs-optimized delta: resolved /
+       persisted / emerged hypotheses, posterior shifts per causal
+       node, metric deltas. Closes the loop on "did this optimization
+       move the right metrics?".
+
+    Failures are caught and logged -- a missing diagnosis section is
+    preferable to a failed bundle write. Rule-based diagnosis is
+    deterministic and cheap (no LLM calls) so we always run it;
+    ``--use-llm`` / ``--use-both`` remain on the standalone
+    ``ragdx diagnose`` command for users who want a second opinion.
+    """
+    from ragdx.core.diagnosis import RAGDiagnosisEngine
+
+    engine = RAGDiagnosisEngine()
+    out: dict[str, dict] = {}
+    for mode, payload in results_by_mode.items():
+        baseline_scores = _baseline_scores_for_mode(payload)
+        optimized_scores = _winner_scores(payload.get("bayes_search") or {})
+
+        baseline_report: dict | None = None
+        optimized_report: dict | None = None
+        if baseline_scores:
+            try:
+                bres = _synth_eval_result(
+                    baseline_scores, mode=mode,
+                    extra_metadata={"phase": "baseline"},
+                )
+                baseline_report = engine.diagnose(bres).model_dump()
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "baseline diagnosis for mode=%s failed: %s", mode, exc,
+                )
+        if optimized_scores and optimized_scores != baseline_scores:
+            try:
+                ores = _synth_eval_result(
+                    optimized_scores, mode=mode,
+                    extra_metadata={"phase": "optimized"},
+                )
+                optimized_report = engine.diagnose(ores).model_dump()
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "optimized diagnosis for mode=%s failed: %s", mode, exc,
+                )
+        if baseline_report or optimized_report:
+            entry: dict = {
+                "baseline": baseline_report,
+                "optimized": optimized_report,
+            }
+            # Comparison only when we have both sides to compare.
+            if baseline_report and optimized_report:
+                entry["comparison"] = _compare_diagnoses(
+                    baseline_report, optimized_report,
+                    baseline_scores=baseline_scores,
+                    optimized_scores=optimized_scores,
+                )
+            out[mode] = entry
+    return out
+
+
 def _build_unified_bundle(
     cfg: ExperimentConfig,
     results_by_mode: dict[str, dict],
@@ -1112,6 +1418,12 @@ def _build_unified_bundle(
         "objectives": {m: r["objective_spec"] for m, r in results_by_mode.items()},
         "bayes_search": {m: r["bayes_search"] for m, r in results_by_mode.items()},
         "dspy_a_b": {m: r["dspy_a_b"] for m, r in results_by_mode.items()},
+        # Rule-based diagnosis at the BO winner config. Surfaced in
+        # the experiment-report HTML so the report tells the reader
+        # both "what we tried" (bayes_search) and "what to attack next"
+        # (diagnosis). LLM-refined diagnosis is still available via
+        # the standalone ``ragdx diagnose`` command.
+        "diagnosis": _diagnose_per_mode(results_by_mode),
         "extras": extras,
     }
 

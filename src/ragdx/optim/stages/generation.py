@@ -207,13 +207,36 @@ class GenerationOptimizer(StageOptimizer):
             )
 
         # ----- Pick the inner-loop DSPy metric (PR6+) -----------------
-        # Default: ragas composite for no-GT (where ``llm_judge``
-        # saturates), token-F1 for with-GT (where it has a discriminative
-        # GT to compare against). Users override via ``--dspy-metric``.
+        # Default for no-GT: ``embed_rubric`` (2 embedding cosines + a
+        # single multi-output LLM rubric). Cheaper and more
+        # discriminative than the ragas composite, which wastes a slot
+        # on the retrieval-only ``context_precision`` and another on
+        # ``faithfulness`` (saturates on permissive judges). Default
+        # for with-GT stays token-F1 vs GT. Users override via
+        # ``--dspy-metric {embed_rubric, ragas, llm_judge, token_f1}``.
         dspy_metric_choice = getattr(ctx, "dspy_metric", "auto")
         if dspy_metric_choice == "auto":
-            dspy_metric_choice = "ragas" if ctx.label == "no_gt" else "token_f1"
+            dspy_metric_choice = "embed_rubric" if ctx.label == "no_gt" else "token_f1"
         custom_metric = None
+        if dspy_metric_choice == "embed_rubric":
+            from ragdx.optim._embed_rubric_metric import make_embed_rubric_metric
+            try:
+                custom_metric = make_embed_rubric_metric(
+                    embeddings=runtime.embeddings,
+                    judge_lm=runtime.dspy_lm,
+                )
+                logger.info(
+                    "[DSPy/%s] using embed_rubric composite (embed(answer,ctx) + "
+                    "embed(answer,q) + rubric.groundedness + rubric.completeness) "
+                    "as inner-loop metric",
+                    ctx.label,
+                )
+            except ImportError:
+                logger.warning(
+                    "[DSPy/%s] dspy not available for embed_rubric; falling "
+                    "back to ragas composite", ctx.label,
+                )
+                dspy_metric_choice = "ragas"
         if dspy_metric_choice == "ragas":
             from ragdx.optim._ragas_dspy_metric import make_ragas_metric
             try:
@@ -240,7 +263,7 @@ class GenerationOptimizer(StageOptimizer):
                 "[DSPy/%s] using token-F1 vs GT as inner-loop metric",
                 ctx.label,
             )
-        else:
+        elif dspy_metric_choice == "llm_judge":
             logger.info(
                 "[DSPy/%s] using DSPy llm_judge (faithfulness) as inner-loop metric",
                 ctx.label,

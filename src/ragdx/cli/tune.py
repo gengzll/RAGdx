@@ -101,11 +101,15 @@ def tune(
     dspy_metric: str = typer.Option(
         "auto", "--dspy-metric",
         help="Inner-loop metric for ``--stage generation``: "
-        "``auto`` (default: ``token_f1`` with GT, ``ragas`` without), "
-        "``ragas`` (ragas composite — context_precision + faithfulness + "
-        "answer_relevancy — even in no-GT mode), "
-        "``llm_judge`` (legacy single-LLM faithfulness; cheap but "
-        "saturates on permissive judges like GLM-4-Flash), "
+        "``auto`` (default: ``token_f1`` with GT, ``embed_rubric`` without), "
+        "``embed_rubric`` (2 embedding cosines + 1 multi-output LLM "
+        "rubric; cheaper and more discriminative than ``ragas`` -- "
+        "skips context_precision (retrieval-only, useless here) and "
+        "the faithfulness claim-extraction chain that saturates on "
+        "permissive judges), "
+        "``ragas`` (legacy ragas composite — context_precision + "
+        "faithfulness + answer_relevancy; kept for back-compat), "
+        "``llm_judge`` (single-LLM faithfulness; cheap but saturates), "
         "``token_f1`` (token-F1 vs GT; requires GT-populated records).",
     ),
     dspy_optimizer: str = typer.Option(
@@ -222,7 +226,7 @@ def tune(
         raise typer.BadParameter(
             f"--mipro-auto must be one of {_MIPRO_AUTO_CHOICES}, got {mipro_auto!r}."
         )
-    _DSPY_METRIC_CHOICES = ("auto", "ragas", "llm_judge", "token_f1")
+    _DSPY_METRIC_CHOICES = ("auto", "embed_rubric", "ragas", "llm_judge", "token_f1")
     if dspy_metric not in _DSPY_METRIC_CHOICES:
         raise typer.BadParameter(
             f"--dspy-metric must be one of {_DSPY_METRIC_CHOICES}, "
@@ -660,6 +664,77 @@ def tune(
         bundle["dspy_a_b"] = {mode_label: result.extras}
     else:
         bundle["bayes_search"] = {mode_label: result.to_bayes_search_bundle()}
+
+    # Rule-based diagnosis -- baked into the bundle so the static HTML
+    # report tells the user (1) why this tune stage was worth running
+    # given the baseline's bottlenecks and (2) what's still broken at
+    # the tuned config. Same shape as the ``ragdx experiment`` bundle
+    # (see :func:`ragdx.experiments._diagnose_per_mode`): a per-mode
+    # dict with ``{"baseline": <report>, "optimized": <report>}``.
+    # Rule-based only, no LLM calls. ``ragdx diagnose --use-llm``
+    # on the saved run still gives an LLM-refined view.
+    try:
+        from ragdx.experiments import (  # type: ignore[attr-defined]
+            _compare_diagnoses,
+            _synth_eval_result,
+        )
+        from ragdx.core.diagnosis import RAGDiagnosisEngine
+
+        if eff_stage == "generation":
+            _baseline_diag_scores = dict(
+                result.extras.get("baseline_scores", {}) or {}
+            )
+            _optimized_diag_scores = dict(
+                result.extras.get("optimized_scores", {}) or {}
+            )
+        else:
+            # BO-style stage: the first trial approximates the baseline,
+            # the best-trial scores are the "optimized" outcome.
+            _baseline_diag_scores = (
+                dict(result.trials[0].scores or {}) if result.trials else {}
+            )
+            _matching = [
+                t for t in result.trials if t.params == result.best_params
+            ]
+            _optimized_diag_scores = (
+                dict(_matching[0].scores or {}) if _matching else {}
+            )
+
+        _engine = RAGDiagnosisEngine()
+
+        def _diag(scores: dict[str, Any], phase: str) -> dict | None:
+            if not scores:
+                return None
+            try:
+                rep = _engine.diagnose(_synth_eval_result(
+                    scores, mode=mode_label,
+                    extra_metadata={"phase": phase},
+                ))
+                return rep.model_dump()
+            except Exception as exc:  # pragma: no cover - defensive
+                print(f"[yellow]{phase} diagnosis skipped:[/yellow] {exc}")
+                return None
+
+        _baseline_rep = _diag(_baseline_diag_scores, "baseline")
+        _optimized_rep = (
+            _diag(_optimized_diag_scores, "optimized")
+            if _optimized_diag_scores != _baseline_diag_scores
+            else None
+        )
+        if _baseline_rep or _optimized_rep:
+            _entry: dict[str, Any] = {
+                "baseline": _baseline_rep,
+                "optimized": _optimized_rep,
+            }
+            if _baseline_rep and _optimized_rep:
+                _entry["comparison"] = _compare_diagnoses(
+                    _baseline_rep, _optimized_rep,
+                    baseline_scores=_baseline_diag_scores,
+                    optimized_scores=_optimized_diag_scores,
+                )
+            bundle["diagnosis"] = {mode_label: _entry}
+    except Exception as _exc:  # pragma: no cover - defensive
+        print(f"[yellow]Diagnosis skipped:[/yellow] {_exc}")
 
     out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

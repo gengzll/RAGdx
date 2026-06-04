@@ -211,6 +211,346 @@ def _render_diagnostics(bundle: dict) -> str:
     )
 
 
+def _severity_class(severity: str) -> str:
+    s = (severity or "").lower()
+    if s == "high":
+        return "warn"
+    if s in ("medium", "med"):
+        return ""
+    return "ok"
+
+
+def _diagnosis_view(bundle: dict, phase: str) -> dict[str, dict | None]:
+    """Return ``{mode: report_dump | None}`` for the requested ``phase``
+    (``"baseline"`` or ``"optimized"``). Handles both the new
+    baseline/optimized-keyed schema and the legacy flat-per-mode schema
+    (where the value is just the optimized report).
+    """
+    out: dict[str, dict | None] = {}
+    diag_by_mode = bundle.get("diagnosis") or {}
+    for mode, entry in diag_by_mode.items():
+        if isinstance(entry, dict) and (
+            "baseline" in entry or "optimized" in entry
+        ):
+            out[mode] = entry.get(phase)
+        elif phase == "optimized":
+            # Legacy: a flat per-mode report dict means the "optimized"
+            # view (this was the original schema before we split into
+            # baseline-vs-optimized; keep it readable to old bundles).
+            out[mode] = entry
+        else:
+            out[mode] = None
+    return out
+
+
+def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
+    """One mode's diagnosis content (used by both baseline and optimized
+    renderers). Returns an empty string when ``report`` is None or empty.
+    """
+    if not report:
+        return ""
+
+    parts: list[str] = [f'<h3>Mode: {_esc(mode)}</h3>']
+
+    summary = report.get("summary") or ""
+    confidence = report.get("diagnosis_confidence")
+    parts.append('<div class="metric-row">')
+    parts.append(_metric(
+        "Diagnosis confidence",
+        f"{confidence:.2f}" if isinstance(confidence, (int, float)) else "—",
+    ))
+    parts.append(_metric(
+        "Causal signals", len(report.get("causal_signals") or [])
+    ))
+    parts.append(_metric(
+        "Hypotheses", len(report.get("hypotheses") or [])
+    ))
+    parts.append('</div>')
+    if summary:
+        parts.append(f'<div class="box">{_esc(summary)}</div>')
+
+    gaps = report.get("metric_gaps") or {}
+    if gaps:
+        parts.append('<h4>Metric gaps (below threshold)</h4>')
+        gap_rows = [
+            {"metric": k, "gap": f"{v:.4f}" if isinstance(v, (int, float)) else v}
+            for k, v in gaps.items()
+        ]
+        parts.append(_table(gap_rows, cols=["metric", "gap"]))
+
+    signals = report.get("causal_signals") or []
+    if signals:
+        parts.append('<h4>Causal signals (top 8 by posterior)</h4>')
+        sig_rows = []
+        for s in signals[:8]:
+            sig_rows.append({
+                "node": s.get("node", ""),
+                "component": s.get("component", ""),
+                "prior": f"{s.get('prior', 0.0):.2f}",
+                "posterior": f"{s.get('posterior', 0.0):.2f}",
+                "recommended experiment": s.get("recommended_experiment", ""),
+            })
+        parts.append(_table(
+            sig_rows,
+            cols=["node", "component", "prior", "posterior",
+                  "recommended experiment"],
+        ))
+
+    hyps = report.get("hypotheses") or []
+    if hyps:
+        parts.append('<h4>Hypotheses</h4>')
+        for i, h in enumerate(hyps, 1):
+            sev_class = _severity_class(h.get("severity", ""))
+            tag = (
+                f'<span class="tag {sev_class}">{_esc(h.get("severity", "?"))}'
+                f'</span> · component: <code>{_esc(h.get("component", "?"))}</code> '
+                f'· confidence {h.get("confidence", 0.0):.2f}'
+            )
+            title = f"{i}. {h.get('root_cause', '?')}"
+            inner: list[str] = [f'<p>{tag}</p>']
+            ev = h.get("evidence") or []
+            if ev:
+                inner.append('<h4>Evidence</h4><ul>')
+                inner.extend(f'<li>{_esc(e)}</li>' for e in ev)
+                inner.append('</ul>')
+            acts = h.get("recommended_actions") or []
+            if acts:
+                inner.append('<h4>Recommended actions</h4><ul>')
+                inner.extend(f'<li>{_esc(a)}</li>' for a in acts)
+                inner.append('</ul>')
+            parts.append(_details(title, "".join(inner), open_=(i == 1)))
+
+    prio = report.get("priority_actions") or []
+    if prio:
+        parts.append('<h4>Priority actions</h4><ul>')
+        parts.extend(f'<li>{_esc(a)}</li>' for a in prio)
+        parts.append('</ul>')
+
+    disambig = report.get("disambiguation_actions") or []
+    if disambig:
+        parts.append('<h4>Disambiguation actions</h4><ul>')
+        parts.extend(f'<li>{_esc(a)}</li>' for a in disambig)
+        parts.append('</ul>')
+
+    cands = report.get("optimization_candidates") or []
+    if cands:
+        parts.append(
+            '<h4>Optimization candidates</h4><p>'
+            + " ".join(f'<span class="tag">{_esc(c)}</span>' for c in cands)
+            + '</p>'
+        )
+    return "\n".join(parts)
+
+
+def _render_baseline_diagnosis(bundle: dict) -> str:
+    """Diagnosis on the baseline (pre-optimization) config -- the *why*
+    behind the optimization sections that follow. Placed near the top
+    of the report so the reader sees the problem before the solution.
+    """
+    per_mode = _diagnosis_view(bundle, "baseline")
+    bodies = [
+        _render_diagnosis_body(rep, mode=m)
+        for m, rep in per_mode.items()
+    ]
+    bodies = [b for b in bodies if b]
+    if not bodies:
+        return ""
+    header = '<h2>Diagnosis (baseline) — what we set out to fix</h2>'
+    caption = (
+        '<p class="caption">Rule-based root-cause analysis at the '
+        '<em>baseline</em> config (post-retrieval-BO, pre-prompt-tuning). '
+        'This is the bottleneck picture that motivates the optimization '
+        'sections below: causal-graph nodes with high posterior probability '
+        'are what to attack first. The <strong>Optimization candidates</strong> '
+        'tags map directly to the tools used in the sections below '
+        '(Bayesian search, DSPy A/B). For an LLM-refined view, run '
+        '<code>ragdx diagnose --use-both</code> on the saved run.</p>'
+    )
+    return header + caption + "\n".join(bodies)
+
+
+def _render_optimized_diagnosis(bundle: dict) -> str:
+    """Diagnosis on the optimized winner -- the *follow-up*: did we
+    actually move the right metrics, and what (if anything) is still
+    broken? Placed after the optimization sections.
+    """
+    per_mode = _diagnosis_view(bundle, "optimized")
+    bodies = [
+        _render_diagnosis_body(rep, mode=m)
+        for m, rep in per_mode.items()
+    ]
+    bodies = [b for b in bodies if b]
+    if not bodies:
+        return ""
+    header = '<h2>Diagnosis (optimized) — what still needs attention</h2>'
+    caption = (
+        '<p class="caption">Same analysis re-run on the optimized config. '
+        'Compare the posteriors here with the baseline diagnosis above: '
+        'a node whose posterior dropped is a hypothesis we successfully '
+        'attacked; a node whose posterior is still high is the next '
+        'thing to tune.</p>'
+    )
+    return header + caption + "\n".join(bodies)
+
+
+def _render_one_comparison(mode: str, comp: dict) -> str:
+    """Render a single mode's baseline vs optimized diagnosis delta."""
+    parts: list[str] = [f'<h3>Mode: {_esc(mode)}</h3>']
+
+    # Top-line story
+    summary = comp.get("summary") or ""
+    if summary:
+        parts.append(f'<div class="box">{_esc(summary)}</div>')
+
+    top_imp = comp.get("top_improvement")
+    top_reg = comp.get("top_regression")
+    parts.append('<div class="metric-row">')
+    if top_imp:
+        parts.append(_metric(
+            f'Top improvement · {top_imp.get("node", "")}',
+            f'{top_imp.get("baseline", 0.0):.2f} → '
+            f'{top_imp.get("optimized", 0.0):.2f}  '
+            f'(Δ {top_imp.get("delta", 0.0):+.2f})',
+        ))
+    if top_reg:
+        parts.append(_metric(
+            f'Top regression · {top_reg.get("node", "")}',
+            f'{top_reg.get("baseline", 0.0):.2f} → '
+            f'{top_reg.get("optimized", 0.0):.2f}  '
+            f'(Δ {top_reg.get("delta", 0.0):+.2f})',
+        ))
+    parts.append(_metric("Resolved", len(comp.get("resolved_hypotheses") or [])))
+    parts.append(_metric("Persisted", len(comp.get("persisted_hypotheses") or [])))
+    parts.append(_metric("Emerged", len(comp.get("emerged_hypotheses") or [])))
+    parts.append('</div>')
+
+    # Hypothesis status grid
+    def _hyp_rows(hyps: list, status: str) -> list[dict]:
+        return [{
+            "status": status,
+            "component": h.get("component", ""),
+            "root cause": h.get("root_cause", ""),
+            "severity": h.get("severity", ""),
+            "confidence": f'{h.get("confidence", 0.0):.2f}',
+        } for h in hyps]
+
+    all_rows: list[dict] = []
+    all_rows += _hyp_rows(comp.get("resolved_hypotheses") or [], "✓ resolved")
+    all_rows += _hyp_rows(comp.get("emerged_hypotheses") or [], "✗ emerged")
+    all_rows += _hyp_rows(comp.get("persisted_hypotheses") or [], "→ persisted")
+    if all_rows:
+        parts.append('<h4>Hypothesis status</h4>')
+        parts.append(_table(
+            all_rows,
+            cols=["status", "component", "root cause", "severity", "confidence"],
+        ))
+
+    # Posterior shifts (already filtered + sorted by |delta|)
+    shifts = comp.get("posterior_shifts") or []
+    if shifts:
+        parts.append('<h4>Posterior shifts (|Δ| ≥ 0.05, sorted by magnitude)</h4>')
+        rows = []
+        for s in shifts:
+            direction = s.get("direction", "")
+            arrow = "↓" if direction == "improved" else "↑"
+            sigil = "ok" if direction == "improved" else "warn"
+            rows.append({
+                "node": s.get("node", ""),
+                "baseline": f'{s.get("baseline", 0.0):.2f}',
+                "optimized": f'{s.get("optimized", 0.0):.2f}',
+                "Δ": f'<span class="tag {sigil}">{arrow} {s.get("delta", 0.0):+.2f}</span>',
+                "direction": direction,
+            })
+        # _table HTML-escapes values; build manually so the tag stays as HTML.
+        head = "".join(
+            f"<th>{_esc(c)}</th>"
+            for c in ["node", "baseline", "optimized", "Δ", "direction"]
+        )
+        body = "".join(
+            "<tr>"
+            + f"<td>{_esc(r['node'])}</td>"
+            + f"<td>{_esc(r['baseline'])}</td>"
+            + f"<td>{_esc(r['optimized'])}</td>"
+            + f"<td>{r['Δ']}</td>"
+            + f"<td>{_esc(r['direction'])}</td>"
+            + "</tr>"
+            for r in rows
+        )
+        parts.append(
+            f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+        )
+
+    # Metric deltas (with LOWER_IS_BETTER direction-aware arrow)
+    deltas = comp.get("metric_deltas") or {}
+    lower_better = set(comp.get("lower_is_better_metrics") or [])
+    if deltas:
+        parts.append('<h4>Metric deltas (optimized − baseline)</h4>')
+        rows = []
+        for m, d in sorted(deltas.items(), key=lambda kv: abs(kv[1]), reverse=True):
+            if abs(d) < 1e-9:
+                continue
+            improved = (d < 0) if m in lower_better else (d > 0)
+            arrow = "↑" if d > 0 else "↓"
+            sigil = "ok" if improved else "warn"
+            rows.append({
+                "metric": m,
+                "delta": f'<span class="tag {sigil}">{arrow} {d:+.4f}</span>',
+                "note": "lower-is-better" if m in lower_better else "",
+            })
+        if rows:
+            head = "<th>metric</th><th>delta</th><th>note</th>"
+            body = "".join(
+                "<tr>"
+                + f"<td>{_esc(r['metric'])}</td>"
+                + f"<td>{r['delta']}</td>"
+                + f"<td>{_esc(r['note'])}</td>"
+                + "</tr>"
+                for r in rows
+            )
+            parts.append(
+                f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+            )
+
+    return "\n".join(parts)
+
+
+def _render_diagnosis_comparison(bundle: dict) -> str:
+    """Render the baseline-vs-optimized delta story.
+
+    Closes the optimization loop: did we actually move the metrics
+    the baseline diagnosis pointed at? Did anything regress as a
+    side-effect (a common failure mode: fixing recall exposes
+    precision noise, so retrieval_precision_defect's posterior rises
+    even though faithfulness went up)?
+    """
+    diag_by_mode = bundle.get("diagnosis") or {}
+    bodies: list[str] = []
+    for mode, entry in diag_by_mode.items():
+        if not isinstance(entry, dict):
+            continue
+        comp = entry.get("comparison")
+        if not comp:
+            continue
+        bodies.append(_render_one_comparison(mode, comp))
+    if not bodies:
+        return ""
+    header = (
+        '<h2>Diagnosis comparison — did the optimization move what it should?</h2>'
+    )
+    caption = (
+        '<p class="caption">Baseline vs optimized diagnosis delta. '
+        '<strong>Resolved</strong> = hypothesis present at baseline but '
+        'gone after optimization (a clear win). '
+        '<strong>Persisted</strong> = still present (next target). '
+        '<strong>Emerged</strong> = appeared only after optimization '
+        '(common after fixing one bottleneck: the next one becomes '
+        'visible). Posterior shifts identify which causal-graph nodes '
+        'moved most; a <em>regression</em> (posterior rising) is a side-effect '
+        'worth investigating before celebrating.</p>'
+    )
+    return header + caption + "\n".join(bodies)
+
+
 def _render_questions(bundle: dict) -> str:
     qs = bundle.get("questions") or []
     if not qs:
@@ -376,11 +716,17 @@ def _render_bayes_search(bundle: dict) -> str:
                 )
                 rec_rows = []
                 for j, r in enumerate(t.get("records") or [], 1):
+                    # Show full answer text (no truncation). Earlier the
+                    # row sliced to 300 chars to keep the table compact,
+                    # but for multi-paragraph ESG / legal RAG answers
+                    # that's where the actual content begins. The page
+                    # CSS wraps long cells, and the parent ``<details>``
+                    # element keeps them collapsed by default.
                     rec_rows.append({
                         "#": j,
-                        "question": (r.get("question") or "")[:200],
-                        "ground_truth": (r.get("ground_truth") or "—")[:200],
-                        "answer": (r.get("answer") or "")[:300],
+                        "question": r.get("question") or "",
+                        "ground_truth": r.get("ground_truth") or "—",
+                        "answer": r.get("answer") or "",
                     })
                 inspector += _table(
                     rec_rows, cols=["#", "question", "ground_truth", "answer"]
@@ -701,9 +1047,21 @@ def render_report(bundle: dict, *, title: str | None = None) -> str:
         s for s in (
             _render_meta(bundle),
             _render_diagnostics(bundle),
+            # Baseline diagnosis comes BEFORE the optimization sections
+            # because it's the *why*: a baseline-driven flow looks at
+            # the diagnosis to decide which directions to optimize.
+            _render_baseline_diagnosis(bundle),
             _render_objectives(bundle),
             _render_bayes_search(bundle),
             _render_dspy_a_b(bundle),
+            # Comparison section first: the "did it work?" story (delta
+            # between baseline and optimized diagnoses). This is the
+            # natural narrative bridge between the optimization
+            # sections above and the residual analysis below.
+            _render_diagnosis_comparison(bundle),
+            # Optimized diagnosis closes the loop: what (if anything)
+            # is still broken at the optimized config?
+            _render_optimized_diagnosis(bundle),
             _render_questions(bundle),
             _render_extras(bundle),
         ) if s
