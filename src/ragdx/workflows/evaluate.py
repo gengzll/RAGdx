@@ -108,6 +108,7 @@ def evaluate(
     *,
     runtime: RagdxRuntime | None = None,
     metadata: dict[str, Any] | None = None,
+    evaluator: str = "ragas",
 ) -> EvaluationResult:
     """Run ``config`` over ``records`` and return a normalized
     :class:`EvaluationResult`.
@@ -164,21 +165,60 @@ def evaluate(
             )
         )
 
-    # 2. Score with ragas. Re-use the experiment workflow's helper so
-    # the throttle / error-handling behaviour is identical.
-    from ragdx.experiments import _evaluate_with_ragas
+    # 2. Score with the chosen evaluator. ragas vs deepeval differ in
+    # judge-LM contract and metric naming; we hide both behind the
+    # same ``scores`` dict + ``EvaluationResult`` so downstream code
+    # (objectives, diagnosis, dashboards) is evaluator-agnostic.
+    evaluator_kind = (evaluator or "ragas").lower()
+    if evaluator_kind not in {"ragas", "deepeval"}:
+        raise ValueError(
+            f"Unknown evaluator {evaluator!r}. "
+            f"Choose one of: 'ragas', 'deepeval'."
+        )
 
-    metrics = _select_metrics(answered)
-    ev = _evaluate_with_ragas(
-        answered,
-        runtime.ragas_judge,
-        runtime.ragas_embeddings,
-        metrics,
-        run_config=runtime.ragas_run_config,
-    )
-    scores = ev.get("scores", {})
-    if "error" in ev:
-        logger.warning("evaluate: ragas reported error -- %s", ev["error"])
+    if evaluator_kind == "deepeval":
+        from ragdx.engines.deepeval_adapter import DeepEvalAdapter
+
+        if runtime.deepeval_judge is None:
+            raise RuntimeError(
+                "evaluator='deepeval' requested but deepeval (or "
+                "langchain-openai) isn't installed. Install with "
+                "`pip install ragdx[deepeval]`."
+            )
+        try:
+            er = DeepEvalAdapter().evaluate(
+                answered,
+                run_deepeval=True,
+                model=runtime.deepeval_judge,
+            )
+            scores = {**er.retrieval, **er.generation, **er.e2e}
+            ev_meta_extra = {
+                "evaluator": "deepeval",
+                "deepeval_metrics": er.metadata.get("deepeval_metrics", []),
+            }
+        except Exception as exc:  # pragma: no cover - depends on judge
+            logger.warning("evaluate: deepeval reported error -- %s", exc)
+            scores = {}
+            ev_meta_extra = {"evaluator": "deepeval", "evaluator_error": str(exc)}
+    else:
+        # Re-use the experiment workflow's helper so the ragas throttle /
+        # error-handling behaviour is identical to the experiment path.
+        from ragdx.experiments import _evaluate_with_ragas
+
+        metrics = _select_metrics(answered)
+        ev = _evaluate_with_ragas(
+            answered,
+            runtime.ragas_judge,
+            runtime.ragas_embeddings,
+            metrics,
+            run_config=runtime.ragas_run_config,
+        )
+        scores = ev.get("scores", {})
+        if "error" in ev:
+            logger.warning("evaluate: ragas reported error -- %s", ev["error"])
+        ev_meta_extra = {"evaluator": "ragas"}
+        if ev.get("skipped"):
+            ev_meta_extra["ragas_skipped_metrics"] = ev["skipped"]
 
     # 3. Normalize into EvaluationResult sections.
     md: dict[str, Any] = {
@@ -186,11 +226,13 @@ def evaluate(
         "n_chunks": pipeline.n_chunks,
         "model": config.generator.model,
         "config_name": config.name,
+        **ev_meta_extra,
     }
     if metadata:
         md.update(metadata)
-    if ev.get("skipped"):
-        md["ragas_skipped_metrics"] = ev["skipped"]
+    # ``ragas_skipped_metrics`` (when present) is already in ev_meta_extra
+    # for the ragas path; the deepeval path doesn't have an equivalent
+    # skip-list concept.
     return _scores_to_evaluation_result(scores, metadata=md)
 
 

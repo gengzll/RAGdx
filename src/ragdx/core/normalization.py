@@ -48,3 +48,21 @@ RAGCHECKER_MAP: dict[str, tuple[str, str]] = {
     "self_knowledge": ("generation", "noise_sensitivity"),
     "faithfulness": ("generation", "faithfulness"),
 }
+
+# DeepEval metric names → (bucket, canonical ragdx name).
+# Keep canonical names consistent with RAGAS_MAP so downstream
+# objectives / thresholds / dashboards see the same schema
+# regardless of which evaluator produced the score.
+DEEPEVAL_MAP: dict[str, tuple[str, str]] = {
+    # DeepEval class name -> (bucket, canonical name)
+    "Contextual Precision": ("retrieval", "context_precision"),
+    "Contextual Recall": ("retrieval", "context_recall"),
+    "Contextual Relevancy": ("retrieval", "context_precision"),
+    "Answer Relevancy": ("generation", "answer_relevancy"),
+    "Faithfulness": ("generation", "faithfulness"),
+    "Hallucination": ("generation", "hallucination"),
+    "Bias": ("generation", "bias"),
+    "Toxicity": ("generation", "toxicity"),
+    "Summarization": ("e2e", "summarization"),
+    "G-Eval": ("e2e", "g_eval"),  # name varies by user-supplied label
+}

@@ -87,6 +87,14 @@ def evaluate(
         help="When ``--save`` is set, refine the optimization plan with "
         "an LLM. Independent of ``--use-llm`` / ``--use-both``.",
     ),
+    evaluator: str = typer.Option(
+        "ragas", "--evaluator",
+        help="Which evaluation library to use: ``ragas`` (default; the "
+        "established RAG metric suite) or ``deepeval`` (Confident AI's "
+        "test-case-style framework, includes G-Eval for less saturation "
+        "on permissive judges). Both produce the same EvaluationResult "
+        "schema downstream.",
+    ),
 ):
     """Evaluate a RAGConfig against an eval suite.
 
@@ -197,12 +205,18 @@ def evaluate(
     if name:
         metadata["name"] = name
 
+    if evaluator not in {"ragas", "deepeval"}:
+        raise typer.BadParameter(
+            f"--evaluator must be 'ragas' or 'deepeval', got {evaluator!r}."
+        )
+
     result = workflow_evaluate(
         rag_config,
         chunks=chunks,
         records=records,
         runtime=runtime,
         metadata=metadata,
+        evaluator=evaluator,
     )
 
     out_path = Path(output)

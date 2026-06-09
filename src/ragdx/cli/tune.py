@@ -103,10 +103,11 @@ def tune(
         help="Inner-loop metric for ``--stage generation``: "
         "``auto`` (default: ``token_f1`` with GT, ``embed_rubric`` without), "
         "``embed_rubric`` (2 embedding cosines + 1 multi-output LLM "
-        "rubric; cheaper and more discriminative than ``ragas`` -- "
-        "skips context_precision (retrieval-only, useless here) and "
-        "the faithfulness claim-extraction chain that saturates on "
-        "permissive judges), "
+        "rubric; cheaper and more discriminative than ``ragas``), "
+        "``geval`` (deepeval G-Eval + AnswerRelevancy + Faithfulness; "
+        "G-Eval is a CoT LLM-as-judge that resists saturation on "
+        "permissive judges like GLM-4-Flash; requires "
+        "``pip install ragdx[deepeval]``), "
         "``ragas`` (legacy ragas composite — context_precision + "
         "faithfulness + answer_relevancy; kept for back-compat), "
         "``llm_judge`` (single-LLM faithfulness; cheap but saturates), "
@@ -226,7 +227,9 @@ def tune(
         raise typer.BadParameter(
             f"--mipro-auto must be one of {_MIPRO_AUTO_CHOICES}, got {mipro_auto!r}."
         )
-    _DSPY_METRIC_CHOICES = ("auto", "embed_rubric", "ragas", "llm_judge", "token_f1")
+    _DSPY_METRIC_CHOICES = (
+        "auto", "embed_rubric", "geval", "ragas", "llm_judge", "token_f1",
+    )
     if dspy_metric not in _DSPY_METRIC_CHOICES:
         raise typer.BadParameter(
             f"--dspy-metric must be one of {_DSPY_METRIC_CHOICES}, "

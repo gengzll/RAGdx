@@ -237,6 +237,31 @@ class GenerationOptimizer(StageOptimizer):
                     "back to ragas composite", ctx.label,
                 )
                 dspy_metric_choice = "ragas"
+        if dspy_metric_choice == "geval":
+            from ragdx.optim._deepeval_dspy_metric import make_deepeval_metric
+            judge = getattr(runtime, "deepeval_judge", None)
+            if judge is None:
+                logger.warning(
+                    "[DSPy/%s] deepeval not configured; falling back to "
+                    "embed_rubric. Install with `pip install "
+                    "ragdx[deepeval]` to enable G-Eval.", ctx.label,
+                )
+                # Recurse into the embed_rubric branch via the same dispatch.
+                dspy_metric_choice = "embed_rubric"
+            else:
+                try:
+                    custom_metric = make_deepeval_metric(judge_lm=judge)
+                    logger.info(
+                        "[DSPy/%s] using deepeval composite (G-Eval + "
+                        "AnswerRelevancy + Faithfulness) as inner-loop "
+                        "metric", ctx.label,
+                    )
+                except ImportError:
+                    logger.warning(
+                        "[DSPy/%s] deepeval not installed; falling back "
+                        "to ragas composite", ctx.label,
+                    )
+                    dspy_metric_choice = "ragas"
         if dspy_metric_choice == "ragas":
             from ragdx.optim._ragas_dspy_metric import make_ragas_metric
             try:

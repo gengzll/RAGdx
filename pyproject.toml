@@ -74,6 +74,7 @@ langchain = [
 llamaindex = ["llama-index-core>=0.12,<1"]
 bo = ["ax-platform>=1.1,<2", "botorch>=0.17,<1", "torch>=2.2,<3"]
 ragas = ["ragas>=0.3,<0.4"]
+deepeval = ["deepeval>=2.0,<4", "langchain-openai>=0.2,<1"]
 ragchecker = ["ragchecker>=0.1,<0.2"]
 dspy = ["dspy>=2.5.6,<4"]
 autorag = ["AutoRAG>=0.3,<0.4"]

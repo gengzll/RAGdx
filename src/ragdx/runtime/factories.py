@@ -71,6 +71,10 @@ class RagdxRuntime:
     llm_max_concurrent: int = 2
     llm_max_retries: int = 5
     ragas_run_config: Any = None
+    # Optional deepeval judge built lazily by ``build_deepeval_judge``.
+    # ``None`` when deepeval isn't installed; callers that picked
+    # ``--evaluator deepeval`` or ``--dspy-metric geval`` must check.
+    deepeval_judge: Any = None
     system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION
 
 
@@ -252,6 +256,101 @@ def build_ragas_embeddings(embedder: Any) -> Any:
     return LangchainEmbeddingsWrapper(embedder)
 
 
+def build_deepeval_judge(judge: JudgeSpec, fallback: GeneratorSpec) -> Any | None:
+    """Build a deepeval-compatible judge LLM.
+
+    DeepEval metrics accept ``model=<DeepEvalBaseLLM | str | None>``.
+    For arbitrary OpenAI-compatible endpoints (Zhipu / vLLM / Ollama /
+    DeepSeek / ...) we subclass ``DeepEvalBaseLLM`` to route through
+    ``langchain_openai.ChatOpenAI``. The same wire as the ragas judge;
+    separate function because deepeval's ABC contract
+    (``load_model`` / ``generate`` / ``a_generate`` / ``get_model_name``)
+    differs from ragas's ``LangchainLLMWrapper``.
+
+    Returns ``None`` when deepeval (or langchain-openai) isn't
+    installed -- callers that need a deepeval judge must guard
+    accordingly.
+    """
+    try:
+        from deepeval.models.base_model import DeepEvalBaseLLM
+        from langchain_openai import ChatOpenAI
+    except Exception:  # pragma: no cover - depends on user env
+        return None
+
+    model = judge.model or fallback.model
+    api_base = judge.api_base or fallback.api_base
+    api_key = judge.api_key or fallback.api_key
+    chat_model = model.split("/", 1)[-1] if "/" in model else model
+    chat = ChatOpenAI(
+        model=chat_model,
+        api_key=api_key,
+        base_url=api_base,
+        temperature=fallback.temperature,
+        timeout=fallback.timeout,
+        max_retries=judge.llm_max_retries,
+    )
+
+    class _RagdxDeepEvalLM(DeepEvalBaseLLM):
+        """Thin DeepEvalBaseLLM wrapper around a langchain ChatOpenAI."""
+
+        def __init__(self, client: Any, name: str) -> None:
+            self._client = client
+            self._name = name
+
+        def load_model(self) -> Any:
+            return self._client
+
+        @staticmethod
+        def _to_text(response: Any) -> str:
+            content = getattr(response, "content", response)
+            if isinstance(content, list):
+                # LangChain chat models occasionally return a list of
+                # content blocks (text / tool_use dicts). Concatenate
+                # the text-only parts.
+                parts = []
+                for c in content:
+                    if isinstance(c, str):
+                        parts.append(c)
+                    elif isinstance(c, dict) and c.get("type") == "text":
+                        parts.append(str(c.get("text") or ""))
+                return "".join(parts)
+            return str(content)
+
+        def _parse_schema(self, text: str, schema: Any) -> Any:
+            import json
+            try:
+                return schema.model_validate_json(text)
+            except Exception:
+                # Best-effort fallback: extract the first ``{...}`` block.
+                start = text.find("{")
+                end = text.rfind("}")
+                if 0 <= start < end:
+                    try:
+                        return schema.model_validate(
+                            json.loads(text[start:end + 1])
+                        )
+                    except Exception:
+                        pass
+                # Last resort: hand the raw text back; some deepeval
+                # metrics tolerate this, others will retry.
+                return text
+
+        def generate(self, prompt: str, schema: Any | None = None) -> Any:
+            resp = self._client.invoke(prompt)
+            text = self._to_text(resp)
+            return text if schema is None else self._parse_schema(text, schema)
+
+        async def a_generate(self, prompt: str, schema: Any | None = None) -> Any:
+            resp = await self._client.ainvoke(prompt)
+            text = self._to_text(resp)
+            return text if schema is None else self._parse_schema(text, schema)
+
+        def get_model_name(self) -> str:
+            return self._name
+
+    return _RagdxDeepEvalLM(chat, chat_model)
+
+
 def build_ragas_run_config(judge: JudgeSpec) -> Any | None:
     """Build the ragas throttle config from ``JudgeSpec``.
 
@@ -302,6 +401,10 @@ def build_runtime(config: RAGConfig) -> RagdxRuntime:
     ragas_embeddings = build_ragas_embeddings(embedder)
     ragas_judge = build_ragas_judge(config.judge, fallback=gen)
     ragas_run_config = build_ragas_run_config(config.judge)
+    # Best-effort: ``build_deepeval_judge`` returns ``None`` if deepeval
+    # isn't installed, so this is a no-op when the user didn't opt in
+    # to the deepeval extra. Zero cost when unused.
+    deepeval_judge = build_deepeval_judge(config.judge, fallback=gen)
 
     return RagdxRuntime(
         llm_callable=llm_callable,
@@ -312,6 +415,7 @@ def build_runtime(config: RAGConfig) -> RagdxRuntime:
         llm_max_concurrent=config.judge.llm_max_concurrent,
         llm_max_retries=config.judge.llm_max_retries,
         ragas_run_config=ragas_run_config,
+        deepeval_judge=deepeval_judge,
         system_instruction=gen.system_instruction or DEFAULT_SYSTEM_INSTRUCTION,
     )
 
@@ -320,6 +424,7 @@ __all__ = [
     "DEFAULT_SYSTEM_INSTRUCTION",
     "RagdxRuntime",
     "apply_litellm_temperature_clamp",
+    "build_deepeval_judge",
     "build_dspy_lm",
     "build_embedder",
     "build_llm_callable",
