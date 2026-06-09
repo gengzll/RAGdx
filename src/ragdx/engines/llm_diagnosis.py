@@ -205,9 +205,43 @@ class LLMDiagnosisExplainer:
         prompt = f"{self.prompt_template}\n\nINPUT:\n{json.dumps(payload, indent=2, ensure_ascii=False)}"
         data = _normalize_payload(self._call(prompt))
         try:
-            return DiagnosisReport(**data)
+            llm_report = DiagnosisReport(**data)
         except Exception as exc:
             raise LLMError(f"LLM diagnosis output failed validation: {exc}") from exc
+
+        # Phase 2: preserve lineage. Top-level fields reflect the LLM
+        # output (active), but we keep both ``rule_based`` (from the
+        # base report) and ``llm_based`` (just produced) so the
+        # renderer can show "what changed from rule to LLM".
+        from ragdx.schemas.models import DiagnosisLayer
+        llm_layer = DiagnosisLayer(
+            source="llm",
+            summary=llm_report.summary,
+            hypotheses=list(llm_report.hypotheses),
+            causal_signals=list(llm_report.causal_signals),
+            metric_gaps=dict(llm_report.metric_gaps),
+            optimization_candidates=list(llm_report.optimization_candidates),
+            priority_actions=list(llm_report.priority_actions),
+            disambiguation_actions=list(llm_report.disambiguation_actions),
+            diagnosis_confidence=llm_report.diagnosis_confidence,
+        )
+        # ``base_report.rule_based`` may be None for old callers; fall
+        # back to a freshly-built layer from base_report's fields.
+        rule_layer = base_report.rule_based or DiagnosisLayer(
+            source="rule",
+            summary=base_report.summary,
+            hypotheses=list(base_report.hypotheses),
+            causal_signals=list(base_report.causal_signals),
+            metric_gaps=dict(base_report.metric_gaps),
+            optimization_candidates=list(base_report.optimization_candidates),
+            priority_actions=list(base_report.priority_actions),
+            disambiguation_actions=list(base_report.disambiguation_actions),
+            diagnosis_confidence=base_report.diagnosis_confidence,
+        )
+        llm_report.rule_based = rule_layer
+        llm_report.llm_based = llm_layer
+        llm_report.active_source = "llm"
+        return llm_report
 
     def summarize_both(
         self,
@@ -232,9 +266,49 @@ class LLMDiagnosisExplainer:
         prompt = f"{self.summary_prompt_template}\n\nINPUT:\n{json.dumps(payload, indent=2, ensure_ascii=False)}"
         data = _normalize_payload(self._call(prompt))
         try:
-            return DiagnosisReport(**data)
+            synth = DiagnosisReport(**data)
         except Exception as exc:
             raise LLMError(f"LLM synthesis output failed validation: {exc}") from exc
+
+        # Phase 2: keep all three layers so the renderer can show
+        # rule / LLM / synthesis side-by-side.
+        from ragdx.schemas.models import DiagnosisLayer
+        synthesis_layer = DiagnosisLayer(
+            source="synthesis",
+            summary=synth.summary,
+            hypotheses=list(synth.hypotheses),
+            causal_signals=list(synth.causal_signals),
+            metric_gaps=dict(synth.metric_gaps),
+            optimization_candidates=list(synth.optimization_candidates),
+            priority_actions=list(synth.priority_actions),
+            disambiguation_actions=list(synth.disambiguation_actions),
+            diagnosis_confidence=synth.diagnosis_confidence,
+        )
+        synth.rule_based = rule_report.rule_based or DiagnosisLayer(
+            source="rule",
+            summary=rule_report.summary,
+            hypotheses=list(rule_report.hypotheses),
+            causal_signals=list(rule_report.causal_signals),
+            metric_gaps=dict(rule_report.metric_gaps),
+            optimization_candidates=list(rule_report.optimization_candidates),
+            priority_actions=list(rule_report.priority_actions),
+            disambiguation_actions=list(rule_report.disambiguation_actions),
+            diagnosis_confidence=rule_report.diagnosis_confidence,
+        )
+        synth.llm_based = llm_report.llm_based or DiagnosisLayer(
+            source="llm",
+            summary=llm_report.summary,
+            hypotheses=list(llm_report.hypotheses),
+            causal_signals=list(llm_report.causal_signals),
+            metric_gaps=dict(llm_report.metric_gaps),
+            optimization_candidates=list(llm_report.optimization_candidates),
+            priority_actions=list(llm_report.priority_actions),
+            disambiguation_actions=list(llm_report.disambiguation_actions),
+            diagnosis_confidence=llm_report.diagnosis_confidence,
+        )
+        synth.synthesis = synthesis_layer
+        synth.active_source = "synthesis"
+        return synth
 
 
 __all__ = ["DEFAULT_REFINE_PROMPT", "DEFAULT_SUMMARIZE_BOTH_PROMPT", "LLMDiagnosisExplainer"]

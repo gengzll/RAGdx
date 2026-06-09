@@ -411,6 +411,37 @@ class RuleBasedRootCauseAnalyzer:
         if agreement:
             confidence = round(confidence * (0.80 + 0.20 * mean(agreement.values())), 4)
 
-        report = DiagnosisReport(summary=summary, expected_thresholds=self.thresholds, metric_gaps=gaps, hypotheses=hypotheses, optimization_candidates=sorted(set(candidates)), priority_actions=list(dict.fromkeys(actions)), causal_signals=causal_signals, causal_graph=causal_graph, evaluator_agreement=agreement, diagnosis_confidence=confidence, disambiguation_actions=list(dict.fromkeys(disambiguation)))
+        # Build the rule-based layer separately so callers (notably the
+        # LLM explainer wrapping us) can preserve our lineage in
+        # ``report.rule_based`` while overwriting the top-level fields
+        # with their own analysis. Phase 2: rule vs LLM split.
+        from ragdx.schemas.models import DiagnosisLayer
+        rule_layer = DiagnosisLayer(
+            source="rule",
+            summary=summary,
+            hypotheses=list(hypotheses),
+            causal_signals=list(causal_signals),
+            metric_gaps=dict(gaps),
+            optimization_candidates=sorted(set(candidates)),
+            priority_actions=list(dict.fromkeys(actions)),
+            disambiguation_actions=list(dict.fromkeys(disambiguation)),
+            diagnosis_confidence=confidence,
+        )
+        report = DiagnosisReport(
+            summary=summary,
+            expected_thresholds=self.thresholds,
+            metric_gaps=gaps,
+            hypotheses=hypotheses,
+            optimization_candidates=sorted(set(candidates)),
+            priority_actions=list(dict.fromkeys(actions)),
+            causal_signals=causal_signals,
+            causal_graph=causal_graph,
+            evaluator_agreement=agreement,
+            diagnosis_confidence=confidence,
+            disambiguation_actions=list(dict.fromkeys(disambiguation)),
+            # New: per-source lineage.
+            rule_based=rule_layer,
+            active_source="rule",
+        )
         self.store.update_causal_priors_from_report(report, result.feedback_events)
         return report

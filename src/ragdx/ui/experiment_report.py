@@ -243,6 +243,76 @@ def _diagnosis_view(bundle: dict, phase: str) -> dict[str, dict | None]:
     return out
 
 
+def _render_layer_panel(layer: dict, *, label: str, sigil: str) -> str:
+    """One per-source diagnosis layer rendered as a labelled panel.
+
+    ``sigil`` is the short tag shown next to the layer label so the
+    reader doesn't have to read the whole title to know whether they're
+    looking at rule output vs LLM output vs synthesised output.
+    """
+    parts: list[str] = [f'<h4>{_esc(label)} <span class="tag">{_esc(sigil)}</span></h4>']
+    summary = layer.get("summary") or ""
+    if summary:
+        parts.append(f'<div class="box">{_esc(summary)}</div>')
+
+    hyps = layer.get("hypotheses") or []
+    if hyps:
+        rows = [
+            {
+                "severity": h.get("severity", "?"),
+                "component": h.get("component", "?"),
+                "root cause": h.get("root_cause", ""),
+                "confidence": f"{h.get('confidence', 0.0):.2f}",
+            }
+            for h in hyps
+        ]
+        parts.append(_table(rows, cols=["severity", "component", "root cause", "confidence"]))
+
+    cands = layer.get("optimization_candidates") or []
+    if cands:
+        parts.append(
+            '<p><strong>Candidates:</strong> '
+            + " ".join(f'<span class="tag">{_esc(c)}</span>' for c in cands)
+            + '</p>'
+        )
+    return "\n".join(parts)
+
+
+def _render_diagnosis_layers(report: dict) -> str:
+    """Render the per-source layers (rule / LLM / synthesis) side-by-side.
+
+    Phase 2: the JSON now carries ``rule_based`` / ``llm_based`` /
+    ``synthesis`` subsections. Show whichever ones are populated so the
+    reader can tell where each hypothesis came from. ``active_source``
+    is highlighted to match the top-level fields downstream consumers
+    see.
+    """
+    active = report.get("active_source") or "rule"
+    panels: list[str] = []
+    for key, label, sigil in (
+        ("rule_based", "Rule-based", "rule"),
+        ("llm_based", "LLM", "llm"),
+        ("synthesis", "Synthesis", "both"),
+    ):
+        layer = report.get(key)
+        if not isinstance(layer, dict):
+            continue
+        active_marker = " (active)" if key.split("_")[0] == active else ""
+        panels.append(_render_layer_panel(
+            layer, label=f"{label}{active_marker}", sigil=sigil,
+        ))
+    if not panels:
+        return ""
+    return (
+        '<h4>Per-source diagnosis layers</h4>'
+        '<p class="caption">Which signals come from where. <strong>Rule</strong> '
+        '= deterministic causal-graph analysis. <strong>LLM</strong> = LLM-refined '
+        'view of the same data. <strong>Synthesis</strong> = LLM-merged final '
+        'answer combining both. The active layer drives the top-level summary above.</p>'
+        + "\n".join(panels)
+    )
+
+
 def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
     """One mode's diagnosis content (used by both baseline and optimized
     renderers). Returns an empty string when ``report`` is None or empty.
@@ -254,6 +324,7 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
 
     summary = report.get("summary") or ""
     confidence = report.get("diagnosis_confidence")
+    active = report.get("active_source") or "rule"
     parts.append('<div class="metric-row">')
     parts.append(_metric(
         "Diagnosis confidence",
@@ -265,9 +336,18 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
     parts.append(_metric(
         "Hypotheses", len(report.get("hypotheses") or [])
     ))
+    parts.append(_metric(
+        "Source", active,
+    ))
     parts.append('</div>')
     if summary:
         parts.append(f'<div class="box">{_esc(summary)}</div>')
+
+    # Per-source layer panels (Phase 2). Renders nothing for legacy
+    # reports that don't have the layers populated.
+    layers_html = _render_diagnosis_layers(report)
+    if layers_html:
+        parts.append(layers_html)
 
     gaps = report.get("metric_gaps") or {}
     if gaps:

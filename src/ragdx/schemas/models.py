@@ -210,7 +210,45 @@ class DiagnosisHypothesis(BaseModel):
         return value
 
 
+class DiagnosisLayer(BaseModel):
+    """One layer of a diagnosis report (rule-based, LLM, or synthesised).
+
+    Carries the same fields a full report does -- so the renderer can
+    show them side-by-side without special-casing. Each layer has its
+    own ``source`` tag so the reader always knows where a hypothesis
+    came from.
+    """
+
+    source: Literal["rule", "llm", "synthesis"] = "rule"
+    summary: str = ""
+    hypotheses: list[DiagnosisHypothesis] = Field(default_factory=list)
+    causal_signals: list[CausalSignal] = Field(default_factory=list)
+    metric_gaps: dict[str, float] = Field(default_factory=dict)
+    optimization_candidates: list[str] = Field(default_factory=list)
+    priority_actions: list[str] = Field(default_factory=list)
+    disambiguation_actions: list[str] = Field(default_factory=list)
+    diagnosis_confidence: float = 0.0
+
+
 class DiagnosisReport(BaseModel):
+    """Top-level diagnosis report.
+
+    Two views of the same information:
+
+    * **Top-level fields** (``summary`` / ``hypotheses`` / ...) -- the
+      "active" view used by downstream consumers (planner, dashboard,
+      CLI summary). When ``--use-llm`` / ``--use-both`` is in effect,
+      these reflect the LLM / synthesis output; otherwise they reflect
+      the rule-based output. Kept for backwards compatibility.
+
+    * **Layer fields** (``rule_based`` / ``llm_based`` / ``synthesis``)
+      -- the underlying per-source views. Populated when the producing
+      engine wants to preserve the lineage so the renderer can show
+      ``"this hypothesis came from the rule engine, this one came from
+      the LLM, this combined view came from synthesis"``. ``None``
+      when the producer didn't supply that layer.
+    """
+
     summary: str
     expected_thresholds: dict[str, float] = Field(default_factory=dict)
     metric_gaps: dict[str, float] = Field(default_factory=dict)
@@ -222,6 +260,15 @@ class DiagnosisReport(BaseModel):
     evaluator_agreement: dict[str, float] = Field(default_factory=dict)
     diagnosis_confidence: float = 0.0
     disambiguation_actions: list[str] = Field(default_factory=list)
+
+    # ----- Per-source layers (additive, optional) --------------------
+    rule_based: DiagnosisLayer | None = None
+    llm_based: DiagnosisLayer | None = None
+    synthesis: DiagnosisLayer | None = None
+    # Which layer drove the top-level fields. ``rule`` for the default
+    # ``--use-llm`` False path, ``llm`` for ``--use-llm`` alone,
+    # ``synthesis`` for ``--use-both``. ``rule`` is the safe default.
+    active_source: Literal["rule", "llm", "synthesis"] = "rule"
 
 
 class OptimizationExperiment(BaseModel):
