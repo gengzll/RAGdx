@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "stage": "generation",
+  "gt_mode": "no_gt",
+  "base_config": {
+    "name": "esg-analyst-demo",
+    "runtime": "langchain",
+    "corpus": {
+      "kind": "pdf",
+      "path": "e0522-asmptesgreport.pdf",
+      "items": []
+    },
+    "chunker": {
+      "strategy": "recursive",
+      "chunk_size": 512,
+      "chunk_overlap": 50
+    },
+    "embedder": {
+      "kind": "huggingface",
+      "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+      "normalize": true
+    },
+    "retriever": {
+      "vectorstore": "faiss",
+      "search_type": "similarity",
+      "top_k": 3,
+      "reranker": "none"
+    },
+    "generator": {
+      "provider": "litellm",
+      "model": "openai/glm-4-flash",
+      "api_base": "https://open.bigmodel.cn/api/paas/v4",
+      "api_key": null,
+      "system_instruction": "You are reviewing ASMPT's 2024 ESG report. Answer concisely using only\nthe supplied context. If the answer is not in the context, reply\n\"Not in report\".\n",
+      "few_shot_demos": [],
+      "temperature": 0.01,
+      "max_tokens": 500,
+      "timeout": 60
+    },
+    "judge": {
+      "model": null,
+      "api_base": null,
+      "api_key": null,
+      "llm_max_concurrent": 2,
+      "llm_max_retries": 5
+    }
+  },
+  "best_params": {
+    "system_instruction": "You are reviewing ASMPT's 2024 ESG report. Answer concisely using only\nthe supplied context. If the answer is not in the context, reply\n\"Not in report\".",
+    "few_shot_demos": []
+  },
+  "best_composite": 0.0,
+  "objective_spec": {
+    "metrics": {
+      "faithfulness": 1.5,
+      "answer_relevancy": 1.0,
+      "context_precision": 0.3
+    },
+    "constraints": {
+      "faithfulness": [
+        "min",
+        0.85
+      ]
+    },
+    "mode": "weighted_sum"
+  },
+  "meta": {
+    "workspace": "end2end_demo",
+    "model": "openai/glm-4-flash",
+    "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "experiment_mode": "generation",
+    "modes_run": [
+      "no_gt"
+    ],
+    "has_gt": false,
+    "detected_gt_mode": "no_gt",
+    "source": "workspace end2end_demo tune-prompt"
+  },
+  "dspy_a_b": {
+    "no_gt": {
+      "baseline_scores": {},
+      "optimized_scores": {},
+      "delta": {},
+      "composite": {
+        "objective_spec": {
+          "metrics": {
+            "faithfulness": 1.5,
+            "answer_relevancy": 1.0,
+            "context_precision": 0.3
+          },
+          "constraints": {
+            "faithfulness": [
+              "min",
+              0.85
+            ]
+          },
+          "mode": "weighted_sum"
+        },
+        "baseline": {
+          "score": 0.0,
+          "feasible": false,
+          "violations": [
+            "faithfulness: missing from scores"
+          ]
+        },
+        "optimized": {
+          "score": 0.0,
+          "feasible": false,
+          "violations": [
+            "faithfulness: missing from scores"
+          ]
+        },
+        "delta": 0.0
+      },
+      "baseline_sample_answers": [
+        "Not in report",
+        "Not in report",
+        "Not in report"
+      ],
+      "optimized_sample_answers": [
+        "Not in report",
+        "Not in report",
+        "Not in report"
+      ],
+      "records": [
+        {
+          "question": "What progress did ASMPT make on Scope 1 and Scope 2 greenhouse gas emissions in 2024?",
+          "ground_truth": null,
+          "contexts": [],
+          "baseline_answer": "Not in report",
+          "optimized_answer": "Not in report"
+        },
+        {
+          "question": "What are ASMPT's commitments and initiatives around workplace diversity and inclusion?",
+          "ground_truth": null,
+          "contexts": [],
+          "baseline_answer": "Not in report",
+          "optimized_answer": "Not in report"
+        },
+        {
+          "question": "What governance structure does ASMPT have in place for ESG oversight at the board level?",
+          "ground_truth": null,
+          "contexts": [],
+          "baseline_answer": "Not in report",
+          "optimized_answer": "Not in report"
+        }
+      ],
+      "baseline_instructions": {
+        "predict": "You are reviewing ASMPT's 2024 ESG report. Answer concisely using only\nthe supplied context. If the answer is not in the context, reply\n\"Not in report\"."
+      },
+      "baseline_demos": {
+        "predict": []
+      },
+      "instructions": {
+        "predict": "You are reviewing ASMPT's 2024 ESG report. Answer concisely using only\nthe supplied context. If the answer is not in the context, reply\n\"Not in report\"."
+      },
+      "demos": {
+        "predict": []
+      },
+      "trial_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "best_score_progression": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mipro_auto": "light",
+      "dspy_metric_used": "embed_rubric",
+      "dspy_optimizer_used": "mipro",
+      "winning_demos": [],
+      "proposed_instructions_by_predictor": {
+        "0": [
+          "You are reviewing ASMPT's 2024 ESG report. Answer concisely using only\nthe supplied context. If the answer is not in the context, reply\n\"Not in report\".",
+          "You are a decision-making and reasoning engine specialized in analyzing ESG reports. Given a question and context, provide a step-by-step reasoning process leading to an answer. Ensure your answer is concise and based solely on the information provided in the context. If the answer cannot be derived from the context, respond with \"Not in report.",
+          "Prompt the Language Model to analyze a given question and context related to corporate environmental reporting, and generate a step-by-step reasoning process to provide a concise and accurate answer, ensuring that the answer is derived solely from the provided context. If the answer cannot be found within the context, instruct the Language Model to respond with \"Not in report."
+        ]
+      },
+      "trial_log": [
+        {
+          "trial": 1,
+          "score": 0.0,
+          "kind": "default",
+          "params": null
+        },
+        {
+          "trial": 2,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']"
+        },
+        {
+          "trial": 3,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+        },
+        {
+          "trial": 4,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 5,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2']"
+        },
+        {
+          "trial": 6,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 7,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+        },
+        {
+          "trial": 8,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 9,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4']"
+        },
+        {
+          "trial": 10,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 11,
+          "score": 0.0,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 0']"
+        }
+      ],
+      "gt_mode": "no_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 3
+    }
+  }
+}

@@ -1,0 +1,1188 @@
+{
+  "schema_version": 1,
+  "stage": "joint",
+  "gt_mode": "no_gt",
+  "base_config": {
+    "name": "esg-analyst-demo",
+    "runtime": "langchain",
+    "corpus": {
+      "kind": "pdf",
+      "path": "e0522-asmptesgreport.pdf",
+      "items": []
+    },
+    "chunker": {
+      "strategy": "recursive",
+      "chunk_size": 512,
+      "chunk_overlap": 50
+    },
+    "embedder": {
+      "kind": "huggingface",
+      "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+      "normalize": true
+    },
+    "retriever": {
+      "vectorstore": "faiss",
+      "search_type": "similarity",
+      "top_k": 3,
+      "reranker": "none"
+    },
+    "generator": {
+      "provider": "litellm",
+      "model": "openai/glm-4-flash",
+      "api_base": "https://open.bigmodel.cn/api/paas/v4",
+      "api_key": null,
+      "system_instruction": "You are reviewing ASMPT's 2024 ESG report. Answer concisely using only\nthe supplied context. If the answer is not in the context, reply\n\"Not in report\".\n",
+      "few_shot_demos": [],
+      "temperature": 0.01,
+      "max_tokens": 500,
+      "timeout": 60
+    },
+    "judge": {
+      "model": null,
+      "api_base": null,
+      "api_key": null,
+      "llm_max_concurrent": 2,
+      "llm_max_retries": 5
+    }
+  },
+  "best_params": {
+    "chunk_size": 1024,
+    "chunk_overlap": 0,
+    "top_k": 3
+  },
+  "best_composite": 1.699999999985,
+  "objective_spec": {
+    "metrics": {
+      "faithfulness": 1.5,
+      "answer_relevancy": 1.0,
+      "context_precision": 0.3
+    },
+    "constraints": {
+      "faithfulness": [
+        "min",
+        0.85
+      ]
+    },
+    "mode": "weighted_sum"
+  },
+  "meta": {
+    "workspace": "end2end_demo",
+    "model": "openai/glm-4-flash",
+    "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "experiment_mode": "joint",
+    "modes_run": [
+      "no_gt"
+    ],
+    "has_gt": false,
+    "detected_gt_mode": "no_gt",
+    "source": "workspace end2end_demo tune-rag"
+  },
+  "bayes_search": {
+    "no_gt": {
+      "search_space": {
+        "chunk_size": [
+          256,
+          512,
+          1024
+        ],
+        "chunk_overlap": [
+          0,
+          50,
+          100
+        ],
+        "top_k": [
+          1,
+          3,
+          5,
+          7
+        ]
+      },
+      "n_init": 2,
+      "max_trials": 4,
+      "objective_spec": {
+        "metrics": {
+          "faithfulness": 1.5,
+          "answer_relevancy": 1.0,
+          "context_precision": 0.3
+        },
+        "constraints": {
+          "faithfulness": [
+            "min",
+            0.85
+          ]
+        },
+        "mode": "weighted_sum"
+      },
+      "trials": [
+        {
+          "trial_index": 0,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 50,
+            "top_k": 7
+          },
+          "n_chunks": 548,
+          "scores": {
+            "context_precision": 0.5847222221970486,
+            "faithfulness": 0.9696969696969697
+          },
+          "composite_score": 1.6299621212045692,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "Not in report",
+            "ASMPT's commitments and initiatives around workplace diversity and inclusion include:\n\n- Commitment to creating a bias-free workplace and an ecosystem where diversity is celebrated, equity is the norm",
+            "ASMPT has a robust governance structure for ESG oversight at the board level. The Board of Directors consists of ten directors, with six independent non-executive directors, two non-executive director"
+          ],
+          "records": [
+            {
+              "question": "What progress did ASMPT make on Scope 1 and Scope 2 greenhouse gas emissions in 2024?",
+              "ground_truth": null,
+              "contexts": [
+                ". Embracing the goal of “ASMPT net-zero 2035”, which aims to minimise envi- ronmental impact, ASMPT remains steadfast in its commitment to reducing our Scope 1 and Scope 2 emissions to net-zero by 2035 relative to the baseline year of 2020. A detailed decarbonisation action plan with interim targets of reducing Scope 1 and 2 emis - sions by 30% by 2026 and 50% by 2030 has been put in motion",
+                ". Once the Scope 3 emissions baseline is established, we will be able to set targets and develop mitigation pathways for Scope 3 emissions going forward. Our Leading Actions in the Semiconductor Climate Consortium Being one of the SCC founding members, ASMPT took a leading role in launching the SCC at COP27 in 2022. ASMPT is also the leader of SCC’s Scope 2 Emis- sion Working Group within the consortium",
+                ". As leader of the SCC Scope 2 Emissions working group, ASMPT chaired a deep discussion on the ambitions and targets of our working group, espe - cially key action areas in 2024 and beyond. ASMPT presented its net-zero 2035 goals to SCC members during productronica 2023 in Munich. One of ASMPT’s environmental projects",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 45 Scope 3 Reduction Strategy ASMPT is in the process of measuring Group-wide Scope 3 emissions. Our objective is to identify the sig- nificant emission areas within the 15 categories de - fined in the GHG Protocol, and establish the Group’s baselines for Scope 3 emissions, marking the initial step toward achieving Scope 3 net-zero",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 95 1 According to The Greenhouse Gas Protocol – Scope 1 (direct emissions) covers the greenhouse gas emissions directly from operations owned or controlled by the Group, while scope 2 (indirect emissions) covers “indirect energy” greenhouse gas emissions from the Group’s internal consumption (purchased or acquired) of electricity, heat, cooling and steam",
+                ". The Work- ing Group aims to lower its members’ Scope 2 emis - sions footprint, driving the semiconductor value chain to a low-carbon energy future. ASMPT’s leadership contributions to the Working Group are another key component of our overall Scope 3 emissions reduction efforts, by increasing low-carbon energy access and availability to stakeholders upstream and downstream in our value chain",
+                ". By setting this ambitious timeline, we are accelerating our efforts in carbon reduction. The Group also established clear decarbonisation milestones in three implementation stages. Compared to the baseline year of 2020, we aim to reduce our car- bon emissions by 30%, 50%, and 100% for Phase 1 (2020-2026), Phase 2 (2026-2030) and Phase 3 (2030- 2035) respectively"
+              ],
+              "answer": "Not in report",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.19999999998
+              }
+            },
+            {
+              "question": "What are ASMPT's commitments and initiatives around workplace diversity and inclusion?",
+              "ground_truth": null,
+              "contexts": [
+                ". By doing so, ASMPT is commited to creating not just a bias-free workplace, but an ecosystem where diversity is cele- brated, equity is the norm, and inclusion is the culture we live by daily.",
+                ". ASMPT is currently in the process of evolving its Diversity, Equity & Inclusion (DEI) framework from an introductory stage to a more advanced action stage. In 2023, we implemented vari - ous initiatives such as establishing Country Women’s Chapters at major facilities and undertaking activities to address potential unconscious biases. ASMPT strongly believes that our DEI efforts contribute to cre- ating a supportive and fulfilling workplace",
+                ", diversity is not just a checkbox exercise, but an unwavering commitment to fostering an environment where unique perspectives come together to spark creativity and lead to powerful solutions.” Katrin Damaschke, Head of HR, ASMPT SMT Solutions EMEA",
+                "Nurturing our Employees 70 The ASMPT POWER values set out the rights and obligations of all employees Diversity, Equity and Inclusion are main drivers Support for more than 11,000 employees globally through attractive employer benefits and offers At ASMPT, we recognise that at the heart of our success are our people. We have developed strong values with them. We call them POWER – Passion, Ownership, Win, Excellence, Respect",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 5 ASMPT is committed to playing a pivotal role in ad- dressing the environmental impact of our opera- tions and promoting sustainability within the semi- conductor industry. Under the pillar of “Nurturing Our Employees”, we are dedicated to fostering a diverse, equal, and inclusive work environment globally",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 73 6.2 Diversity, Equity & Inclusion (DEI) Why it Matters With a global footprint across more than 30 countries, employing over 11,000 people and with a huge mix of different languages and dialects being spoken within the Group, ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
+                "Nurturing our Employees 72 Employee Profile for 2023: 76% 24% Gender Distribution Male | Female 19% 61% 20% Age Group Distribution Below 30 | 30-50 | Above 50 19% 4% 24% 53% Geographical Region Distribution Greater China | Europe, Middle East and Africa Rest of Asia | North and South America Employment Type Distribution Full time | Part time 2% 98% 0.00% 5.00% 10.00 15.00% 20.00% 25.00% 2023 2022 2021 Overall Employee Turnover Rate “For ASMPT, diversity is not just a checkbox exercise"
+              ],
+              "answer": "ASMPT's commitments and initiatives around workplace diversity and inclusion include:\n\n- Commitment to creating a bias-free workplace and an ecosystem where diversity is celebrated, equity is the norm, and inclusion is the culture.\n- Evolving its Diversity, Equity & Inclusion (DEI) framework from an introductory stage to a more advanced action stage.\n- Implementing initiatives such as establishing Country Women’s Chapters at major facilities and activities to address potential unconscious biases.\n- Belief that DEI efforts contribute to creating a supportive and fulfilling workplace.\n- Recognition of diversity as a strategic imperative critical to the company's success.\n- Implementation of the ASMPT POWER values, which include Diversity, Equity and Inclusion as main drivers.\n- Support for more than 11,000 employees globally through attractive employer benefits and offers.\n- Employee profile data highlighting gender, age group, and geographical region distribution.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9845669676888279,
+                "context_precision": 0.8874999999778125
+              }
+            },
+            {
+              "question": "What governance structure does ASMPT have in place for ESG oversight at the board level?",
+              "ground_truth": null,
+              "contexts": [
+                "ASMPT Limited Environmental, Social and Governance Report 2023 25 3.1 ESG Governance Structure The Group’s robust governance structure, which is embedded at all levels of the Group, is organised as follows: ASMPT’s Board of Directors consists of ten directors as at 31 December 2023. Among them, two are female, including the Chairman and an independent non-exec- utive director. The Board’s has six independent non-ex- ecutive directors, two non-executive directors, and two executive directors",
+                ". The ESG Team operates as a dedicated unit under the leadership of Guenter Lauber, Executive Vice President and Chief Strategy and Digitalisation Officer. It formulates and implements ESG strategy, as well as provides guidance on the Group’s overall ESG-related practices. The responsibilities for each group are detailed below. For more information on ASMPT’s corporate governance and risk management practices for the 2023 financial year, please refer to the Group’s 2023 Annual Report",
+                "Governance26 SRRC ESG Team • Identify and analyse strategic external and internal risks facing the Group. • Inc orporate TCFD-aligned ESG risk analysis into the enterprise risk management framework. • Rev iew recommendations from the Task Force. • For mulate, implement and monitor the Group’s ESG policies and practices. • Pro vide guidance on ESG strategy and compliance, assess ESG related risks and opportunities, and evaluate ESG management performance",
+                "; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 3 1 About this Report This Environmental, Social and Governance Report (“ESG Report”) provides an annual update on the environmental, social and governance (ESG) impact, policies and initia- tives of ASMPT Limited and its subsidiaries (collectively “ASMPT” or the “Group”) for the year ended 31 December 2023 (“the Reporting Period”). The Reporting Period aligns with the Group’s financial year",
+                ". ESG and Climate-related risk governance structure Board of Directors • Ove rsee the ESG strategy, policies, implementation and matters, with a view to the corporate objective of growing responsibly in the interest of all stakeholders. • Com municate with the EXCO to set up ESG-related goals and track progress. • Dev elop and review Group policies and practices on corporate governance, including the Group risk management framework",
+                ". This ESG Report covers key issues relevant to the Group ’s various stakeholders including shareholders, employees, customers and business partners and society. It is published only in electronic form, and the ESG Reports for 2016 onwards are avail- able online at: https://www.asmpt.com/en/company/substainability/"
+              ],
+              "answer": "ASMPT has a robust governance structure for ESG oversight at the board level. The Board of Directors consists of ten directors, with six independent non-executive directors, two non-executive directors, and two executive directors. The Board oversees the ESG strategy, policies, implementation, and matters, aligning with the corporate objective of growing responsibly in the interest of all stakeholders.",
+              "scores": {
+                "faithfulness": 0.9090909090909091,
+                "answer_relevancy": 0.7999341401998802,
+                "context_precision": 0.6666666666333333
+              }
+            }
+          ],
+          "elapsed_seconds": 173.83
+        },
+        {
+          "trial_index": 1,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 1
+          },
+          "n_chunks": 548,
+          "scores": {
+            "context_precision": 0.6666666666,
+            "faithfulness": 0.9583333333333334
+          },
+          "composite_score": 1.63749999998,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "Not in report",
+            "ASMPT is committed to creating a bias-free workplace, celebrating diversity, ensuring equity, and making inclusion a daily culture.",
+            "ASMPT has a robust governance structure for ESG oversight at the board level, which includes ten directors, with six independent non-executive directors, two non-executive directors, and two executive"
+          ],
+          "records": [
+            {
+              "question": "What progress did ASMPT make on Scope 1 and Scope 2 greenhouse gas emissions in 2024?",
+              "ground_truth": null,
+              "contexts": [
+                ". Embracing the goal of “ASMPT net-zero 2035”, which aims to minimise envi- ronmental impact, ASMPT remains steadfast in its commitment to reducing our Scope 1 and Scope 2 emissions to net-zero by 2035 relative to the baseline year of 2020. A detailed decarbonisation action plan with interim targets of reducing Scope 1 and 2 emis - sions by 30% by 2026 and 50% by 2030 has been put in motion"
+              ],
+              "answer": "Not in report",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are ASMPT's commitments and initiatives around workplace diversity and inclusion?",
+              "ground_truth": null,
+              "contexts": [
+                ". By doing so, ASMPT is commited to creating not just a bias-free workplace, but an ecosystem where diversity is cele- brated, equity is the norm, and inclusion is the culture we live by daily."
+              ],
+              "answer": "ASMPT is committed to creating a bias-free workplace, celebrating diversity, ensuring equity, and making inclusion a daily culture.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.8772973557676348,
+                "context_precision": 0.9999999999
+              }
+            },
+            {
+              "question": "What governance structure does ASMPT have in place for ESG oversight at the board level?",
+              "ground_truth": null,
+              "contexts": [
+                "ASMPT Limited Environmental, Social and Governance Report 2023 25 3.1 ESG Governance Structure The Group’s robust governance structure, which is embedded at all levels of the Group, is organised as follows: ASMPT’s Board of Directors consists of ten directors as at 31 December 2023. Among them, two are female, including the Chairman and an independent non-exec- utive director. The Board’s has six independent non-ex- ecutive directors, two non-executive directors, and two executive directors"
+              ],
+              "answer": "ASMPT has a robust governance structure for ESG oversight at the board level, which includes ten directors, with six independent non-executive directors, two non-executive directors, and two executive directors. Among the directors, two are female, including the Chairman and an independent non-executive director.",
+              "scores": {
+                "faithfulness": 0.875,
+                "answer_relevancy": 0.9713468701085826,
+                "context_precision": 0.9999999999
+              }
+            }
+          ],
+          "elapsed_seconds": 71.72
+        },
+        {
+          "trial_index": 2,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 3
+          },
+          "n_chunks": 548,
+          "scores": {
+            "context_precision": 0.6666666666166666,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.699999999985,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "Not in report",
+            "ASMPT's commitments and initiatives around workplace diversity and inclusion include:\n\n- Creating a bias-free workplace and an ecosystem where diversity is celebrated, equity is the norm, and inclusio",
+            "ASMPT has a robust governance structure for ESG oversight at the board level, with the Board of Directors consisting of ten directors, including two female directors, the Chairman, six independent non"
+          ],
+          "records": [
+            {
+              "question": "What progress did ASMPT make on Scope 1 and Scope 2 greenhouse gas emissions in 2024?",
+              "ground_truth": null,
+              "contexts": [
+                ". Embracing the goal of “ASMPT net-zero 2035”, which aims to minimise envi- ronmental impact, ASMPT remains steadfast in its commitment to reducing our Scope 1 and Scope 2 emissions to net-zero by 2035 relative to the baseline year of 2020. A detailed decarbonisation action plan with interim targets of reducing Scope 1 and 2 emis - sions by 30% by 2026 and 50% by 2030 has been put in motion",
+                ". Once the Scope 3 emissions baseline is established, we will be able to set targets and develop mitigation pathways for Scope 3 emissions going forward. Our Leading Actions in the Semiconductor Climate Consortium Being one of the SCC founding members, ASMPT took a leading role in launching the SCC at COP27 in 2022. ASMPT is also the leader of SCC’s Scope 2 Emis- sion Working Group within the consortium",
+                ". As leader of the SCC Scope 2 Emissions working group, ASMPT chaired a deep discussion on the ambitions and targets of our working group, espe - cially key action areas in 2024 and beyond. ASMPT presented its net-zero 2035 goals to SCC members during productronica 2023 in Munich. One of ASMPT’s environmental projects"
+              ],
+              "answer": "Not in report",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are ASMPT's commitments and initiatives around workplace diversity and inclusion?",
+              "ground_truth": null,
+              "contexts": [
+                ". By doing so, ASMPT is commited to creating not just a bias-free workplace, but an ecosystem where diversity is cele- brated, equity is the norm, and inclusion is the culture we live by daily.",
+                ". ASMPT is currently in the process of evolving its Diversity, Equity & Inclusion (DEI) framework from an introductory stage to a more advanced action stage. In 2023, we implemented vari - ous initiatives such as establishing Country Women’s Chapters at major facilities and undertaking activities to address potential unconscious biases. ASMPT strongly believes that our DEI efforts contribute to cre- ating a supportive and fulfilling workplace",
+                ", diversity is not just a checkbox exercise, but an unwavering commitment to fostering an environment where unique perspectives come together to spark creativity and lead to powerful solutions.” Katrin Damaschke, Head of HR, ASMPT SMT Solutions EMEA"
+              ],
+              "answer": "ASMPT's commitments and initiatives around workplace diversity and inclusion include:\n\n- Creating a bias-free workplace and an ecosystem where diversity is celebrated, equity is the norm, and inclusion is the culture.\n- Evolving the Diversity, Equity & Inclusion (DEI) framework from an introductory stage to a more advanced action stage.\n- Implementing initiatives such as establishing Country Women’s Chapters at major facilities.\n- Undertaking activities to address potential unconscious biases.\n- Believing that DEI efforts contribute to creating a supportive and fulfilling workplace.\n- Committing to fostering an environment where unique perspectives come together to spark creativity and lead to powerful solutions.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9845669676888279,
+                "context_precision": 0.99999999995
+              }
+            },
+            {
+              "question": "What governance structure does ASMPT have in place for ESG oversight at the board level?",
+              "ground_truth": null,
+              "contexts": [
+                "ASMPT Limited Environmental, Social and Governance Report 2023 25 3.1 ESG Governance Structure The Group’s robust governance structure, which is embedded at all levels of the Group, is organised as follows: ASMPT’s Board of Directors consists of ten directors as at 31 December 2023. Among them, two are female, including the Chairman and an independent non-exec- utive director. The Board’s has six independent non-ex- ecutive directors, two non-executive directors, and two executive directors",
+                ". The ESG Team operates as a dedicated unit under the leadership of Guenter Lauber, Executive Vice President and Chief Strategy and Digitalisation Officer. It formulates and implements ESG strategy, as well as provides guidance on the Group’s overall ESG-related practices. The responsibilities for each group are detailed below. For more information on ASMPT’s corporate governance and risk management practices for the 2023 financial year, please refer to the Group’s 2023 Annual Report",
+                "Governance26 SRRC ESG Team • Identify and analyse strategic external and internal risks facing the Group. • Inc orporate TCFD-aligned ESG risk analysis into the enterprise risk management framework. • Rev iew recommendations from the Task Force. • For mulate, implement and monitor the Group’s ESG policies and practices. • Pro vide guidance on ESG strategy and compliance, assess ESG related risks and opportunities, and evaluate ESG management performance"
+              ],
+              "answer": "ASMPT has a robust governance structure for ESG oversight at the board level, with the Board of Directors consisting of ten directors, including two female directors, the Chairman, six independent non-executive directors, two non-executive directors, and two executive directors. The ESG Team operates as a dedicated unit under the leadership of Guenter Lauber, Executive Vice President and Chief Strategy and Digitalisation Officer, to formulate and implement ESG strategy and provide guidance on ESG-related practices.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.8183790193358339,
+                "context_precision": 0.9999999999
+              }
+            }
+          ],
+          "elapsed_seconds": 133.7
+        },
+        {
+          "trial_index": 3,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 5
+          },
+          "n_chunks": 548,
+          "scores": {
+            "context_precision": 0.6958333332859375,
+            "faithfulness": 0.9440559440559442
+          },
+          "composite_score": 1.6248339160696976,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "Not in report",
+            "ASMPT's commitments and initiatives around workplace diversity and inclusion include:\n\n- Commitment to creating a bias-free workplace and an ecosystem where diversity is celebrated, equity is the norm",
+            "ASMPT has a robust governance structure for ESG oversight at the board level, which includes a Board of Directors consisting of ten directors, with six independent non-executive directors, two non-exe"
+          ],
+          "records": [
+            {
+              "question": "What progress did ASMPT make on Scope 1 and Scope 2 greenhouse gas emissions in 2024?",
+              "ground_truth": null,
+              "contexts": [
+                ". Embracing the goal of “ASMPT net-zero 2035”, which aims to minimise envi- ronmental impact, ASMPT remains steadfast in its commitment to reducing our Scope 1 and Scope 2 emissions to net-zero by 2035 relative to the baseline year of 2020. A detailed decarbonisation action plan with interim targets of reducing Scope 1 and 2 emis - sions by 30% by 2026 and 50% by 2030 has been put in motion",
+                ". Once the Scope 3 emissions baseline is established, we will be able to set targets and develop mitigation pathways for Scope 3 emissions going forward. Our Leading Actions in the Semiconductor Climate Consortium Being one of the SCC founding members, ASMPT took a leading role in launching the SCC at COP27 in 2022. ASMPT is also the leader of SCC’s Scope 2 Emis- sion Working Group within the consortium",
+                ". As leader of the SCC Scope 2 Emissions working group, ASMPT chaired a deep discussion on the ambitions and targets of our working group, espe - cially key action areas in 2024 and beyond. ASMPT presented its net-zero 2035 goals to SCC members during productronica 2023 in Munich. One of ASMPT’s environmental projects",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 45 Scope 3 Reduction Strategy ASMPT is in the process of measuring Group-wide Scope 3 emissions. Our objective is to identify the sig- nificant emission areas within the 15 categories de - fined in the GHG Protocol, and establish the Group’s baselines for Scope 3 emissions, marking the initial step toward achieving Scope 3 net-zero",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 95 1 According to The Greenhouse Gas Protocol – Scope 1 (direct emissions) covers the greenhouse gas emissions directly from operations owned or controlled by the Group, while scope 2 (indirect emissions) covers “indirect energy” greenhouse gas emissions from the Group’s internal consumption (purchased or acquired) of electricity, heat, cooling and steam"
+              ],
+              "answer": "Not in report",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.19999999998
+              }
+            },
+            {
+              "question": "What are ASMPT's commitments and initiatives around workplace diversity and inclusion?",
+              "ground_truth": null,
+              "contexts": [
+                ". By doing so, ASMPT is commited to creating not just a bias-free workplace, but an ecosystem where diversity is cele- brated, equity is the norm, and inclusion is the culture we live by daily.",
+                ". ASMPT is currently in the process of evolving its Diversity, Equity & Inclusion (DEI) framework from an introductory stage to a more advanced action stage. In 2023, we implemented vari - ous initiatives such as establishing Country Women’s Chapters at major facilities and undertaking activities to address potential unconscious biases. ASMPT strongly believes that our DEI efforts contribute to cre- ating a supportive and fulfilling workplace",
+                ", diversity is not just a checkbox exercise, but an unwavering commitment to fostering an environment where unique perspectives come together to spark creativity and lead to powerful solutions.” Katrin Damaschke, Head of HR, ASMPT SMT Solutions EMEA",
+                "Nurturing our Employees 70 The ASMPT POWER values set out the rights and obligations of all employees Diversity, Equity and Inclusion are main drivers Support for more than 11,000 employees globally through attractive employer benefits and offers At ASMPT, we recognise that at the heart of our success are our people. We have developed strong values with them. We call them POWER – Passion, Ownership, Win, Excellence, Respect",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 5 ASMPT is committed to playing a pivotal role in ad- dressing the environmental impact of our opera- tions and promoting sustainability within the semi- conductor industry. Under the pillar of “Nurturing Our Employees”, we are dedicated to fostering a diverse, equal, and inclusive work environment globally"
+              ],
+              "answer": "ASMPT's commitments and initiatives around workplace diversity and inclusion include:\n\n- Commitment to creating a bias-free workplace and an ecosystem where diversity is celebrated, equity is the norm, and inclusion is the culture.\n- Evolving the Diversity, Equity & Inclusion (DEI) framework from an introductory stage to a more advanced action stage.\n- Implementing initiatives such as establishing Country Women’s Chapters at major facilities and activities to address potential unconscious biases.\n- Belief that DEI efforts contribute to creating a supportive and fulfilling workplace.\n- Recognizing diversity as an unwavering commitment to fostering an environment where unique perspectives come together to spark creativity and lead to powerful solutions.\n- The POWER values, which include Diversity, Equity and Inclusion as main drivers.\n- Support for more than 11,000 employees globally through attractive employer benefits and offers.\n- Commitment to fostering a diverse, equal, and inclusive work environment globally.",
+              "scores": {
+                "faithfulness": 0.9090909090909091,
+                "answer_relevancy": 0.9845669676888279,
+                "context_precision": 0.8874999999778125
+              }
+            },
+            {
+              "question": "What governance structure does ASMPT have in place for ESG oversight at the board level?",
+              "ground_truth": null,
+              "contexts": [
+                "ASMPT Limited Environmental, Social and Governance Report 2023 25 3.1 ESG Governance Structure The Group’s robust governance structure, which is embedded at all levels of the Group, is organised as follows: ASMPT’s Board of Directors consists of ten directors as at 31 December 2023. Among them, two are female, including the Chairman and an independent non-exec- utive director. The Board’s has six independent non-ex- ecutive directors, two non-executive directors, and two executive directors",
+                ". The ESG Team operates as a dedicated unit under the leadership of Guenter Lauber, Executive Vice President and Chief Strategy and Digitalisation Officer. It formulates and implements ESG strategy, as well as provides guidance on the Group’s overall ESG-related practices. The responsibilities for each group are detailed below. For more information on ASMPT’s corporate governance and risk management practices for the 2023 financial year, please refer to the Group’s 2023 Annual Report",
+                "Governance26 SRRC ESG Team • Identify and analyse strategic external and internal risks facing the Group. • Inc orporate TCFD-aligned ESG risk analysis into the enterprise risk management framework. • Rev iew recommendations from the Task Force. • For mulate, implement and monitor the Group’s ESG policies and practices. • Pro vide guidance on ESG strategy and compliance, assess ESG related risks and opportunities, and evaluate ESG management performance",
+                "; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 3 1 About this Report This Environmental, Social and Governance Report (“ESG Report”) provides an annual update on the environmental, social and governance (ESG) impact, policies and initia- tives of ASMPT Limited and its subsidiaries (collectively “ASMPT” or the “Group”) for the year ended 31 December 2023 (“the Reporting Period”). The Reporting Period aligns with the Group’s financial year"
+              ],
+              "answer": "ASMPT has a robust governance structure for ESG oversight at the board level, which includes a Board of Directors consisting of ten directors, with six independent non-executive directors, two non-executive directors, and two executive directors. Among the directors, two are female, including the Chairman and an independent non-executive director. The ESG Team operates as a dedicated unit under the leadership of Guenter Lauber, Executive Vice President and Chief Strategy and Digitalisation Officer, formulating and implementing ESG strategy and providing guidance on ESG-related practices.",
+              "scores": {
+                "faithfulness": 0.9230769230769231,
+                "answer_relevancy": 0.8183790193358339,
+                "context_precision": 0.9999999999
+              }
+            }
+          ],
+          "elapsed_seconds": 148.5
+        }
+      ],
+      "best_params": {
+        "chunk_size": 1024,
+        "chunk_overlap": 0,
+        "top_k": 3
+      },
+      "best_composite": 1.699999999985
+    }
+  },
+  "diagnosis": {
+    "no_gt": {
+      "baseline": {
+        "summary": "Primary bottleneck: retrieval noise or weak ranking quality. 1 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.96.",
+        "expected_thresholds": {
+          "context_precision": 0.8,
+          "context_recall": 0.8,
+          "context_entities_recall": 0.75,
+          "hit_rate_at_k": 0.85,
+          "faithfulness": 0.9,
+          "response_relevancy": 0.85,
+          "context_utilization": 0.75,
+          "noise_sensitivity": 0.2,
+          "hallucination": 0.1,
+          "answer_correctness": 0.85,
+          "answer_accuracy": 0.85,
+          "citation_accuracy": 0.85,
+          "user_success_rate": 0.85
+        },
+        "metric_gaps": {
+          "context_precision": 0.2153
+        },
+        "hypotheses": [
+          {
+            "component": "retrieval",
+            "root_cause": "retrieval noise or weak ranking quality",
+            "severity": "high",
+            "confidence": 0.84,
+            "evidence": [
+              "context_precision=0.58 is below target 0.80",
+              "Noisy contexts usually propagate to hallucination and citation failures."
+            ],
+            "recommended_actions": [
+              "Add or tune reranker.",
+              "Reduce top-k or separate recall stage from final evidence stage.",
+              "Use metadata or section-aware filters."
+            ]
+          }
+        ],
+        "optimization_candidates": [
+          "autorag_pipeline_search"
+        ],
+        "priority_actions": [
+          "Improve ranking precision and evidence filtering.",
+          "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+        ],
+        "causal_signals": [
+          {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9642,
+            "prior": 0.95,
+            "evidence": [
+              "context_precision=0.58 is below target.",
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "corpus_chunking_defect",
+            "component": "retrieval",
+            "posterior": 0.9595,
+            "prior": 0.95,
+            "evidence": [
+              "Traces show a small number of retrieved chunks per query."
+            ],
+            "recommended_experiment": "Run parser and chunking search before retriever tuning."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.953,
+            "prior": 0.95,
+            "evidence": [
+              "Verification spans are sparse."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
+            "node": "retrieval_recall_defect",
+            "component": "retrieval",
+            "posterior": 0.9502,
+            "prior": 0.95,
+            "evidence": [],
+            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+          },
+          {
+            "node": "citation_binding_defect",
+            "component": "e2e",
+            "posterior": 0.8987,
+            "prior": 0.8986,
+            "evidence": [],
+            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+          },
+          {
+            "node": "context_packing_defect",
+            "component": "generation",
+            "posterior": 0.6073,
+            "prior": 0.5874,
+            "evidence": [
+              "Enough evidence exists but packing may be letting noise dominate."
+            ],
+            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+          },
+          {
+            "node": "distribution_shift",
+            "component": "pipeline",
+            "posterior": 0.4849,
+            "prior": 0.4849,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
+            "node": "judge_or_metric_instability",
+            "component": "pipeline",
+            "posterior": 0.2918,
+            "prior": 0.2918,
+            "evidence": [],
+            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+          }
+        ],
+        "causal_graph": {
+          "nodes": [
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.9642,
+              "prior": 0.95,
+              "evidence": [
+                "context_precision=0.58 is below target.",
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.9595,
+              "prior": 0.95,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.953,
+              "prior": 0.95,
+              "evidence": [
+                "Verification spans are sparse."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.9502,
+              "prior": 0.95,
+              "evidence": [],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.8987,
+              "prior": 0.8986,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.6073,
+              "prior": 0.5874,
+              "evidence": [
+                "Enough evidence exists but packing may be letting noise dominate."
+              ],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "pipeline",
+              "posterior": 0.4849,
+              "prior": 0.4849,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "pipeline",
+              "posterior": 0.2918,
+              "prior": 0.2918,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "edges": [
+            {
+              "source": "corpus_chunking_defect",
+              "target": "retrieval_recall_defect",
+              "weight": 0.55,
+              "rationale": "Poor parsing and chunk boundaries directly suppress recall."
+            },
+            {
+              "source": "retrieval_recall_defect",
+              "target": "context_packing_defect",
+              "weight": 0.22,
+              "rationale": "Weak recall increases packing pressure on partial evidence."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "context_packing_defect",
+              "weight": 0.18,
+              "rationale": "Noisy retrieval degrades packed context quality."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "grounding_defect",
+              "weight": 0.45,
+              "rationale": "Noisy retrieval raises unsupported reasoning risk."
+            },
+            {
+              "source": "context_packing_defect",
+              "target": "grounding_defect",
+              "weight": 0.4,
+              "rationale": "Poor packing directly weakens grounding."
+            },
+            {
+              "source": "grounding_defect",
+              "target": "citation_binding_defect",
+              "weight": 0.3,
+              "rationale": "Unsupported claims often come with weak citation mapping."
+            },
+            {
+              "source": "judge_or_metric_instability",
+              "target": "distribution_shift",
+              "weight": 0.1,
+              "rationale": "Evaluator disagreement can indicate shift or judge mismatch."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "retrieval_recall_defect",
+              "weight": 0.3,
+              "rationale": "Shifted traffic often first breaks evidence coverage."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "grounding_defect",
+              "weight": 0.18,
+              "rationale": "Shifted domains also weaken grounding reliability."
+            }
+          ]
+        },
+        "evaluator_agreement": {},
+        "diagnosis_confidence": 0.84,
+        "disambiguation_actions": [],
+        "rule_based": {
+          "source": "rule",
+          "summary": "Primary bottleneck: retrieval noise or weak ranking quality. 1 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.96.",
+          "hypotheses": [
+            {
+              "component": "retrieval",
+              "root_cause": "retrieval noise or weak ranking quality",
+              "severity": "high",
+              "confidence": 0.84,
+              "evidence": [
+                "context_precision=0.58 is below target 0.80",
+                "Noisy contexts usually propagate to hallucination and citation failures."
+              ],
+              "recommended_actions": [
+                "Add or tune reranker.",
+                "Reduce top-k or separate recall stage from final evidence stage.",
+                "Use metadata or section-aware filters."
+              ]
+            }
+          ],
+          "causal_signals": [
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.9642,
+              "prior": 0.95,
+              "evidence": [
+                "context_precision=0.58 is below target.",
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.9595,
+              "prior": 0.95,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.953,
+              "prior": 0.95,
+              "evidence": [
+                "Verification spans are sparse."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.9502,
+              "prior": 0.95,
+              "evidence": [],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.8987,
+              "prior": 0.8986,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.6073,
+              "prior": 0.5874,
+              "evidence": [
+                "Enough evidence exists but packing may be letting noise dominate."
+              ],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "pipeline",
+              "posterior": 0.4849,
+              "prior": 0.4849,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "pipeline",
+              "posterior": 0.2918,
+              "prior": 0.2918,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "metric_gaps": {
+            "context_precision": 0.2153
+          },
+          "optimization_candidates": [
+            "autorag_pipeline_search"
+          ],
+          "priority_actions": [
+            "Improve ranking precision and evidence filtering.",
+            "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          ],
+          "disambiguation_actions": [],
+          "diagnosis_confidence": 0.84
+        },
+        "llm_based": null,
+        "synthesis": null,
+        "active_source": "rule"
+      },
+      "optimized": {
+        "summary": "Primary bottleneck: retrieval noise or weak ranking quality. 1 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.96.",
+        "expected_thresholds": {
+          "context_precision": 0.8,
+          "context_recall": 0.8,
+          "context_entities_recall": 0.75,
+          "hit_rate_at_k": 0.85,
+          "faithfulness": 0.9,
+          "response_relevancy": 0.85,
+          "context_utilization": 0.75,
+          "noise_sensitivity": 0.2,
+          "hallucination": 0.1,
+          "answer_correctness": 0.85,
+          "answer_accuracy": 0.85,
+          "citation_accuracy": 0.85,
+          "user_success_rate": 0.85
+        },
+        "metric_gaps": {
+          "context_precision": 0.1333
+        },
+        "hypotheses": [
+          {
+            "component": "retrieval",
+            "root_cause": "retrieval noise or weak ranking quality",
+            "severity": "high",
+            "confidence": 0.84,
+            "evidence": [
+              "context_precision=0.67 is below target 0.80",
+              "Noisy contexts usually propagate to hallucination and citation failures."
+            ],
+            "recommended_actions": [
+              "Add or tune reranker.",
+              "Reduce top-k or separate recall stage from final evidence stage.",
+              "Use metadata or section-aware filters."
+            ]
+          }
+        ],
+        "optimization_candidates": [
+          "autorag_pipeline_search"
+        ],
+        "priority_actions": [
+          "Improve ranking precision and evidence filtering.",
+          "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+        ],
+        "causal_signals": [
+          {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9607,
+            "prior": 0.95,
+            "evidence": [
+              "context_precision=0.67 is below target.",
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "corpus_chunking_defect",
+            "component": "retrieval",
+            "posterior": 0.9595,
+            "prior": 0.95,
+            "evidence": [
+              "Traces show a small number of retrieved chunks per query."
+            ],
+            "recommended_experiment": "Run parser and chunking search before retriever tuning."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.9529,
+            "prior": 0.95,
+            "evidence": [
+              "Verification spans are sparse."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
+            "node": "retrieval_recall_defect",
+            "component": "retrieval",
+            "posterior": 0.9502,
+            "prior": 0.95,
+            "evidence": [],
+            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+          },
+          {
+            "node": "citation_binding_defect",
+            "component": "e2e",
+            "posterior": 0.8987,
+            "prior": 0.8986,
+            "evidence": [],
+            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+          },
+          {
+            "node": "context_packing_defect",
+            "component": "generation",
+            "posterior": 0.6101,
+            "prior": 0.5904,
+            "evidence": [
+              "Enough evidence exists but packing may be letting noise dominate."
+            ],
+            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+          },
+          {
+            "node": "distribution_shift",
+            "component": "pipeline",
+            "posterior": 0.4849,
+            "prior": 0.4849,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
+            "node": "judge_or_metric_instability",
+            "component": "pipeline",
+            "posterior": 0.2918,
+            "prior": 0.2918,
+            "evidence": [],
+            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+          }
+        ],
+        "causal_graph": {
+          "nodes": [
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.9607,
+              "prior": 0.95,
+              "evidence": [
+                "context_precision=0.67 is below target.",
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.9595,
+              "prior": 0.95,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.9529,
+              "prior": 0.95,
+              "evidence": [
+                "Verification spans are sparse."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.9502,
+              "prior": 0.95,
+              "evidence": [],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.8987,
+              "prior": 0.8986,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.6101,
+              "prior": 0.5904,
+              "evidence": [
+                "Enough evidence exists but packing may be letting noise dominate."
+              ],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "pipeline",
+              "posterior": 0.4849,
+              "prior": 0.4849,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "pipeline",
+              "posterior": 0.2918,
+              "prior": 0.2918,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "edges": [
+            {
+              "source": "corpus_chunking_defect",
+              "target": "retrieval_recall_defect",
+              "weight": 0.55,
+              "rationale": "Poor parsing and chunk boundaries directly suppress recall."
+            },
+            {
+              "source": "retrieval_recall_defect",
+              "target": "context_packing_defect",
+              "weight": 0.22,
+              "rationale": "Weak recall increases packing pressure on partial evidence."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "context_packing_defect",
+              "weight": 0.18,
+              "rationale": "Noisy retrieval degrades packed context quality."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "grounding_defect",
+              "weight": 0.45,
+              "rationale": "Noisy retrieval raises unsupported reasoning risk."
+            },
+            {
+              "source": "context_packing_defect",
+              "target": "grounding_defect",
+              "weight": 0.4,
+              "rationale": "Poor packing directly weakens grounding."
+            },
+            {
+              "source": "grounding_defect",
+              "target": "citation_binding_defect",
+              "weight": 0.3,
+              "rationale": "Unsupported claims often come with weak citation mapping."
+            },
+            {
+              "source": "judge_or_metric_instability",
+              "target": "distribution_shift",
+              "weight": 0.1,
+              "rationale": "Evaluator disagreement can indicate shift or judge mismatch."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "retrieval_recall_defect",
+              "weight": 0.3,
+              "rationale": "Shifted traffic often first breaks evidence coverage."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "grounding_defect",
+              "weight": 0.18,
+              "rationale": "Shifted domains also weaken grounding reliability."
+            }
+          ]
+        },
+        "evaluator_agreement": {},
+        "diagnosis_confidence": 0.84,
+        "disambiguation_actions": [],
+        "rule_based": {
+          "source": "rule",
+          "summary": "Primary bottleneck: retrieval noise or weak ranking quality. 1 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.96.",
+          "hypotheses": [
+            {
+              "component": "retrieval",
+              "root_cause": "retrieval noise or weak ranking quality",
+              "severity": "high",
+              "confidence": 0.84,
+              "evidence": [
+                "context_precision=0.67 is below target 0.80",
+                "Noisy contexts usually propagate to hallucination and citation failures."
+              ],
+              "recommended_actions": [
+                "Add or tune reranker.",
+                "Reduce top-k or separate recall stage from final evidence stage.",
+                "Use metadata or section-aware filters."
+              ]
+            }
+          ],
+          "causal_signals": [
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.9607,
+              "prior": 0.95,
+              "evidence": [
+                "context_precision=0.67 is below target.",
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.9595,
+              "prior": 0.95,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.9529,
+              "prior": 0.95,
+              "evidence": [
+                "Verification spans are sparse."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.9502,
+              "prior": 0.95,
+              "evidence": [],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.8987,
+              "prior": 0.8986,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.6101,
+              "prior": 0.5904,
+              "evidence": [
+                "Enough evidence exists but packing may be letting noise dominate."
+              ],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "pipeline",
+              "posterior": 0.4849,
+              "prior": 0.4849,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "pipeline",
+              "posterior": 0.2918,
+              "prior": 0.2918,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "metric_gaps": {
+            "context_precision": 0.1333
+          },
+          "optimization_candidates": [
+            "autorag_pipeline_search"
+          ],
+          "priority_actions": [
+            "Improve ranking precision and evidence filtering.",
+            "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          ],
+          "disambiguation_actions": [],
+          "diagnosis_confidence": 0.84
+        },
+        "llm_based": null,
+        "synthesis": null,
+        "active_source": "rule"
+      },
+      "comparison": {
+        "resolved_hypotheses": [],
+        "persisted_hypotheses": [
+          {
+            "component": "retrieval",
+            "root_cause": "retrieval noise or weak ranking quality",
+            "severity": "high",
+            "confidence": 0.84,
+            "evidence": [
+              "context_precision=0.67 is below target 0.80",
+              "Noisy contexts usually propagate to hallucination and citation failures."
+            ],
+            "recommended_actions": [
+              "Add or tune reranker.",
+              "Reduce top-k or separate recall stage from final evidence stage.",
+              "Use metadata or section-aware filters."
+            ]
+          }
+        ],
+        "emerged_hypotheses": [],
+        "posterior_shifts": [],
+        "top_improvement": null,
+        "top_regression": null,
+        "metric_deltas": {
+          "context_precision": 0.0819,
+          "faithfulness": 0.0303
+        },
+        "lower_is_better_metrics": [
+          "cost_usd",
+          "hallucination",
+          "latency_ms",
+          "noise_sensitivity",
+          "retrieval_latency_ms"
+        ],
+        "summary": "1 still persisting"
+      }
+    }
+  }
+}
