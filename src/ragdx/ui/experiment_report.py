@@ -220,6 +220,190 @@ def _severity_class(severity: str) -> str:
     return "ok"
 
 
+def _render_causal_graph_svg(signals: list[dict], graph: dict | None = None) -> str:
+    """Phase 4c: render the 8-node causal graph as an SVG diagram.
+
+    Layout: fixed positions for the 8 canonical nodes (the analyser
+    has a hardcoded topology). Node circles are sized by posterior
+    (bigger = stronger signal) and tinted by component (retrieval /
+    generation / e2e / pipeline -> blue / orange / green / grey).
+    Edges drawn from ``graph.edges`` when supplied; otherwise from the
+    hardcoded analyzer topology so legacy reports still render.
+
+    Returns ``""`` when ``signals`` is empty (caller skips the section).
+    """
+    if not signals:
+        return ""
+
+    # Hardcoded coordinates -- four columns roughly: upstream / mid /
+    # downstream / side. Matches the 8-node causal topology.
+    layout = {
+        "corpus_chunking_defect":      (110, 80),
+        "retrieval_recall_defect":     (110, 180),
+        "retrieval_precision_defect":  (110, 280),
+        "context_packing_defect":      (310, 130),
+        "grounding_defect":            (310, 240),
+        "citation_binding_defect":     (510, 240),
+        "judge_or_metric_instability": (510, 80),
+        "distribution_shift":          (510, 160),
+    }
+    comp_colors = {
+        "retrieval":  "#1d4ed8",   # blue
+        "generation": "#c2410c",   # orange
+        "e2e":        "#15803d",   # green
+        "pipeline":   "#6b7280",   # grey
+    }
+    edges_default = [
+        ("corpus_chunking_defect", "retrieval_recall_defect"),
+        ("retrieval_recall_defect", "context_packing_defect"),
+        ("retrieval_precision_defect", "context_packing_defect"),
+        ("retrieval_precision_defect", "grounding_defect"),
+        ("context_packing_defect", "grounding_defect"),
+        ("grounding_defect", "citation_binding_defect"),
+        ("judge_or_metric_instability", "distribution_shift"),
+        ("distribution_shift", "retrieval_recall_defect"),
+        ("distribution_shift", "grounding_defect"),
+    ]
+    if graph and isinstance(graph.get("edges"), list):
+        edges = [(e.get("source"), e.get("target")) for e in graph["edges"]]
+    else:
+        edges = edges_default
+
+    sig_by_node = {s.get("node"): s for s in signals}
+
+    # SVG primitives.
+    width, height = 640, 360
+    bits: list[str] = [
+        f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'style="border:1px solid var(--line);border-radius:6px;background:#fff" '
+        f'xmlns="http://www.w3.org/2000/svg">'
+    ]
+    # Arrow marker definition.
+    bits.append(
+        '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" '
+        'markerWidth="6" markerHeight="6" orient="auto-start-reverse">'
+        '<path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/></marker></defs>'
+    )
+    # Edges first so nodes overlay them.
+    for src, tgt in edges:
+        if src not in layout or tgt not in layout:
+            continue
+        x1, y1 = layout[src]
+        x2, y2 = layout[tgt]
+        bits.append(
+            f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '
+            f'stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" />'
+        )
+    # Nodes.
+    for node, (cx, cy) in layout.items():
+        sig = sig_by_node.get(node) or {}
+        post = sig.get("posterior")
+        post_val = float(post) if isinstance(post, (int, float)) else 0.0
+        # Radius: 12..28 px scaled by posterior.
+        r = 12 + int(16 * max(0.0, min(1.0, post_val)))
+        comp = sig.get("component") or "pipeline"
+        fill = comp_colors.get(comp, "#9ca3af")
+        opacity = 0.4 + 0.6 * post_val  # stronger fill for higher posterior
+        bits.append(
+            f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{fill}" '
+            f'fill-opacity="{opacity:.2f}" stroke="{fill}" stroke-width="1.5"><title>'
+            f'{_esc(node)} (post={post_val:.2f}, component={comp})</title></circle>'
+        )
+        # Posterior label inside the node.
+        bits.append(
+            f'<text x="{cx}" y="{cy + 4}" font-size="11" font-weight="600" '
+            f'fill="#fff" text-anchor="middle">{post_val:.2f}</text>'
+        )
+        # Node name label below.
+        label = node.replace("_defect", "").replace("_", " ")
+        bits.append(
+            f'<text x="{cx}" y="{cy + r + 14}" font-size="11" '
+            f'fill="#374151" text-anchor="middle">{_esc(label)}</text>'
+        )
+    # Legend.
+    legend_x, legend_y = width - 150, 12
+    for i, (comp, color) in enumerate(comp_colors.items()):
+        ly = legend_y + i * 18
+        bits.append(
+            f'<rect x="{legend_x}" y="{ly}" width="12" height="12" fill="{color}" '
+            f'fill-opacity="0.7" />'
+            f'<text x="{legend_x + 16}" y="{ly + 10}" font-size="11" fill="#374151">'
+            f'{_esc(comp)}</text>'
+        )
+    bits.append('</svg>')
+    return (
+        '<h4>Causal graph (SVG)</h4>'
+        '<p class="caption">Node radius scales with posterior probability. '
+        'Colour denotes the component (retrieval / generation / e2e / '
+        'pipeline). Arrows = causal-propagation edges from the analyser '
+        'topology.</p>'
+        + "".join(bits)
+    )
+
+
+def _render_answer_diff(baseline: str, optimized: str) -> str:
+    """Phase 4b: word-level baseline-vs-optimized diff with colours.
+
+    Uses ``difflib.ndiff`` on word tokens. The shape:
+    * equal tokens render plain.
+    * tokens only in baseline render struck-through in red ("removed").
+    * tokens only in optimized render bold in green ("added").
+    Whitespace is preserved verbatim. Empty diff (identical strings)
+    returns ``""`` so the caller can skip the section entirely.
+    """
+    import difflib
+    import re as _re
+
+    if not baseline and not optimized:
+        return ""
+    if baseline == optimized:
+        return (
+            '<p class="caption"><em>(Baseline and optimized answers '
+            'are identical -- prompt change had no textual effect on '
+            'this record.)</em></p>'
+        )
+
+    # Tokenise by word boundaries while keeping the separators. Newlines
+    # get their own token so paragraph breaks survive.
+    def _tokens(text: str) -> list[str]:
+        return [t for t in _re.split(r'(\s+)', text) if t != ""]
+
+    base_toks = _tokens(baseline)
+    opt_toks = _tokens(optimized)
+
+    sm = difflib.SequenceMatcher(a=base_toks, b=opt_toks, autojunk=False)
+    parts: list[str] = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            parts.append(_esc("".join(base_toks[i1:i2])))
+        elif tag == "delete":
+            parts.append(
+                f'<span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">'
+                f'{_esc("".join(base_toks[i1:i2]))}</span>'
+            )
+        elif tag == "insert":
+            parts.append(
+                f'<span style="background:#dcfce7;font-weight:600;color:#166534">'
+                f'{_esc("".join(opt_toks[j1:j2]))}</span>'
+            )
+        elif tag == "replace":
+            parts.append(
+                f'<span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">'
+                f'{_esc("".join(base_toks[i1:i2]))}</span>'
+            )
+            parts.append(
+                f'<span style="background:#dcfce7;font-weight:600;color:#166534">'
+                f'{_esc("".join(opt_toks[j1:j2]))}</span>'
+            )
+    return (
+        '<h4>Answer diff (baseline -> optimized)</h4>'
+        '<p class="caption">Red strikethrough = removed by optimization. '
+        'Green bold = added. Plain = unchanged.</p>'
+        f'<pre style="white-space:pre-wrap;background:#fafbfc;padding:12px;'
+        f'border:1px solid var(--line);border-radius:6px">{"".join(parts)}</pre>'
+    )
+
+
 def _render_run_cost(bundle: dict) -> str:
     """Phase 4e: surface "what did this run cost" -- per-trial wall
     time, mean per-question latency, total runtime. Token / dollar
@@ -423,6 +607,11 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
         parts.append(f"<table><thead>{gap_head}</thead><tbody>{gap_body}</tbody></table>")
 
     signals = report.get("causal_signals") or []
+    # Phase 4c: SVG diagram BEFORE the table -- visual reading first,
+    # numeric drill-down second.
+    svg = _render_causal_graph_svg(signals, report.get("causal_graph"))
+    if svg:
+        parts.append(svg)
     if signals:
         parts.append('<h4>Causal signals (top 8 by posterior)</h4>')
         # Phase 4d: anchor per node so evidence can link back.
@@ -1111,6 +1300,60 @@ def _render_dspy_a_b(bundle: dict) -> str:
                     open_=True,
                 ))
 
+        # Phase 4f: optimizer evolution timeline. Renders the candidate
+        # sequence as a vertical timeline with per-candidate score, so
+        # the reader can see "instruction N scored X, succeeded by N+1
+        # scoring Y, ..." at a glance. Complements the table below.
+        if proposed and trial_log:
+            # Map params → score so we can attach a score to each
+            # candidate index. MIPROv2's params look like
+            # ['Predictor 0: Instruction 1', ...] -- regex out the int.
+            import re as _re
+            score_by_idx: dict[str, dict[int, float]] = {}
+            for t in trial_log:
+                p = str(t.get("params") or "")
+                s = t.get("score")
+                if not isinstance(s, (int, float)):
+                    continue
+                for m in _re.finditer(r"Instruction (\d+)", p):
+                    score_by_idx.setdefault("predict", {}).setdefault(
+                        int(m.group(1)), float(s),
+                    )
+
+            timeline_html: list[str] = [
+                '<h4>Candidate evolution timeline</h4>',
+                '<p class="caption">Each row = one proposed instruction '
+                'in proposal order. Score (when available) is the best '
+                'trial score that picked this candidate. Winner marked '
+                'with a star.</p>',
+                '<ol style="border-left:2px solid var(--line);padding-left:18px;list-style:none">',
+            ]
+            for pname, cands in sorted(proposed.items()):
+                winner = (opt_instr or {}).get(pname)
+                scores = score_by_idx.get(pname, {})
+                for i, cand in enumerate(cands):
+                    is_winner = (
+                        winner is not None
+                        and cand.strip() == (winner or "").strip()
+                    )
+                    score = scores.get(i)
+                    badge_color = "#15803d" if is_winner else "#6b7280"
+                    score_str = f"{score:.3f}" if isinstance(score, (int, float)) else "n/a"
+                    marker = " &#x2605; <strong>winner</strong>" if is_winner else ""
+                    snippet = (cand[:160] + "...") if len(cand) > 160 else cand
+                    timeline_html.append(
+                        f'<li style="margin:8px 0;position:relative">'
+                        f'<span style="position:absolute;left:-26px;top:4px;width:14px;'
+                        f'height:14px;border-radius:50%;background:{badge_color};'
+                        f'border:2px solid #fff"></span>'
+                        f'<div><span class="tag">#{i}</span> '
+                        f'<strong>score:</strong> {score_str}{marker}</div>'
+                        f'<pre style="margin:4px 0;font-size:11px">{_esc(snippet)}</pre>'
+                        f'</li>'
+                    )
+            timeline_html.append('</ol>')
+            parts.append("".join(timeline_html))
+
         # Per-trial log: trial # → chosen (instruction_idx, demo_idx)
         # → score. Lets users see "trial 3 picked instruction 4, scored
         # 0.78". Built from the MIPROv2 logger.
@@ -1205,6 +1448,15 @@ def _render_dspy_a_b(bundle: dict) -> str:
                 qa_rows.append({"field": "optimized answer",
                                 "content": r.get("optimized_answer", "")})
                 inspector += _table(qa_rows, cols=["field", "content"])
+                # Phase 4b: word-level diff between baseline and optimized.
+                # Helps the reader spot where the prompt change actually
+                # moved the wording vs where DSPy just kept the seed text.
+                diff_html = _render_answer_diff(
+                    r.get("baseline_answer", "") or "",
+                    r.get("optimized_answer", "") or "",
+                )
+                if diff_html:
+                    inspector += diff_html
             parts.append(_details(
                 f"Per-record before/after (first {len(show)} of {len(recs)})",
                 inspector,
