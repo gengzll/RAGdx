@@ -132,20 +132,47 @@ class Workspace:
 
     def corpus_path(self) -> Path | None:
         """Resolve ``self.corpus``, or fall back to the YAML config's
-        ``corpus.path`` field. ``None`` if neither is set."""
-        if self.corpus:
-            return self.path(self.corpus)
-        # Fall back: peek at the YAML config (cheap -- just yaml.safe_load)
-        cfg_path = self.rag_config_path()
-        if cfg_path.exists():
-            try:
-                data = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
-                cp = (data.get("corpus") or {}).get("path") if isinstance(data, dict) else None
-                if cp:
-                    return self.path(cp)
-            except yaml.YAMLError:
-                return None
-        return None
+        ``corpus.path`` field. ``None`` if neither is set.
+
+        Relative paths are resolved against the workspace root first,
+        then against the current working directory (so a corpus file
+        sitting at the repo root still resolves even though the YAML's
+        ``corpus.path`` is a bare filename). HuggingFace dataset names
+        ("org/dataset") are returned as-is.
+        """
+        candidate: str | None = self.corpus
+        if candidate is None:
+            # Peek at the YAML config (cheap -- just yaml.safe_load).
+            cfg_path = self.rag_config_path()
+            if cfg_path.exists():
+                try:
+                    data = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+                    if isinstance(data, dict):
+                        candidate = (data.get("corpus") or {}).get("path")
+                except yaml.YAMLError:
+                    return None
+        if not candidate:
+            return None
+
+        candidate_path = Path(candidate)
+        if candidate_path.is_absolute():
+            return candidate_path
+
+        # HF datasets look like "org/name" but don't exist on disk;
+        # for those just return the workspace-rooted path so the
+        # downstream loader sees the unchanged string.
+        ws_rel = self.root / candidate
+        if ws_rel.exists():
+            return ws_rel
+
+        cwd_rel = Path.cwd() / candidate
+        if cwd_rel.exists():
+            return cwd_rel.resolve()
+
+        # Neither location holds the file -- fall back to the
+        # workspace-rooted form so the loader's error message points
+        # the user at the obvious place to drop it.
+        return ws_rel
 
     # --------------------------------------------------------------
     # Manifest IO

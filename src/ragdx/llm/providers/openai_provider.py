@@ -43,13 +43,27 @@ class OpenAIProvider(LLMProvider):
             raise DependencyError(
                 "OpenAIProvider requires the `openai` package. Install with `pip install ragdx[openai]`."
             ) from exc
+        import os
         if not api_key:
-            import os
-
-            api_key = os.environ.get("OPENAI_API_KEY")
+            # Fallback chain mirrors the rest of ragdx: explicit kwarg
+            # beats OPENAI_API_KEY beats ZHIPU_API_KEY (GLM users
+            # without an OpenAI key still want the diagnose / planner
+            # LLM to work against their Zhipu endpoint).
+            api_key = (
+                os.environ.get("OPENAI_API_KEY")
+                or os.environ.get("ZHIPU_API_KEY")
+            )
         if not api_key:
             raise LLMConfigError(
-                "OpenAIProvider requires an API key. Set OPENAI_API_KEY or pass api_key=..."
+                "OpenAIProvider requires an API key. Set OPENAI_API_KEY / "
+                "ZHIPU_API_KEY or pass api_key=..."
+            )
+        if not base_url:
+            # Honour the standard OpenAI SDK env var and the legacy
+            # ragas-style one. Both unset = official OpenAI endpoint.
+            base_url = (
+                os.environ.get("OPENAI_BASE_URL")
+                or os.environ.get("OPENAI_API_BASE")
             )
         client_kwargs: dict = {"api_key": api_key, "timeout": timeout}
         if base_url:

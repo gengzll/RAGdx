@@ -502,6 +502,7 @@ def _delegate_to_tune(
     from ragdx.core.diagnosis import RAGDiagnosisEngine
     from ragdx.experiments import (
         ExperimentConfig,
+        _build_ragas_metrics_for_mode,
         _compare_diagnoses,
         _load_corpus_and_records,
         _load_jsonl_questions,
@@ -552,7 +553,11 @@ def _delegate_to_tune(
 
     eff_gt_mode = detect_gt_mode(records)
     objective = default_objective(eff_gt_mode)
-    metrics = ["context_precision", "faithfulness", "answer_relevancy"]
+    # ``ctx.metrics`` must be ragas Metric *instances* (not strings)
+    # because ``_evaluate_with_ragas`` forwards them straight to
+    # ``ragas.evaluate(metrics=...)``. Re-use the same helper the
+    # experiment workflow uses so the metric set is consistent.
+    metrics = _build_ragas_metrics_for_mode(eff_gt_mode)
 
     # Stage dispatch.
     stage_map = {
@@ -573,8 +578,8 @@ def _delegate_to_tune(
         metrics=metrics,
         runtime=runtime,
         label=label,
-        n_init=2 if stage != "generation" else 0,
-        max_trials=budget,
+        n_bo_init=2 if stage != "generation" else 0,
+        n_bo_trials=budget,
     )
     # Extra knobs only the generation stage uses.
     if stage == "generation":

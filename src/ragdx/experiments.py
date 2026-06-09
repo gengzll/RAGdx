@@ -891,6 +891,17 @@ def _evaluate_with_ragas(
             "per_record_scores": result.metadata.get("per_record_scores", []),
         }
     except Exception as e:  # pragma: no cover - live LLM
+        # Surface the error so silent eval failures don't get buried.
+        # Without this log line, an upstream ragas / LLM hiccup just
+        # produces an empty ``scores: {}`` dict that callers happily
+        # accept, and the bundle ends up score-less for no obvious
+        # reason. The DEBUG-level log records the full traceback for
+        # users who set ``RAGDX_LOG_LEVEL=DEBUG``.
+        logger.warning(
+            "_evaluate_with_ragas: %s: %s (returning empty scores)",
+            type(e).__name__, e,
+        )
+        logger.debug("ragas eval traceback", exc_info=True)
         return {"error": f"{type(e).__name__}: {e}", "scores": {}}
 
 
