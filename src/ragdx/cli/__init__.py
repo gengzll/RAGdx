@@ -103,6 +103,7 @@ from ragdx.cli import (  # noqa: E402, I001
     providers as _providers_mod,  # noqa: F401  -- imported for side-effect (registers ``providers`` subapp on ``app``)
     runs as _runs_mod,
     tune as _tune_mod,
+    workspace as _workspace_mod,  # noqa: F401  -- side-effect: registers ``workspace`` subapp
 )
 
 # ---------------------------------------------------------------- backward-compat re-exports
