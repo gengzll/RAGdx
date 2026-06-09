@@ -885,6 +885,10 @@ def _evaluate_with_ragas(
         return {
             "scores": {**result.retrieval, **result.generation, **result.e2e},
             "skipped": result.metadata.get("skipped_metrics", {}),
+            # Phase 4a: forward per-record metric rows so trial bundles
+            # can carry them through to the HTML report. Empty list when
+            # the underlying ragas Result couldn't expose them.
+            "per_record_scores": result.metadata.get("per_record_scores", []),
         }
     except Exception as e:  # pragma: no cover - live LLM
         return {"error": f"{type(e).__name__}: {e}", "scores": {}}

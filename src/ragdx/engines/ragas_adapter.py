@@ -157,23 +157,36 @@ class RagasAdapter:
         result_obj = ragas_evaluate(**eval_kwargs)
 
         # ragas returns a Result object: try the public to_pandas first, then dict scores.
+        # Phase 4a: also extract per-record rows so the renderer can
+        # show per-question metric breakdown (not just trial means).
         raw_scores: dict[str, float] = {}
+        per_record: list[dict[str, float]] = []
         try:
             df = result_obj.to_pandas()
             numeric = df.select_dtypes(include="number")
             raw_scores = {col: float(numeric[col].mean()) for col in numeric.columns}
+            # One dict per record, keyed by metric name. Skip non-numeric
+            # rows (NaN etc) -- consumer just renders "-" for those.
+            for _, row in numeric.iterrows():
+                per_record.append({
+                    col: float(row[col]) for col in numeric.columns
+                    if _is_number(row[col])
+                })
         except Exception:
             # Older releases expose ``scores`` as a dict or list[dict]
             scores = getattr(result_obj, "scores", None)
             if isinstance(scores, dict):
                 raw_scores = {k: float(v) for k, v in scores.items() if _is_number(v)}
             elif isinstance(scores, list) and scores and isinstance(scores[0], dict):
-                # Average per metric across rows.
+                # Average per metric across rows; keep the rows too.
                 acc: dict[str, list[float]] = {}
                 for row in scores:
+                    row_clean: dict[str, float] = {}
                     for k, v in row.items():
                         if _is_number(v):
                             acc.setdefault(k, []).append(float(v))
+                            row_clean[k] = float(v)
+                    per_record.append(row_clean)
                 raw_scores = {k: sum(vs) / len(vs) for k, vs in acc.items() if vs}
             else:
                 raise RuntimeError(
@@ -187,6 +200,10 @@ class RagasAdapter:
                 "mode": "evaluated",
                 "ragas_metrics": [self._metric_name(m) for m in used_metrics],
                 "skipped_metrics": skipped,
+                # Per-record scores (Phase 4a). Index aligns with the
+                # ``records`` argument so the renderer can join on
+                # position. Empty list when extraction failed.
+                "per_record_scores": per_record,
                 "data_diagnostics": {
                     "has_ground_truth": has_ground_truth(records),
                     "has_answers": has_answers(records),

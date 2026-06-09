@@ -220,6 +220,66 @@ def _severity_class(severity: str) -> str:
     return "ok"
 
 
+def _render_run_cost(bundle: dict) -> str:
+    """Phase 4e: surface "what did this run cost" -- per-trial wall
+    time, mean per-question latency, total runtime. Token / dollar
+    accounting only renders when traces carry it; otherwise we just
+    show the timing we always have.
+    """
+    bayes = bundle.get("bayes_search") or {}
+    dspy = bundle.get("dspy_a_b") or {}
+    rows: list[dict[str, Any]] = []
+    total_seconds = 0.0
+    for mode, payload in bayes.items():
+        trials = (payload or {}).get("trials") or []
+        if not trials:
+            continue
+        elapsed = [t.get("elapsed_seconds") for t in trials if isinstance(t.get("elapsed_seconds"), (int, float))]
+        n_records = max(
+            (len(t.get("records") or []) for t in trials), default=0
+        )
+        per_question = (sum(elapsed) / (len(trials) * n_records)) if elapsed and n_records else 0.0
+        total = sum(elapsed)
+        total_seconds += total
+        rows.append({
+            "section": f"BO ({mode})",
+            "trials": len(trials),
+            "questions / trial": n_records,
+            "total runtime (s)": f"{total:.1f}" if total else "-",
+            "mean per question (s)": f"{per_question:.1f}" if per_question else "-",
+        })
+    for mode, payload in dspy.items():
+        # GenerationOptimizer doesn't carry trial timings; we report the
+        # baseline+optimized eval cycle as one "section" if we have any
+        # data at all to be honest about cost shape.
+        if not payload:
+            continue
+        rows.append({
+            "section": f"DSPy ({mode})",
+            "trials": "n/a",
+            "questions / trial": len((payload or {}).get("records") or []) or "n/a",
+            "total runtime (s)": "n/a (not tracked yet)",
+            "mean per question (s)": "n/a",
+        })
+    if not rows:
+        return ""
+    out = ['<h2>Run cost</h2>']
+    out.append('<p class="caption">Wall-clock cost of the optimization run, '
+               'derived from per-trial elapsed times. Token / dollar accounting '
+               'only renders when traces carry it (not by default).</p>')
+    out.append(_table(rows, cols=[
+        "section", "trials", "questions / trial",
+        "total runtime (s)", "mean per question (s)",
+    ]))
+    if total_seconds:
+        out.append(
+            f'<p class="caption"><strong>Total tracked runtime:</strong> '
+            f'{total_seconds:.1f}s '
+            f'({total_seconds / 60.0:.1f} min)</p>'
+        )
+    return "\n".join(out)
+
+
 def _diagnosis_view(bundle: dict, phase: str) -> dict[str, dict | None]:
     """Return ``{mode: report_dump | None}`` for the requested ``phase``
     (``"baseline"`` or ``"optimized"``). Handles both the new
@@ -352,32 +412,81 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
     gaps = report.get("metric_gaps") or {}
     if gaps:
         parts.append('<h4>Metric gaps (below threshold)</h4>')
-        gap_rows = [
-            {"metric": k, "gap": f"{v:.4f}" if isinstance(v, (int, float)) else v}
+        # Phase 4d: each row gets an anchor id so the hypothesis
+        # evidence below can hyperlink back to the underlying gap.
+        gap_head = '<tr><th>metric</th><th>gap</th></tr>'
+        gap_body = "".join(
+            f'<tr id="gap-{_esc(k)}"><td>{_esc(k)}</td>'
+            f'<td>{(_esc(f"{v:.4f}") if isinstance(v, (int, float)) else _esc(v))}</td></tr>'
             for k, v in gaps.items()
-        ]
-        parts.append(_table(gap_rows, cols=["metric", "gap"]))
+        )
+        parts.append(f"<table><thead>{gap_head}</thead><tbody>{gap_body}</tbody></table>")
 
     signals = report.get("causal_signals") or []
     if signals:
         parts.append('<h4>Causal signals (top 8 by posterior)</h4>')
-        sig_rows = []
+        # Phase 4d: anchor per node so evidence can link back.
+        sig_head = (
+            '<tr><th>node</th><th>component</th><th>prior</th>'
+            '<th>posterior</th><th>recommended experiment</th></tr>'
+        )
+        sig_rows_html: list[str] = []
         for s in signals[:8]:
-            sig_rows.append({
-                "node": s.get("node", ""),
-                "component": s.get("component", ""),
-                "prior": f"{s.get('prior', 0.0):.2f}",
-                "posterior": f"{s.get('posterior', 0.0):.2f}",
-                "recommended experiment": s.get("recommended_experiment", ""),
-            })
-        parts.append(_table(
-            sig_rows,
-            cols=["node", "component", "prior", "posterior",
-                  "recommended experiment"],
-        ))
+            node = s.get("node", "")
+            prior_val = s.get("prior", 0.0)
+            post_val = s.get("posterior", 0.0)
+            prior_str = f"{prior_val:.2f}" if isinstance(prior_val, (int, float)) else str(prior_val)
+            post_str = f"{post_val:.2f}" if isinstance(post_val, (int, float)) else str(post_val)
+            sig_rows_html.append(
+                f'<tr id="signal-{_esc(node)}">'
+                f'<td>{_esc(node)}</td>'
+                f'<td>{_esc(s.get("component", ""))}</td>'
+                f'<td>{_esc(prior_str)}</td>'
+                f'<td>{_esc(post_str)}</td>'
+                f'<td>{_esc(s.get("recommended_experiment", ""))}</td>'
+                '</tr>'
+            )
+        parts.append(
+            f"<table><thead>{sig_head}</thead><tbody>{''.join(sig_rows_html)}</tbody></table>"
+        )
 
     hyps = report.get("hypotheses") or []
     if hyps:
+        # Phase 4d: evidence linkifier. Each evidence string typically
+        # mentions a metric ("context_precision=0.55 is below ...") or
+        # a causal-graph node ("Upstream propagation from
+        # retrieval_recall_defect ..."). We turn matching tokens into
+        # hyperlinks pointing at the metric_gaps / causal_signals rows
+        # above (those rows now carry id="gap-<name>" / "signal-<node>"
+        # anchors -- see the gap / signal renderers).
+        gap_names = set(gaps.keys()) if gaps else set()
+        signal_names = {s.get("node", "") for s in signals if s.get("node")}
+
+        def _linkify_evidence(text: str) -> str:
+            """Replace metric and signal mentions with anchor links.
+
+            HTML-escapes first, then layers anchors over the escaped
+            string so the user-supplied evidence text can never inject
+            markup. Longest tokens first so e.g. ``retrieval_recall_defect``
+            wins over ``recall``.
+            """
+            import re as _re
+            esc_text = _esc(text)
+            tokens = sorted(gap_names | signal_names, key=len, reverse=True)
+            for tok in tokens:
+                if not tok:
+                    continue
+                anchor = (
+                    f'gap-{tok}' if tok in gap_names else f'signal-{tok}'
+                )
+                # Word-boundary match against the already-escaped text.
+                pattern = _re.compile(rf'\b{_re.escape(tok)}\b')
+                esc_text = pattern.sub(
+                    f'<a href="#{anchor}"><code>{tok}</code></a>',
+                    esc_text,
+                )
+            return esc_text
+
         parts.append('<h4>Hypotheses</h4>')
         for i, h in enumerate(hyps, 1):
             sev_class = _severity_class(h.get("severity", ""))
@@ -391,7 +500,7 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
             ev = h.get("evidence") or []
             if ev:
                 inner.append('<h4>Evidence</h4><ul>')
-                inner.extend(f'<li>{_esc(e)}</li>' for e in ev)
+                inner.extend(f'<li>{_linkify_evidence(e)}</li>' for e in ev)
                 inner.append('</ul>')
             acts = h.get("recommended_actions") or []
             if acts:
@@ -794,23 +903,40 @@ def _render_bayes_search(bundle: dict) -> str:
                     f"<h4>Trial #{t.get('trial_index')} "
                     f"({_esc(_trial_param_label(t.get('params') or {}))})</h4>"
                 )
+                # Phase 4a: gather every metric name present across the
+                # trial's records so the per-question table shows the
+                # same set of columns even when some records are missing
+                # a metric (rendered as "-").
+                t_records = t.get("records") or []
+                metric_cols: list[str] = []
+                for r in t_records:
+                    for k in (r.get("scores") or {}).keys():
+                        if k not in metric_cols:
+                            metric_cols.append(k)
+
                 rec_rows = []
-                for j, r in enumerate(t.get("records") or [], 1):
+                for j, r in enumerate(t_records, 1):
                     # Show full answer text (no truncation). Earlier the
                     # row sliced to 300 chars to keep the table compact,
                     # but for multi-paragraph ESG / legal RAG answers
                     # that's where the actual content begins. The page
                     # CSS wraps long cells, and the parent ``<details>``
                     # element keeps them collapsed by default.
-                    rec_rows.append({
+                    row: dict[str, Any] = {
                         "#": j,
                         "question": r.get("question") or "",
                         "ground_truth": r.get("ground_truth") or "—",
                         "answer": r.get("answer") or "",
-                    })
-                inspector += _table(
-                    rec_rows, cols=["#", "question", "ground_truth", "answer"]
-                )
+                    }
+                    # Phase 4a: stitch per-record metric columns into
+                    # the row. Missing metrics render as "-".
+                    rec_scores = r.get("scores") or {}
+                    for m in metric_cols:
+                        v = rec_scores.get(m)
+                        row[m] = f"{v:.3f}" if isinstance(v, (int, float)) else "-"
+                    rec_rows.append(row)
+                cols = ["#", "question", "ground_truth", "answer", *metric_cols]
+                inspector += _table(rec_rows, cols=cols)
             parts.append(_details(
                 f"Per-record outputs (first {len(show)} trials)",
                 inspector,
@@ -1142,6 +1268,8 @@ def render_report(bundle: dict, *, title: str | None = None) -> str:
             # Optimized diagnosis closes the loop: what (if anything)
             # is still broken at the optimized config?
             _render_optimized_diagnosis(bundle),
+            # Phase 4e: how long did this all take?
+            _render_run_cost(bundle),
             _render_questions(bundle),
             _render_extras(bundle),
         ) if s

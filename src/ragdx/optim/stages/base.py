@@ -365,6 +365,23 @@ class StageOptimizer(ABC):
             comp_eval = ctx.objective.evaluate(scores)
             bo.report(params, comp_eval["score"])
 
+            # Phase 4a: zip per-record metric scores onto each record
+            # so the HTML report can show per-question breakdowns.
+            # ``per_record_scores`` is positionally aligned with the
+            # records list; empty for ragas releases that can't expose
+            # per-row data.
+            per_rec = ev.get("per_record_scores", []) or []
+            records_with_scores: list[dict[str, Any]] = []
+            for idx, a in enumerate(answered):
+                row: dict[str, Any] = {
+                    "question": a.question,
+                    "ground_truth": a.ground_truth,
+                    "contexts": list(a.contexts or []),
+                    "answer": a.answer or "",
+                }
+                if idx < len(per_rec):
+                    row["scores"] = dict(per_rec[idx])
+                records_with_scores.append(row)
             new_trial = StageTrial(
                 trial_index=len(bo.trials) - 1,
                 params=dict(params),
@@ -374,15 +391,7 @@ class StageOptimizer(ABC):
                 feasible=comp_eval["feasible"],
                 violations=comp_eval["violations"],
                 answers_preview=[(a.answer or "")[:200] for a in answered],
-                records=[
-                    {
-                        "question": a.question,
-                        "ground_truth": a.ground_truth,
-                        "contexts": list(a.contexts or []),
-                        "answer": a.answer or "",
-                    }
-                    for a in answered
-                ],
+                records=records_with_scores,
                 elapsed_seconds=round(time.time() - t_start, 2),
             )
             trials_out.append(new_trial)
