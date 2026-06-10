@@ -515,7 +515,29 @@ class RuleBasedRootCauseAnalyzer:
             hypotheses.append(DiagnosisHypothesis(component='e2e', root_cause='citation mapping is weaker than answer generation', severity='medium', confidence=0.72, evidence=[f"citation_accuracy={cite:.2f} is below target {self.thresholds['citation_accuracy']:.2f}"], recommended_actions=['Enforce sentence-level citation formatting.', 'Return passage ids with the answer synthesis step.']))
             actions.append('Add explicit citation scaffolding in the generation prompt or response schema.')
 
+        # Per-layer aggregate scores (retrieval / generation / e2e) so
+        # the summary can lead with "which layer is weakest" -- a
+        # coarser, more actionable signal than any single metric gap.
+        from ragdx.core.metrics import compute_layer_scores, weakest_layer
+        layer_scores = compute_layer_scores(
+            {**result.retrieval, **result.generation, **result.e2e}
+        )
+        weak = weakest_layer(layer_scores)
+
         summary = 'Metrics are close to the configured thresholds. No dominant bottleneck is detected.' if not hypotheses else f"Primary bottleneck: {hypotheses[0].root_cause}. {len(hypotheses)} diagnosis hypotheses were generated."
+        # Lead with the weakest layer when we have layer scores -- this
+        # is the "attack this layer first" prioritization the layer
+        # aggregation enables.
+        if weak is not None and layer_scores[weak]["score"] is not None:
+            _ls_bits = ", ".join(
+                f"{lyr}={layer_scores[lyr]['score']:.2f}"
+                for lyr in ("retrieval", "generation", "e2e")
+                if layer_scores[lyr]["score"] is not None
+            )
+            summary = (
+                f"Weakest layer: {weak} ({layer_scores[weak]['score']:.2f}). "
+                f"Layer scores: {_ls_bits}. " + summary
+            )
         if causal_signals:
             lead_signal = causal_signals[0]
             summary += f" Lead causal node: {lead_signal.node} with posterior {lead_signal.posterior:.2f}."
@@ -557,6 +579,8 @@ class RuleBasedRootCauseAnalyzer:
             # New: per-source lineage.
             rule_based=rule_layer,
             active_source="rule",
+            # New: per-layer aggregate scores for the three-layer view.
+            layer_scores=layer_scores,
         )
         self.store.update_causal_priors_from_report(report, result.feedback_events)
         return report

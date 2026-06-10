@@ -193,6 +193,25 @@ class EvaluationResult(BaseModel):
                 return bucket[metric]
         return default
 
+    def layer_scores(
+        self, weights: dict[str, float] | None = None
+    ) -> dict[str, dict]:
+        """Per-layer aggregate scores (retrieval / generation / e2e).
+
+        Each layer's score is the (optionally weighted) mean of its
+        metrics, with lower-is-better metrics inverted so the result is
+        uniformly "higher = healthier" in [0, 1]. ``weights`` is a flat
+        ``{metric: weight}`` map; absent metrics default to weight 1.0
+        (simple mean). See :func:`ragdx.core.metrics.compute_layer_scores`.
+
+        Returns ``{layer: {score, metrics, raw, n}}``; ``score`` is
+        ``None`` for an empty layer.
+        """
+        from ragdx.core.metrics import compute_layer_scores
+
+        flat = {**self.retrieval, **self.generation, **self.e2e}
+        return compute_layer_scores(flat, weights=weights)
+
 
 class DiagnosisHypothesis(BaseModel):
     component: LayerName
@@ -260,6 +279,11 @@ class DiagnosisReport(BaseModel):
     evaluator_agreement: dict[str, float] = Field(default_factory=dict)
     diagnosis_confidence: float = 0.0
     disambiguation_actions: list[str] = Field(default_factory=list)
+    # Per-layer aggregate scores (retrieval / generation / e2e) computed
+    # from the evaluated metrics. ``{layer: {score, metrics, raw, n}}``.
+    # Drives the "weakest layer first" prioritization in the summary and
+    # the three-layer overview in the HTML report.
+    layer_scores: dict[str, dict] = Field(default_factory=dict)
 
     # ----- Per-source layers (additive, optional) --------------------
     rule_based: DiagnosisLayer | None = None

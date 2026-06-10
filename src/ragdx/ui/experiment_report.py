@@ -557,6 +557,80 @@ def _render_diagnosis_layers(report: dict) -> str:
     )
 
 
+def _render_layer_overview(layer_scores: dict) -> str:
+    """Three-layer (retrieval / generation / e2e) score overview.
+
+    Each layer renders as a horizontal bar sized + coloured by its
+    aggregate score, with a ``<details>`` drop-down exposing the
+    per-metric breakdown (oriented values, so lower-is-better metrics
+    already inverted). Returns ``""`` when no layer has a score.
+    """
+    layers = ("retrieval", "generation", "e2e")
+    have = [
+        lyr for lyr in layers
+        if isinstance((layer_scores.get(lyr) or {}).get("score"), (int, float))
+    ]
+    if not have:
+        return ""
+
+    def _bar_color(s: float) -> str:
+        # red < 0.6 < amber < 0.8 < green
+        if s < 0.6:
+            return "#dc2626"
+        if s < 0.8:
+            return "#d97706"
+        return "#16a34a"
+
+    parts: list[str] = [
+        '<h4>Three-layer score overview</h4>',
+        '<p class="caption">Aggregate score per layer (weighted mean of '
+        'the layer\'s metrics; lower-is-better metrics like '
+        '<code>hallucination</code> are inverted so higher = healthier). '
+        'Click a layer to see the per-metric breakdown.</p>',
+    ]
+    for lyr in layers:
+        d = layer_scores.get(lyr) or {}
+        s = d.get("score")
+        if not isinstance(s, (int, float)):
+            continue
+        pct = round(s * 100)
+        color = _bar_color(s)
+        # The bar row.
+        bar = (
+            f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
+            f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
+            f'<div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative">'
+            f'<div style="width:{pct}%;background:{color};height:100%;border-radius:5px"></div>'
+            f'</div>'
+            f'<div style="width:48px;text-align:right;font-variant-numeric:tabular-nums">{s:.2f}</div>'
+            f'</div>'
+        )
+        # Per-metric detail (oriented + raw).
+        metrics = d.get("metrics") or {}
+        raw = d.get("raw") or {}
+        if metrics:
+            rows = []
+            for m, ov in metrics.items():
+                rv = raw.get(m)
+                note = ""
+                if isinstance(rv, (int, float)) and abs(rv - ov) > 1e-9:
+                    note = f" (raw {rv:.3f}, inverted)"
+                rows.append(
+                    f"<tr><td><code>{_esc(m)}</code></td>"
+                    f"<td>{ov:.3f}{_esc(note)}</td></tr>"
+                )
+            detail = (
+                "<table><thead><tr><th>metric</th><th>oriented value</th></tr>"
+                f"</thead><tbody>{''.join(rows)}</tbody></table>"
+            )
+            parts.append(bar + _details(
+                f"{lyr} — {d.get('n', len(metrics))} metric(s)", detail,
+            ))
+        else:
+            parts.append(bar)
+    return "\n".join(parts)
+
+
 def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
     """One mode's diagnosis content (used by both baseline and optimized
     renderers). Returns an empty string when ``report`` is None or empty.
@@ -586,6 +660,13 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
     parts.append('</div>')
     if summary:
         parts.append(f'<div class="box">{_esc(summary)}</div>')
+
+    # Three-layer overview (retrieval / generation / e2e). Bars sized
+    # by each layer's aggregate score, expandable to the per-metric
+    # breakdown. Renders nothing for legacy reports without layer_scores.
+    overview_html = _render_layer_overview(report.get("layer_scores") or {})
+    if overview_html:
+        parts.append(overview_html)
 
     # Per-source layer panels (Phase 2). Renders nothing for legacy
     # reports that don't have the layers populated.
