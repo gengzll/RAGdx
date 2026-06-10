@@ -99,9 +99,49 @@ METRIC_CATALOG: dict[str, dict] = {
 REQUIRES_LABEL: dict[str, str] = {
     "none": "",
     "gt": "requires ground truth",
-    "deepeval": "requires --evaluator deepeval",
+    "deepeval": "computed via deepeval",
     "traces": "requires trace data",
     "feedback": "requires feedback",
+}
+
+
+# Per-metric glossary: what it measures + direction. ``direction`` is
+# "higher" (higher = better) or "lower" (lower = better). Used to render
+# an explanatory table so a reader doesn't have to know every metric.
+METRIC_GLOSSARY: dict[str, dict[str, str]] = {
+    "context_precision": {"direction": "higher", "desc": "Of the retrieved chunks, how many are actually relevant — and are the relevant ones ranked first. Low = the retriever is pulling noise."},
+    "context_recall": {"direction": "higher", "desc": "Of the information needed to answer, how much was retrieved. Low = the retriever is missing evidence (needs the ground-truth answer to measure)."},
+    "context_entities_recall": {"direction": "higher", "desc": "Of the key entities in the ground-truth answer, how many appear in the retrieved context."},
+    "hit_rate_at_k": {"direction": "higher", "desc": "Fraction of queries where at least one relevant chunk is in the top-k."},
+    "faithfulness": {"direction": "higher", "desc": "Of the claims in the answer, how many are supported by the retrieved context. Low = the generator is making things up."},
+    "answer_relevancy": {"direction": "higher", "desc": "How directly the answer addresses the question (not off-topic or padded)."},
+    "response_relevancy": {"direction": "higher", "desc": "Alias of answer_relevancy: how on-topic the response is."},
+    "context_utilization": {"direction": "higher", "desc": "How much of the retrieved context the answer actually used."},
+    "noise_sensitivity": {"direction": "lower", "desc": "How easily the answer is derailed by irrelevant/distractor chunks. Lower = more robust."},
+    "hallucination": {"direction": "lower", "desc": "How much of the answer is fabricated / contradicts the context. Lower is better."},
+    "bias": {"direction": "lower", "desc": "Presence of biased framing in the answer. Lower is better."},
+    "toxicity": {"direction": "lower", "desc": "Presence of toxic / harmful language in the answer. Lower is better."},
+    "answer_correctness": {"direction": "higher", "desc": "How correct the final answer is vs the ground truth (facts + semantics combined)."},
+    "answer_accuracy": {"direction": "higher", "desc": "Accuracy of the final answer against the ground truth."},
+    "citation_accuracy": {"direction": "higher", "desc": "Whether the answer's citations point to the passages that actually support each claim."},
+    "g_eval": {"direction": "higher", "desc": "A chain-of-thought LLM judge scoring overall answer quality against a rubric (grounded + complete + on-topic)."},
+    "user_success_rate": {"direction": "higher", "desc": "Share of production interactions users marked successful (from feedback)."},
+}
+
+
+# Causal-graph node glossary: the 8 defect nodes the diagnosis reasons
+# over. Each node is a *hypothesized failure mode*; the SVG sizes nodes
+# by posterior probability (how likely that defect is, given the
+# metrics + traces). All nodes are "lower posterior = healthier".
+CAUSAL_NODE_GLOSSARY: dict[str, dict[str, str]] = {
+    "corpus_chunking_defect": {"layer": "retrieval", "desc": "The document was split badly — chunks cut across topics or bury the answer — so retrieval can't find clean evidence. Fix at the parser / chunker before tuning the retriever."},
+    "retrieval_recall_defect": {"layer": "retrieval", "desc": "The retriever misses relevant evidence (it's not in the top-k at all). Widen recall: hybrid search, bigger candidate pool, query rewriting."},
+    "retrieval_precision_defect": {"layer": "retrieval", "desc": "The retriever returns too much noise alongside the relevant chunks. Tighten ranking: reranker, lower top-k, metadata filters."},
+    "context_packing_defect": {"layer": "generation", "desc": "Evidence was retrieved but packed into the prompt poorly (order, truncation, no section labels), so the generator under-uses it."},
+    "grounding_defect": {"layer": "generation", "desc": "The generator doesn't stick to the retrieved evidence — it paraphrases loosely or invents. Fix with citation-first prompting, verification, a stronger LM."},
+    "citation_binding_defect": {"layer": "e2e", "desc": "The answer may be right but its citations don't map to the supporting passages. Fix with sentence-level citation formatting / passage ids."},
+    "judge_or_metric_instability": {"layer": "e2e", "desc": "The evaluator itself is unreliable (judge disagreement, prompt drift) — the metrics may not be trustworthy. Audit / calibrate the judge before acting on scores."},
+    "distribution_shift": {"layer": "e2e", "desc": "The traffic / question distribution changed from what the system was built for. Cluster failing queries and expand the benchmark."},
 }
 
 
@@ -244,9 +284,11 @@ def weakest_layer(layer_scores: dict[str, dict]) -> str | None:
 
 
 __all__ = [
+    "CAUSAL_NODE_GLOSSARY",
     "LAYERS",
     "LAYER_OF",
     "METRIC_CATALOG",
+    "METRIC_GLOSSARY",
     "REQUIRES_LABEL",
     "compute_layer_scores",
     "layer_catalog",

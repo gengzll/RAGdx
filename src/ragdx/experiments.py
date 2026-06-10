@@ -940,6 +940,94 @@ def _make_pdf_re_chunk_fn(
     return _re_chunk
 
 
+def _supplement_deepeval_metrics(
+    records_payload: list[dict],
+    runtime: RagdxRuntime,
+) -> dict[str, float]:
+    """Compute the deepeval-only metrics over the optimized answers.
+
+    Returns ``{metric: mean_score}`` for the deepeval metrics ragas
+    doesn't produce: ``hallucination``, ``bias``, ``toxicity``,
+    ``g_eval``. Each metric is computed per-record with a per-call
+    guard so a judge timeout / parse error degrades to "metric not
+    computed" rather than sinking the whole run.
+
+    ``records_payload`` items carry ``question`` / ``contexts`` /
+    ``optimized_answer`` (the dspy_a_b record shape). Returns ``{}``
+    when deepeval (or its judge) isn't available, or no record could
+    be scored.
+    """
+    judge = getattr(runtime, "deepeval_judge", None)
+    if judge is None:
+        return {}
+    try:
+        from deepeval.metrics import (
+            BiasMetric,
+            GEval,
+            HallucinationMetric,
+            ToxicityMetric,
+        )
+        from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+    except Exception:  # pragma: no cover - deepeval optional
+        return {}
+
+    # Build the metric objects once; reuse across records.
+    geval = GEval(
+        name="g_eval",
+        criteria=(
+            "Holistically rate how well the answer responds to the "
+            "question using ONLY the retrieved context: grounded in the "
+            "context, complete, and directly on-topic. Higher is better."
+        ),
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+            LLMTestCaseParams.RETRIEVAL_CONTEXT,
+        ],
+        model=judge,
+    )
+    # Standalone answer-quality metrics (no context needed for bias /
+    # toxicity; hallucination compares answer against the context).
+    builders: dict[str, Any] = {
+        "hallucination": lambda: HallucinationMetric(model=judge),
+        "bias": lambda: BiasMetric(model=judge),
+        "toxicity": lambda: ToxicityMetric(model=judge),
+        "g_eval": lambda: geval,
+    }
+
+    acc: dict[str, list[float]] = {k: [] for k in builders}
+    for r in records_payload:
+        q = str(r.get("question") or "")
+        ans = str(r.get("optimized_answer") or r.get("answer") or "")
+        ctxs = [str(c) for c in (r.get("contexts") or []) if c]
+        if not ans:
+            continue
+        # HallucinationMetric uses ``context`` (the ground-truth-ish
+        # source) rather than ``retrieval_context``; we pass the
+        # retrieved contexts as both so it has something to compare to.
+        tc = LLMTestCase(
+            input=q, actual_output=ans,
+            retrieval_context=ctxs or None, context=ctxs or None,
+        )
+        for name, build in builders.items():
+            try:
+                m = build()
+                m.measure(tc)
+                s = float(getattr(m, "score", None))
+                if s == s:  # not NaN
+                    acc[name].append(max(0.0, min(1.0, s)))
+            except Exception as exc:  # pragma: no cover - judge-dependent
+                logger.debug("deepeval %s failed on a record: %s", name, exc)
+
+    out: dict[str, float] = {}
+    for name, vals in acc.items():
+        if vals:
+            out[name] = round(sum(vals) / len(vals), 4)
+    if out:
+        logger.info("deepeval supplement computed: %s", out)
+    return out
+
+
 def _run_one_mode(
     cfg: ExperimentConfig,
     runtime: _Runtime,
@@ -1017,6 +1105,26 @@ def _run_one_mode(
         label=mode,
     )
     gen_result = GenerationOptimizer().optimize(gen_ctx)
+
+    # --- Stage 3: deepeval supplement (item 1) -----------------------
+    # ragas gives us context_precision / faithfulness / answer_relevancy.
+    # deepeval adds the metrics ragas doesn't compute -- hallucination,
+    # bias, toxicity, g_eval -- so the three-layer view shows real
+    # numbers instead of "requires deepeval". Computed on the OPTIMIZED
+    # answers (the final system). Best-effort: each metric is wrapped so
+    # a judge timeout degrades to "not computed" rather than failing the
+    # run. No-op when deepeval isn't installed.
+    try:
+        extra = _supplement_deepeval_metrics(
+            gen_result.extras.get("records") or [], runtime,
+        )
+        if extra:
+            opt = dict(gen_result.extras.get("optimized_scores") or {})
+            opt.update(extra)
+            gen_result.extras["optimized_scores"] = opt
+            gen_result.extras["deepeval_supplement"] = extra
+    except Exception as exc:  # pragma: no cover - depends on judge LM
+        logger.warning("deepeval supplement skipped: %s", exc)
 
     return {
         "bayes_search": joint_result.to_bayes_search_bundle(),

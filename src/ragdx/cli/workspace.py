@@ -509,8 +509,9 @@ def tune_rag_cmd(
 def tune_prompt_cmd(
     name: str = typer.Argument(..., help="Workspace name."),
     dspy_optimizer: str = typer.Option(
-        "mipro", "--dspy-optimizer",
-        help="DSPy teleprompter: mipro / copro / bootstrap_fewshot / gepa.",
+        "gepa", "--dspy-optimizer",
+        help="DSPy teleprompter: gepa (default) / mipro / copro / "
+        "bootstrap_fewshot.",
     ),
     dspy_metric: str = typer.Option(
         "auto", "--dspy-metric",
@@ -556,7 +557,7 @@ def _delegate_to_tune(
     budget: int,
     output: str,
     verb: str,
-    dspy_optimizer: str = "mipro",
+    dspy_optimizer: str = "gepa",
     dspy_metric: str = "auto",
     mipro_auto: str = "light",
     resume: str = "",

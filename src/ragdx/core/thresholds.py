@@ -44,4 +44,11 @@ DEFAULT_THRESHOLDS = {
     "user_success_rate": 0.85,
 }
 
-LOWER_IS_BETTER = {"noise_sensitivity", "hallucination", "retrieval_latency_ms", "latency_ms", "cost_usd"}
+# Metrics where a LOWER raw value is better. The layer aggregator
+# inverts these (1 - value) so every layer score reads "higher =
+# healthier". ``bias`` / ``toxicity`` come from deepeval where a higher
+# score means MORE bias / toxicity (worse), so they belong here too.
+LOWER_IS_BETTER = {
+    "noise_sensitivity", "hallucination", "bias", "toxicity",
+    "retrieval_latency_ms", "latency_ms", "cost_usd",
+}

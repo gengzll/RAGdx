@@ -220,6 +220,30 @@ def evaluate(
         if ev.get("skipped"):
             ev_meta_extra["ragas_skipped_metrics"] = ev["skipped"]
 
+        # Supplement with deepeval-only metrics (hallucination / bias /
+        # toxicity / g_eval) when a deepeval judge is available, so the
+        # three-layer view shows real numbers instead of "requires
+        # deepeval". Best-effort; no-op when deepeval isn't installed.
+        if getattr(runtime, "deepeval_judge", None) is not None:
+            try:
+                from ragdx.experiments import _supplement_deepeval_metrics
+                supp = _supplement_deepeval_metrics(
+                    [
+                        {
+                            "question": r.question,
+                            "contexts": list(r.contexts or []),
+                            "optimized_answer": r.answer or "",
+                        }
+                        for r in answered
+                    ],
+                    runtime,
+                )
+                if supp:
+                    scores = {**scores, **supp}
+                    ev_meta_extra["deepeval_supplement"] = supp
+            except Exception as exc:  # pragma: no cover - judge-dependent
+                logger.warning("evaluate: deepeval supplement skipped -- %s", exc)
+
     # 3. Normalize into EvaluationResult sections.
     md: dict[str, Any] = {
         "n_records": len(records),

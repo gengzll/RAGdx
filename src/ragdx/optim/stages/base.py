@@ -99,7 +99,7 @@ class StageContext:
     """Optional :class:`ragdx.checkpoint.CheckpointStore` for the
     per-trial save. Ignored when ``checkpoint`` is ``None``."""
 
-    dspy_optimizer: str = "mipro"
+    dspy_optimizer: str = "gepa"
     """Which DSPy teleprompter ``--stage generation`` should run:
 
     * ``"mipro"`` (default): MIPROv2 — Bayesian search over

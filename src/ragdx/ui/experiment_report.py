@@ -91,6 +91,45 @@ def _esc(s: Any) -> str:
     return html.escape("" if s is None else str(s))
 
 
+_REPORT_JS = """
+// item 7: live-editable layer weights. Each .ovlayer recomputes its
+// aggregate from its own weight inputs (oriented values already account
+// for lower-is-better inversion server-side).
+function ragdxRecomputeLayer(layerEl){
+  var inputs = layerEl.querySelectorAll('input.lw');
+  var num=0, den=0;
+  inputs.forEach(function(inp){
+    var w = parseFloat(inp.value); if(isNaN(w)||w<0) w=0;
+    var ov = parseFloat(inp.getAttribute('data-oriented'));
+    if(!isNaN(ov) && w>0){ num += ov*w; den += w; }
+  });
+  var fill = layerEl.querySelector('.ovbar-fill');
+  var st = layerEl.querySelector('.ovscore');
+  if(den<=0){ if(st) st.textContent='-'; if(fill) fill.style.width='0%'; return; }
+  var score = num/den;
+  var pct = Math.round(score*100);
+  if(fill){ fill.style.width = pct+'%';
+    fill.style.background = score<0.6?'#dc2626':(score<0.8?'#d97706':'#16a34a'); }
+  if(st) st.textContent = score.toFixed(2);
+}
+// item 6: per-trial visibility checkboxes toggle each trial block.
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(t && t.classList && t.classList.contains('trial-toggle')){
+    var id = t.getAttribute('data-target');
+    var el = document.getElementById(id);
+    if(el) el.style.display = t.checked ? '' : 'none';
+  }
+});
+document.addEventListener('input', function(e){
+  if(e.target && e.target.classList && e.target.classList.contains('lw')){
+    var layerEl = e.target.closest('.ovlayer');
+    if(layerEl) ragdxRecomputeLayer(layerEl);
+  }
+});
+"""
+
+
 def _wrap(title: str, body: str, generated_at: str) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -104,7 +143,9 @@ def _wrap(title: str, body: str, generated_at: str) -> str:
   <div class="subtle">Generated {_esc(generated_at)} · ragdx schema v{SCHEMA_VERSION}</div>
 </header>
 {body}
-</div></body></html>"""
+</div>
+<script>{_REPORT_JS}</script>
+</body></html>"""
 
 
 def _metric(label: str, value: Any) -> str:
@@ -330,13 +371,45 @@ def _render_causal_graph_svg(signals: list[dict], graph: dict | None = None) -> 
             f'{_esc(comp)}</text>'
         )
     bits.append('</svg>')
+
+    # Node glossary (item 3): what each node means + how to read the SVG.
+    from ragdx.core.metrics import CAUSAL_NODE_GLOSSARY
+    present = {s.get("node") for s in signals}
+    gloss_rows = []
+    for node, meta in CAUSAL_NODE_GLOSSARY.items():
+        sig = sig_by_node.get(node) or {}
+        post = sig.get("posterior")
+        post_str = (
+            f"{float(post):.2f}" if isinstance(post, (int, float)) else "—"
+        )
+        here = " " if node in present else ""
+        gloss_rows.append(
+            f'<tr><td><code>{_esc(node)}</code></td>'
+            f'<td>{_esc(meta["layer"])}</td>'
+            f'<td>{_esc(post_str)}</td>'
+            f'<td class="subtle">{_esc(meta["desc"])}{_esc(here)}</td></tr>'
+        )
+    gloss = (
+        '<table><thead><tr><th>node</th><th>layer</th>'
+        '<th>posterior</th><th>what it means</th></tr>'
+        f'</thead><tbody>{"".join(gloss_rows)}</tbody></table>'
+    )
+
     return (
         '<h4>Causal graph (SVG)</h4>'
-        '<p class="caption">Node radius scales with posterior probability. '
-        'Colour denotes the component (retrieval / generation / e2e / '
-        'pipeline). Arrows = causal-propagation edges from the analyser '
-        'topology.</p>'
+        '<p class="caption"><strong>How to read it:</strong> each circle is '
+        'a hypothesized <em>defect</em> (failure mode). The circle\'s size '
+        'and fill opacity scale with its <em>posterior probability</em> — '
+        'how likely that defect is, given the metrics + traces — so the '
+        'biggest, boldest node is the prime suspect. Colour = which layer '
+        'the defect sits in (retrieval blue / generation orange / e2e '
+        'green). Arrows are causal-propagation edges: a defect upstream '
+        'raises the probability of the ones it points to. Lower posterior '
+        '= healthier. The number inside each node is its posterior.</p>'
         + "".join(bits)
+        + '<div style="margin-top:10px">'
+        + _details("Causal node glossary (what each node means)", gloss)
+        + '</div>'
     )
 
 
@@ -589,14 +662,16 @@ def _render_layer_overview(layer_scores: dict) -> str:
             return "#d97706"
         return "#16a34a"
 
+    from ragdx.core.metrics import METRIC_GLOSSARY
+
     parts: list[str] = [
         '<h4>Three-layer score overview</h4>',
         '<p class="caption">Aggregate score per layer (weighted mean of '
         'the layer\'s <em>computed</em> metrics; lower-is-better metrics '
         'like <code>hallucination</code> are inverted so higher = '
-        'healthier). Every metric in the layer is listed when you expand '
-        'it — ones not computed in this run show why '
-        '(needs ground truth / deepeval / traces / feedback).</p>',
+        'healthier). Expand a layer to see every metric, its meaning, and '
+        'a <strong>weight box</strong> — edit the weights and the layer '
+        'score above recomputes live.</p>',
     ]
     for lyr in layers:
         d = layer_scores.get(lyr) or {}
@@ -604,64 +679,91 @@ def _render_layer_overview(layer_scores: dict) -> str:
         raw = d.get("raw") or {}
         oriented = d.get("metrics") or {}
 
-        # The aggregate bar (only when the layer has a score).
+        # The aggregate bar (id-less; the JS finds .ovbar-fill / .ovscore
+        # within this .ovlayer container).
         if isinstance(s, (int, float)):
             pct = round(s * 100)
             color = _bar_color(s)
-            bar = (
-                f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
-                f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
-                f'<div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative">'
-                f'<div style="width:{pct}%;background:{color};height:100%;border-radius:5px"></div>'
-                f'</div>'
-                f'<div style="width:48px;text-align:right;font-variant-numeric:tabular-nums">{s:.2f}</div>'
-                f'</div>'
-            )
+            score_txt = f"{s:.2f}"
         else:
-            # No computed metrics in this layer -- show a muted bar so
-            # the layer still appears in the overview.
-            bar = (
-                f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
-                f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
-                f'<div style="flex:1;color:var(--muted);font-size:12px">no metrics computed in this run</div>'
-                f'<div style="width:48px;text-align:right">—</div>'
-                f'</div>'
-            )
+            pct = 0
+            color = "#cbd5e1"
+            score_txt = "—"
+        bar = (
+            f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
+            f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
+            f'<div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative">'
+            f'<div class="ovbar-fill" style="width:{pct}%;background:{color};height:100%;border-radius:5px"></div>'
+            f'</div>'
+            f'<div class="ovscore" style="width:48px;text-align:right;font-variant-numeric:tabular-nums">{score_txt}</div>'
+            f'</div>'
+        )
 
-        # Full catalog detail: computed value OR requires-badge.
+        # Full catalog detail: computed value OR requires-badge, each row
+        # carrying meaning + direction (item 2) + a weight input (item 7).
         entries = catalog.get(lyr) or []
         n_computed = sum(1 for e in entries if e["computed"])
         rows = []
         for e in entries:
             name = e["name"]
+            gloss = METRIC_GLOSSARY.get(name, {})
+            direction = gloss.get("direction", "higher")
+            arrow = "↑ higher better" if direction == "higher" else "↓ lower better"
+            desc = gloss.get("desc", "")
             if e["computed"]:
                 ov = oriented.get(name)
                 rv = raw.get(name)
-                if isinstance(ov, (int, float)):
-                    note = ""
-                    if isinstance(rv, (int, float)) and abs(rv - ov) > 1e-9:
-                        note = f" (raw {rv:.3f}, inverted)"
-                    val = f"{ov:.3f}{note}"
+                if isinstance(rv, (int, float)):
+                    inv = (
+                        " (inverted for score)"
+                        if isinstance(ov, (int, float)) and abs(rv - ov) > 1e-9
+                        else ""
+                    )
+                    val_cell = _esc(f"{rv:.3f}{inv}")
                 else:
-                    val = f"{rv:.3f}" if isinstance(rv, (int, float)) else "—"
-                rows.append(
-                    f'<tr><td><code>{_esc(name)}</code></td>'
-                    f'<td>{_esc(val)}</td></tr>'
+                    val_cell = "—"
+                # Weight box drives the live recompute. data-oriented is
+                # the value the aggregate uses (already direction-fixed).
+                ov_attr = (
+                    f"{float(ov):.6f}" if isinstance(ov, (int, float)) else "0"
+                )
+                weight_cell = (
+                    f'<input class="lw" type="number" step="0.1" min="0" '
+                    f'value="1" data-oriented="{ov_attr}" '
+                    f'style="width:56px" aria-label="weight for {_esc(name)}">'
                 )
             else:
                 badge = e["requires_label"] or "not computed"
-                rows.append(
-                    f'<tr><td><code>{_esc(name)}</code></td>'
-                    f'<td><span class="tag" style="background:#f3f4f6;color:#6b7280">'
-                    f'{_esc(badge)}</span></td></tr>'
+                val_cell = (
+                    f'<span class="tag" style="background:#f3f4f6;color:#6b7280">'
+                    f'{_esc(badge)}</span>'
                 )
+                weight_cell = '<span class="subtle">—</span>'
+            rows.append(
+                f'<tr><td><code>{_esc(name)}</code></td>'
+                f'<td>{val_cell}</td>'
+                f'<td>{weight_cell}</td>'
+                f'<td class="subtle">{_esc(arrow)}</td>'
+                f'<td class="subtle">{_esc(desc)}</td></tr>'
+            )
         detail = (
-            '<table><thead><tr><th>metric</th><th>value / status</th></tr>'
+            '<table><thead><tr><th>metric</th><th>value / status</th>'
+            '<th>weight</th><th>direction</th><th>what it measures</th></tr>'
             f'</thead><tbody>{"".join(rows)}</tbody></table>'
+            '<p class="caption">Weights apply within this layer (weighted '
+            'mean of the computed metrics). Set a weight to 0 to drop a '
+            'metric; the bar above updates as you type.</p>'
         )
-        parts.append(bar + _details(
-            f"{lyr} — {n_computed}/{len(entries)} metric(s) computed", detail,
-        ))
+        # Wrap in .ovlayer so the JS scopes the recompute to this layer.
+        parts.append(
+            f'<div class="ovlayer" data-layer="{_esc(lyr)}">'
+            + bar
+            + _details(
+                f"{lyr} — {n_computed}/{len(entries)} metric(s) computed",
+                detail,
+            )
+            + '</div>'
+        )
     return "\n".join(parts)
 
 
@@ -1212,53 +1314,66 @@ def _render_bayes_search(bundle: dict) -> str:
                 "so far -- the non-decreasing curve shows BO convergence.</p>"
             )
 
-        # Per-trial Q/A inspector (compact: first 3 trials)
+        # Per-trial Q/A inspector — ALL trials, each toggleable via a
+        # checkbox (item 6). First 3 are shown by default; the rest are
+        # hidden until ticked, so the section stays readable but every
+        # trial is one click away.
         records_keyed = [t for t in trials if t.get("records")]
         if records_keyed:
-            show = records_keyed[:3]
-            inspector = ""
-            for t in show:
-                inspector += (
-                    f"<h4>Trial #{t.get('trial_index')} "
-                    f"({_esc(_trial_param_label(t.get('params') or {}))})</h4>"
+            checkboxes: list[str] = []
+            blocks: list[str] = []
+            for idx, t in enumerate(records_keyed):
+                tindex = t.get("trial_index")
+                block_id = f"trial-{_esc(mode)}-{idx}"
+                shown_default = idx < 3
+                checkboxes.append(
+                    f'<label style="margin-right:14px;white-space:nowrap">'
+                    f'<input type="checkbox" class="trial-toggle" '
+                    f'data-target="{block_id}"{" checked" if shown_default else ""}> '
+                    f'Trial #{_esc(tindex)}</label>'
                 )
-                # Phase 4a: gather every metric name present across the
-                # trial's records so the per-question table shows the
-                # same set of columns even when some records are missing
-                # a metric (rendered as "-").
+
+                # Phase 4a: union of metric columns across the trial's records.
                 t_records = t.get("records") or []
                 metric_cols: list[str] = []
                 for r in t_records:
                     for k in (r.get("scores") or {}).keys():
                         if k not in metric_cols:
                             metric_cols.append(k)
-
                 rec_rows = []
                 for j, r in enumerate(t_records, 1):
-                    # Show full answer text (no truncation). Earlier the
-                    # row sliced to 300 chars to keep the table compact,
-                    # but for multi-paragraph ESG / legal RAG answers
-                    # that's where the actual content begins. The page
-                    # CSS wraps long cells, and the parent ``<details>``
-                    # element keeps them collapsed by default.
                     row: dict[str, Any] = {
                         "#": j,
                         "question": r.get("question") or "",
                         "ground_truth": r.get("ground_truth") or "—",
                         "answer": r.get("answer") or "",
                     }
-                    # Phase 4a: stitch per-record metric columns into
-                    # the row. Missing metrics render as "-".
                     rec_scores = r.get("scores") or {}
                     for m in metric_cols:
                         v = rec_scores.get(m)
                         row[m] = f"{v:.3f}" if isinstance(v, (int, float)) else "-"
                     rec_rows.append(row)
                 cols = ["#", "question", "ground_truth", "answer", *metric_cols]
-                inspector += _table(rec_rows, cols=cols)
+                display = "" if shown_default else "display:none"
+                blocks.append(
+                    f'<div id="{block_id}" style="{display}">'
+                    f'<h4>Trial #{_esc(tindex)} '
+                    f'({_esc(_trial_param_label(t.get("params") or {}))})</h4>'
+                    + _table(rec_rows, cols=cols)
+                    + '</div>'
+                )
+
+            inspector = (
+                '<p class="caption">Tick a trial to show / hide its '
+                'per-record answers + metrics. The first three are shown '
+                'by default.</p>'
+                f'<div style="margin:8px 0;line-height:2">{"".join(checkboxes)}</div>'
+                + "".join(blocks)
+            )
             parts.append(_details(
-                f"Per-record outputs (first {len(show)} trials)",
+                f"Per-record outputs ({len(records_keyed)} trials, toggleable)",
                 inspector,
+                open_=True,
             ))
 
     return "\n".join(parts)

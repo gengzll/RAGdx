@@ -114,19 +114,20 @@ def tune(
         "``token_f1`` (token-F1 vs GT; requires GT-populated records).",
     ),
     dspy_optimizer: str = typer.Option(
-        "mipro", "--dspy-optimizer",
+        "gepa", "--dspy-optimizer",
         help="Which DSPy teleprompter to use for ``--stage generation``: "
-        "``mipro`` (default; MIPROv2 — BO over instruction x demos, "
-        "writes BOTH system_instruction AND few_shot_demos to the "
-        "winning config), "
+        "``gepa`` (default; GEPA — reflective text-based evolution, "
+        "arXiv 2507.19457; reflects on why a candidate scored poorly and "
+        "rewrites the instruction accordingly — usually the strongest "
+        "for prompt-only optimization; writes ONLY system_instruction; "
+        "needs the DSPy 3.x ``gepa`` package), "
+        "``mipro`` (MIPROv2 — BO over instruction x demos, writes BOTH "
+        "system_instruction AND few_shot_demos), "
         "``copro`` (COPRO — iterative LLM-driven instruction rewrite; "
         "writes ONLY system_instruction; fastest), "
         "``bootstrap_fewshot`` (BootstrapFewShot — produces few-shot "
         "demos from the seed program; writes ONLY few_shot_demos; "
-        "no instruction change), "
-        "``gepa`` (GEPA — reflective text-based evolution, arXiv "
-        "2507.19457; writes ONLY system_instruction; "
-        "EXPERIMENTAL — DSPy 3.x ``gepa`` package required). "
+        "no instruction change). "
         "Ignored for non-generation stages.",
     ),
     resume: str = typer.Option(
