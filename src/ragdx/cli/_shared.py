@@ -105,11 +105,20 @@ def _diagnose_and_plan(
     use_llm_planner: bool = False,
     strategy: str = "bayesian",
     budget: int = 12,
+    optimization_history: list[str] | None = None,
 ):
     """Run diagnose + plan in one pass. Shared between ``diagnose``,
-    ``plan``, ``optimize``, and ``save`` commands."""
+    ``plan``, ``optimize``, and ``save`` commands.
+
+    ``optimization_history`` (a list of already-applied optimization
+    candidate names) lets the rule analyzer escalate its
+    recommendations when a defect persists despite the obvious fix
+    having run -- see :meth:`RuleBasedRootCauseAnalyzer.analyze`."""
     engine = _build_engine(use_llm=use_llm, use_both=use_both)
-    report = engine.diagnose(result, use_llm=use_llm, use_both=use_both)
+    report = engine.diagnose(
+        result, use_llm=use_llm, use_both=use_both,
+        optimization_history=optimization_history,
+    )
     planner_llm = _build_llm_callable() if (use_llm_planner or use_llm or use_both) else None
     plan = OptimizationPlanner(llm_callable=planner_llm).build_plan(
         report, result=result, strategy=strategy, budget=budget

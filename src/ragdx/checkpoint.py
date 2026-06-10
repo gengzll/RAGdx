@@ -159,7 +159,22 @@ class CheckpointStore:
         <root>/<checkpoint_id>/chunks.json   (optional)
     """
 
-    def __init__(self, root: str | Path = ".ragdx/checkpoints") -> None:
+    def __init__(self, root: str | Path | None = None) -> None:
+        # ``root=None`` resolves the checkpoint dir under the same
+        # storage root the rest of ragdx uses (``get_settings().storage
+        # .root``), so ``--project`` / ``RAGDX_PROJECT`` / ``RAGDX_ROOT``
+        # actually isolate checkpoints per project/workspace. Previously
+        # the default was a hardcoded ``.ragdx/checkpoints``, so even
+        # ``ragdx tune --project X`` wrote checkpoints to the *global*
+        # store -- and workspace tunes (which scope ``RAGDX_ROOT`` to
+        # ``<workspace>/.ragdx``) couldn't checkpoint into the workspace
+        # at all. An explicit ``root`` (used by tests) still wins.
+        if root is None:
+            try:
+                from ragdx.config import get_settings
+                root = Path(get_settings().storage.root) / "checkpoints"
+            except Exception:  # pragma: no cover - settings always importable
+                root = Path(".ragdx/checkpoints")
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
 

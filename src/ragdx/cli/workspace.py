@@ -220,6 +220,32 @@ def _require_workspace_files(ws: Workspace) -> None:
         )
 
 
+def _scope_storage_to_workspace(ws: Workspace) -> None:
+    """Root the RunStore + causal-prior store inside the workspace.
+
+    Without this, every workspace's ``diagnose`` writes its learned
+    causal posteriors back to the *global* ``.ragdx/causal/priors.json``.
+    Because the prior-update is monotonic toward the 0.95 clamp, a few
+    cross-experiment diagnose calls saturate every node -- so baseline
+    and optimized causal graphs end up visually identical (observed in
+    the first demo pass: all nodes pinned at ~0.96 regardless of the
+    actual metrics).
+
+    Scoping ``RAGDX_ROOT`` to ``<workspace>/.ragdx`` gives each
+    workspace its own causal-prior history (and RunStore), matching the
+    "one workspace = one experiment" model: the priors learn from *this*
+    experiment's diagnose calls only, starting from clean
+    ``base_priors``. ``get_settings()`` reads the env fresh each call,
+    so setting it here -- before any store is built -- takes effect.
+    Honours an explicit ``RAGDX_ROOT`` the user already set (we don't
+    override a deliberate override).
+    """
+    import os
+    if os.environ.get("RAGDX_ROOT"):
+        return
+    os.environ["RAGDX_ROOT"] = str((ws.root / ".ragdx").resolve())
+
+
 # =====================================================================
 # eval
 # =====================================================================
@@ -256,6 +282,7 @@ def eval_cmd(
 
     ws = load_workspace(name)
     _require_workspace_files(ws)
+    _scope_storage_to_workspace(ws)
 
     chosen_evaluator = evaluator or ws.evaluator
     if chosen_evaluator not in {"ragas", "deepeval"}:
@@ -368,6 +395,7 @@ def diagnose_cmd(
     from ragdx.cli._shared import _diagnose_and_plan, _load_eval_or_latest
 
     ws = load_workspace(name)
+    _scope_storage_to_workspace(ws)
 
     if eval_file:
         eval_path = ws.path(eval_file)
@@ -384,8 +412,29 @@ def diagnose_cmd(
         raise typer.BadParameter(f"Evaluation file not found: {eval_path}")
 
     result, _ = _load_eval_or_latest(str(eval_path))
+
+    # History-aware escalation: translate the workspace's tune history
+    # into the list of optimization candidates already applied, so the
+    # analyzer can escalate its advice when a defect persists. A
+    # ``tune-rag`` run counts as ``autorag_pipeline_search`` (the
+    # retrieval-side candidate); a ``tune-prompt`` run counts as
+    # ``dspy_prompt_optimization``. Only diagnose calls that come AFTER
+    # at least one tune see a non-empty history -- so the very first
+    # baseline diagnose gets base-level advice, and a re-diagnose after
+    # an unsuccessful tune gets escalated advice.
+    _hist_map = {
+        "tune-rag": "autorag_pipeline_search",
+        "tune-prompt": "dspy_prompt_optimization",
+    }
+    optimization_history = [
+        _hist_map[h.command]
+        for h in ws.history
+        if h.command in _hist_map
+    ]
+
     report, _plan = _diagnose_and_plan(
         result, use_llm=use_llm, use_both=use_both,
+        optimization_history=optimization_history,
     )
 
     out_name = output or f"{eval_path.stem}.diagnose.json"
@@ -428,6 +477,16 @@ def tune_rag_cmd(
         help="Output filename (relative to workspace). "
         "Default: ``tune_rag_<stage>.json``.",
     ),
+    resume: str = typer.Option(
+        "", "--resume",
+        help="Resume an interrupted run. Pass a checkpoint id, or "
+        "``auto`` to pick the latest interrupted tune-rag checkpoint "
+        "in this workspace.",
+    ),
+    no_checkpoint: bool = typer.Option(
+        False, "--no-checkpoint",
+        help="Disable per-trial checkpointing for this run.",
+    ),
 ) -> None:
     """Tune the retrieval side (chunker / retriever / joint) of the workspace's RAG."""
     if stage not in {"chunking", "retrieval", "joint"}:
@@ -439,6 +498,7 @@ def tune_rag_cmd(
         name=name, stage=stage, budget=budget,
         output=output or f"tune_rag_{stage}.json",
         verb="tune-rag",
+        resume=resume, no_checkpoint=no_checkpoint,
     )
 
 
@@ -466,6 +526,16 @@ def tune_prompt_cmd(
         help="Output filename (relative to workspace). "
         "Default: ``tune_prompt_<optimizer>.json``.",
     ),
+    resume: str = typer.Option(
+        "", "--resume",
+        help="Resume an interrupted run. Pass a checkpoint id, or "
+        "``auto`` to pick the latest interrupted tune-generation "
+        "checkpoint in this workspace.",
+    ),
+    no_checkpoint: bool = typer.Option(
+        False, "--no-checkpoint",
+        help="Disable per-phase checkpointing for this run.",
+    ),
 ) -> None:
     """Tune the generator prompt (DSPy) for the workspace's RAG."""
     _delegate_to_tune(
@@ -475,6 +545,7 @@ def tune_prompt_cmd(
         dspy_optimizer=dspy_optimizer,
         dspy_metric=dspy_metric,
         mipro_auto=mipro_auto,
+        resume=resume, no_checkpoint=no_checkpoint,
     )
 
 
@@ -488,16 +559,25 @@ def _delegate_to_tune(
     dspy_optimizer: str = "mipro",
     dspy_metric: str = "auto",
     mipro_auto: str = "light",
+    resume: str = "",
+    no_checkpoint: bool = False,
 ) -> None:
     """Shared body for tune-rag / tune-prompt.
 
     Composes the same building blocks ``cli/tune.py::tune`` uses but
     sources every input (config / questions / corpus / baseline link)
     from the workspace, so the user types only the verb + name.
+
+    Checkpointing: because ``_scope_storage_to_workspace`` already
+    pointed ``RAGDX_ROOT`` at ``<workspace>/.ragdx``, the
+    ``CheckpointStore`` (which resolves its root via settings) writes to
+    ``<workspace>/.ragdx/checkpoints/``. A crash mid-BO loses at most
+    one trial; resume with ``--resume auto`` (or an explicit id).
     """
     import json
     from typing import Any as _Any
 
+    from ragdx.checkpoint import Checkpoint, CheckpointStore
     from ragdx.cli._shared import _diagnose_and_plan, _store
     from ragdx.core.diagnosis import RAGDiagnosisEngine
     from ragdx.experiments import (
@@ -524,6 +604,7 @@ def _delegate_to_tune(
 
     ws = load_workspace(name)
     _require_workspace_files(ws)
+    _scope_storage_to_workspace(ws)
     corpus_path = ws.corpus_path()
     if corpus_path is None:
         raise typer.BadParameter(
@@ -570,6 +651,58 @@ def _delegate_to_tune(
     optimizer = StageClass()
     label = eff_gt_mode
 
+    # --- Checkpoint: load (--resume) or create -----------------------
+    # CheckpointStore resolves its root via settings, which we've
+    # scoped to the workspace, so checkpoints live in
+    # ``<workspace>/.ragdx/checkpoints/``.
+    checkpoint_obj = None
+    checkpoint_store = None
+    if not no_checkpoint:
+        checkpoint_store = CheckpointStore()
+        ckpt_kind = f"tune.{stage}"
+        if resume:
+            target = resume
+            if target.lower() in {"auto", "latest", "true"}:
+                incomplete = [
+                    c for c in checkpoint_store.list_incomplete()
+                    if c.kind == ckpt_kind
+                ]
+                if not incomplete:
+                    raise typer.BadParameter(
+                        f"No interrupted {ckpt_kind} checkpoint to resume in "
+                        f"workspace {ws.name!r}. Run `ragdx checkpoints` to see "
+                        "what's available."
+                    )
+                target = incomplete[0].checkpoint_id
+            try:
+                checkpoint_obj = checkpoint_store.load(target)
+            except FileNotFoundError as exc:
+                raise typer.BadParameter(str(exc)) from exc
+            checkpoint_obj.status = "running"
+            checkpoint_obj.interrupted_reason = ""
+            print(
+                f"[bold]Resuming checkpoint[/bold] [cyan]{checkpoint_obj.checkpoint_id}[/cyan] "
+                f"(trials_done=[cyan]{len(checkpoint_obj.trials_completed)}[/cyan], "
+                f"phase=[cyan]{checkpoint_obj.generation_phase or '—'}[/cyan])"
+            )
+        else:
+            checkpoint_obj = Checkpoint(
+                kind=ckpt_kind,
+                cli_args={
+                    "workspace": ws.name, "stage": stage, "budget": budget,
+                    "dspy_optimizer": dspy_optimizer, "dspy_metric": dspy_metric,
+                    "mipro_auto": mipro_auto,
+                },
+                name=f"{ws.name}/{verb}",
+                rag_config_yaml=rag_config.scrubbed_for_commit().to_yaml_string(),
+            )
+            checkpoint_store.save(checkpoint_obj)
+            print(
+                f"[dim]Checkpoint:[/dim] [cyan]{checkpoint_obj.checkpoint_id}[/cyan] "
+                f"[dim](resume via `ragdx workspace {verb} {ws.name} --resume "
+                f"{checkpoint_obj.checkpoint_id}`)[/dim]"
+            )
+
     ctx_kwargs: dict[str, _Any] = dict(
         base_config=rag_config,
         chunks_master=chunks,
@@ -580,6 +713,8 @@ def _delegate_to_tune(
         label=label,
         n_bo_init=2 if stage != "generation" else 0,
         n_bo_trials=budget,
+        checkpoint=checkpoint_obj,
+        checkpoint_store=checkpoint_store,
     )
     # Extra knobs only the generation stage uses.
     if stage == "generation":
@@ -590,6 +725,13 @@ def _delegate_to_tune(
     ctx = StageContext(**ctx_kwargs)
     print(f"[dim]Running[/dim] {stage} stage on workspace {ws.name!r}...")
     result = optimizer.optimize(ctx)
+
+    # Mark the checkpoint completed so it doesn't show up as resumable.
+    if checkpoint_obj is not None and checkpoint_store is not None:
+        try:
+            checkpoint_store.mark_completed(checkpoint_obj.checkpoint_id)
+        except Exception as _exc:  # pragma: no cover - defensive
+            print(f"[yellow]Checkpoint finalize skipped:[/yellow] {_exc}")
 
     # Build a bundle shape compatible with ``ragdx experiment-report``
     # so the same renderer works on workspace tune output.

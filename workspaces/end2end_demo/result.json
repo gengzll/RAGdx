@@ -1,0 +1,1021 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "model": "openai/glm-4-flash",
+    "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "experiment_mode": "no_gt",
+    "modes_run": [
+      "no_gt"
+    ],
+    "has_gt": false,
+    "detected_gt_mode": "no_gt",
+    "source": {
+      "corpus": "e0522-asmptesgreport.pdf",
+      "kind": "pdf",
+      "pdf_meta": {
+        "page_count": 114,
+        "chunks": 548,
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "raw_text_chars": 211339
+      }
+    },
+    "run_config": {
+      "llm_max_concurrent": 2,
+      "llm_max_retries": 5,
+      "n_bo_trials": 4,
+      "n_bo_init": 2,
+      "n_questions": 3,
+      "seed": 11,
+      "system_instruction": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+    }
+  },
+  "questions": [
+    {
+      "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+      "ground_truth": null
+    },
+    {
+      "question": "What is the primary reason for ASMPT's success according to the passage?",
+      "ground_truth": null
+    },
+    {
+      "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+      "ground_truth": null
+    }
+  ],
+  "data_diagnostics": {
+    "no_gt": {
+      "has_ground_truth": false,
+      "gt_mode": "no_gt",
+      "record_count": 3
+    }
+  },
+  "objectives": {
+    "no_gt": {
+      "metrics": {
+        "faithfulness": 1.5,
+        "answer_relevancy": 1.0,
+        "context_precision": 0.3
+      },
+      "constraints": {
+        "faithfulness": [
+          "min",
+          0.85
+        ]
+      },
+      "mode": "weighted_sum"
+    }
+  },
+  "bayes_search": {
+    "no_gt": {
+      "search_space": {
+        "chunk_size": [
+          256,
+          512,
+          1024
+        ],
+        "chunk_overlap": [
+          0,
+          50,
+          100
+        ],
+        "top_k": [
+          1,
+          3,
+          5,
+          7
+        ]
+      },
+      "n_init": 2,
+      "max_trials": 4,
+      "objective_spec": {
+        "metrics": {
+          "faithfulness": 1.5,
+          "answer_relevancy": 1.0,
+          "context_precision": 0.3
+        },
+        "constraints": {
+          "faithfulness": [
+            "min",
+            0.85
+          ]
+        },
+        "mode": "weighted_sum"
+      },
+      "trials": [
+        {
+          "trial_index": 0,
+          "params": {
+            "chunk_size": 512,
+            "chunk_overlap": 100,
+            "top_k": 7
+          },
+          "n_chunks": 555,
+          "scores": {
+            "context_precision": 0.6453968253680286,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.6936190476104085,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line in its defect analys",
+            "The primary reason for ASMPT's success according to the passage is its people's experience, commitment, and performance, along with a strong corporate culture that promotes diversity, inclusion, and e",
+            "The Group combined similar factors to enhance clarity and consistency. Adjustments included merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficie"
+          ],
+          "records": [
+            {
+              "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+              "ground_truth": null,
+              "contexts": [
+                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side. Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data",
+                ". ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+                ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+                ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS Optimisation ensures process optimisations throughout the SMT line in collaboration with SPI and AOI systems.",
+                ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers. This not only eliminates a complete work step, the taping of the dies, but also saves many tons of waste",
+                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing. It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory"
+              ],
+              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line in its defect analysis, unlike traditional inspection systems that focus on individual products and manufacturing stations.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9124924740187219,
+                "context_precision": 0.699999999965
+              }
+            },
+            {
+              "question": "What is the primary reason for ASMPT's success according to the passage?",
+              "ground_truth": null,
+              "contexts": [
+                ". • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
+                ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers. 2 Sustainability Strategy",
+                ". Beyond the allure of victory, this event stood as a testament to ASMPT’s unwavering ded- ication to nurturing young talent and fostering a cradle for revolutionary concepts that promise to shape our future. Showcasing the brightest minds in academia with the ASMPT Technology Award",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 71 6.1 Employee Overview Why it Matters The success of ASMPT is largely attributed to our em- ployees, our most precious asset. Understanding the importance of a nurturing environment, ASMPT has crafted an employee value proposition a modern workforce demands. Our Commitment We are committed to providing a workplace where employees feel valued and empowered to grow both professionally and personally",
+                ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers. This not only eliminates a complete work step, the taping of the dies, but also saves many tons of waste",
+                ". They underline the commitment, ethical behaviour and moral at ASMPT at all levels of the corporate structure. Values such as diversity, equality, respect and open communication are key components of ASMPT’s corporate strategy.” Katie Xu Yifan, Chief Financial Officer, ASMPT"
+              ],
+              "answer": "The primary reason for ASMPT's success according to the passage is its people's experience, commitment, and performance, along with a strong corporate culture that promotes diversity, inclusion, and equal opportunity.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9913135405909346,
+                "context_precision": 0.9028571428390857
+              }
+            },
+            {
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "ground_truth": null,
+              "contexts": [
+                ". Stage 3 Implementation The Board has endorsed this ESG Report, which en- compasses the materiality matrix below. The endorsed list of material ESG factors serves as a guide for develop- ing corporate strategies and goals, ongoing stakeholder engagement, as well as disclosures in the Annual Report, ESG Report and other corporate communication chan- nels. Periodic assessments are conducted to deter - mine the materiality of ESG factors to prevailing busi- ness contexts and external conditions",
+                ". The Group has conducted a thorough review and prioritisation of the material ESG factors. A three- stage materiality assessment process was adopted: Stage 1 Identification ASMPT identified the sustainability issues applicable to the Group via wide-ranging research, engagement and analysis. Main sources of input include sharehold- ers, employees, customers, peers, regulatory and standards bodies, and ratings agencies",
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+                ". In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs",
+                ", including the process used to evaluate, prioritise and manage material ESG-related issues (including risks to the issuer’s businesses)",
+                ". The ESG Report has been prepared in accordance with the following four reporting principles contained in the listing rules: • Materiality : Stakeholder communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues. • Quantitative : The ESG Report presents environmental and social KPIs in the form of quantitative data, accompanied by explanations to illustrate their purposes and im- pacts",
+                ". About This Report P.3 NA NA Reporting Principle: Consistency The issuer should disclose in the ESG report any changes to the methods or KPIs used, or any other relevant factors affecting a mean- ingful comparison. About This Report P.3"
+              ],
+              "answer": "The Group combined similar factors to enhance clarity and consistency. Adjustments included merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficiency,\" and \"Business Ethics\" and \"Corporate Governance\" into \"Business Ethics & Corporate Governance.\"",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.4992711751041079,
+                "context_precision": 0.3333333333
+              }
+            }
+          ],
+          "elapsed_seconds": 168.1
+        },
+        {
+          "trial_index": 1,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 1
+          },
+          "n_chunks": 278,
+          "scores": {
+            "context_precision": 0.6666666666,
+            "faithfulness": 0.9166666666666666
+          },
+          "composite_score": 1.57499999998,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and",
+            "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people.",
+            "The context does not provide specific details about adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency."
+          ],
+          "records": [
+            {
+              "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+              "ground_truth": null,
+              "contexts": [
+                "Governance34 Zero DPMO through Collaboration and Integration The Group aims to achieve zero DPMO through the integration of intelligent quality control along the en- tire SMT line with ASMPT’s hardware and software. In terms of hardware quality control, ASMPT utilis- es the Process Lens solder paste inspection (SPI) system that can measure each solder paste depos- it and detects even the smallest deviations and trends. The exceptional performance of the SPI sys- tem makes it possible to carry out comprehensive measurements without significantly affecting the overall production time. This capability facilitates more stable printing processes, resulting in in - creased throughput and higher yields. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side"
+              ],
+              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9546394441044378,
+                "context_precision": 0.9999999999
+              }
+            },
+            {
+              "question": "What is the primary reason for ASMPT's success according to the passage?",
+              "ground_truth": null,
+              "contexts": [
+                "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values"
+              ],
+              "answer": "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9966196738406964,
+                "context_precision": 0.9999999999
+              }
+            },
+            {
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "ground_truth": null,
+              "contexts": [
+                ". Stage 2 Prioritisation The material sustainability issues have been priori- tised based on the expectations of our various stake- holders and a thorough analysis conducted by the Group. Priority is given to issues with the potential to make a significant impact on our business, operations, and to generate sustainable ESG value. Stage 3 Implementation The Board has endorsed this ESG Report, which en- compasses the materiality matrix below. The endorsed list of material ESG factors serves as a guide for develop- ing corporate strategies and goals, ongoing stakeholder engagement, as well as disclosures in the Annual Report, ESG Report and other corporate communication chan- nels. Periodic assessments are conducted to deter - mine the materiality of ESG factors to prevailing busi- ness contexts and external conditions"
+              ],
+              "answer": "The context does not provide specific details about adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency.",
+              "scores": {
+                "faithfulness": 0.75,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 80.13
+        },
+        {
+          "trial_index": 2,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 7
+          },
+          "n_chunks": 1202,
+          "scores": {
+            "context_precision": 0.9999999999266667,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.799999999978,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and",
+            "The primary reason for ASMPT's success according to the passage is their unwavering commitment to quality, innovation, and the implementation of the POWER VALUES, which include a focus on people, dive",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency with recognized standards and practices in the industry and ESG arena."
+          ],
+          "records": [
+            {
+              "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+              "ground_truth": null,
+              "contexts": [
+                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
+                ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS",
+                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing",
+                ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+                ". Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations",
+                ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers"
+              ],
+              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9546394441044378,
+                "context_precision": 0.9999999999
+              }
+            },
+            {
+              "question": "What is the primary reason for ASMPT's success according to the passage?",
+              "ground_truth": null,
+              "contexts": [
+                ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
+                ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                ", ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
+                ". The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES",
+                ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers",
+                ". The ASMPT prerequisite: ONE ASMPT. The New Leaders’ Program 2023 prepares managers for their new role and their contribution to the company’s success. One of ASMPT’s people projects",
+                ". Beyond the allure of victory, this event stood as a testament to ASMPT’s unwavering ded- ication to nurturing young talent and fostering a cradle for revolutionary concepts that promise to shape our future"
+              ],
+              "answer": "The primary reason for ASMPT's success according to the passage is their unwavering commitment to quality, innovation, and the implementation of the POWER VALUES, which include a focus on people, diversity, inclusion, equal opportunity, and social & environmental responsibility.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999998591,
+                "context_precision": 0.99999999998
+              }
+            },
+            {
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "ground_truth": null,
+              "contexts": [
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
+                ". The Group has conducted a thorough review and prioritisation of the material ESG factors",
+                "The ESG report should disclose: (i) the process to identify and the criteria for the selection of material ESG factors",
+                ". All 19 ESG Material Factors are elaborated upon in this Report",
+                "communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues",
+                ". • Consistency : The methodologies for working out this ESG Report are consist- ent with those adopted in the 2022 and 2021 ESG Reports to ensure compara- bility of information",
+                ". The Group’s material ESG factors are those that carry significant environmental, social, governance and economic impact on its business and influence the assessment and decision-making of in- ternal and external stakeholders"
+              ],
+              "answer": "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency with recognized standards and practices in the industry and ESG arena.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.8253629881483769,
+                "context_precision": 0.9999999999
+              }
+            }
+          ],
+          "elapsed_seconds": 153.04
+        },
+        {
+          "trial_index": 3,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 5
+          },
+          "n_chunks": 1202,
+          "scores": {
+            "context_precision": 0.9999999999266667,
+            "faithfulness": 1.0
+          },
+          "composite_score": 1.799999999978,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and",
+            "The primary reason for ASMPT's success according to the passage is the combination of its unwavering commitment to quality, the POWER VALUES guiding its people, and its focus on diversity, inclusion, ",
+            "The Group made adjustments to the ESG Material Factors by conducting a thorough review and prioritisation of them."
+          ],
+          "records": [
+            {
+              "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+              "ground_truth": null,
+              "contexts": [
+                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
+                ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS",
+                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing",
+                ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources"
+              ],
+              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9546394441044378,
+                "context_precision": 0.9999999999
+              }
+            },
+            {
+              "question": "What is the primary reason for ASMPT's success according to the passage?",
+              "ground_truth": null,
+              "contexts": [
+                ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
+                ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                ", ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
+                ". The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES",
+                ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers"
+              ],
+              "answer": "The primary reason for ASMPT's success according to the passage is the combination of its unwavering commitment to quality, the POWER VALUES guiding its people, and its focus on diversity, inclusion, equal opportunity, innovation, and social & environmental responsibility.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9913135405909346,
+                "context_precision": 0.99999999998
+              }
+            },
+            {
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "ground_truth": null,
+              "contexts": [
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
+                ". The Group has conducted a thorough review and prioritisation of the material ESG factors",
+                "The ESG report should disclose: (i) the process to identify and the criteria for the selection of material ESG factors",
+                ". All 19 ESG Material Factors are elaborated upon in this Report",
+                "communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues"
+              ],
+              "answer": "The Group made adjustments to the ESG Material Factors by conducting a thorough review and prioritisation of them.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.8940101167591313,
+                "context_precision": 0.9999999999
+              }
+            }
+          ],
+          "elapsed_seconds": 104.78
+        }
+      ],
+      "best_params": {
+        "chunk_size": 256,
+        "chunk_overlap": 100,
+        "top_k": 7
+      },
+      "best_composite": 1.799999999978
+    }
+  },
+  "dspy_a_b": {
+    "no_gt": {
+      "baseline_scores": {
+        "context_precision": 0.9999999999266667,
+        "faithfulness": 1.0
+      },
+      "optimized_scores": {
+        "context_precision": 0.9999999999266667,
+        "faithfulness": 0.9523809523809524
+      },
+      "delta": {
+        "context_precision": 0.0,
+        "faithfulness": -0.04761904761904756
+      },
+      "composite": {
+        "objective_spec": {
+          "metrics": {
+            "faithfulness": 1.5,
+            "answer_relevancy": 1.0,
+            "context_precision": 0.3
+          },
+          "constraints": {
+            "faithfulness": [
+              "min",
+              0.85
+            ]
+          },
+          "mode": "weighted_sum"
+        },
+        "baseline": {
+          "score": 1.799999999978,
+          "feasible": true,
+          "violations": []
+        },
+        "optimized": {
+          "score": 1.7285714285494285,
+          "feasible": true,
+          "violations": []
+        },
+        "delta": -0.07142857142857162
+      },
+      "baseline_sample_answers": [
+        "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+        "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, adherence to the POWER VALUES, strategic focus on diversity, inclusion, and equal opportunity, innovation, and social & environmental responsibility.",
+        "The adjustments made to the ESG Material Factors by the Group include a thorough review and prioritization of the factors, enhancing clarity and consistency, and aligning with recognized industry and ESG standards and practices."
+      ],
+      "optimized_sample_answers": [
+        "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, which contrasts with traditional inspection systems that focus on individual products and manufacturing stations.",
+        "The primary reasons for ASMPT's success, according to the passage, are its unwavering commitment to quality, the emphasis on its POWER values, the strategic recognition of diversity, inclusion, and equal opportunity, its focus on innovation and advanced technologies, and its dedication to nurturing young talent and fostering revolutionary concepts.",
+        "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include a thorough review and prioritization of the material ESG factors, incorporating communication and materiality assessment into the preparation of the ESG Report, and ensuring consistency with methodologies adopted in previous ESG Reports to maintain comparability of information."
+      ],
+      "records": [
+        {
+          "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+          "ground_truth": null,
+          "contexts": [
+            ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
+            ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
+            ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS",
+            ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing",
+            ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+            ". Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations",
+            ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers"
+          ],
+          "baseline_answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+          "optimized_answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, which contrasts with traditional inspection systems that focus on individual products and manufacturing stations."
+        },
+        {
+          "question": "What is the primary reason for ASMPT's success according to the passage?",
+          "ground_truth": null,
+          "contexts": [
+            ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
+            ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+            ", ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
+            ". The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES",
+            ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers",
+            ". The ASMPT prerequisite: ONE ASMPT. The New Leaders’ Program 2023 prepares managers for their new role and their contribution to the company’s success. One of ASMPT’s people projects",
+            ". Beyond the allure of victory, this event stood as a testament to ASMPT’s unwavering ded- ication to nurturing young talent and fostering a cradle for revolutionary concepts that promise to shape our future"
+          ],
+          "baseline_answer": "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, adherence to the POWER VALUES, strategic focus on diversity, inclusion, and equal opportunity, innovation, and social & environmental responsibility.",
+          "optimized_answer": "The primary reasons for ASMPT's success, according to the passage, are its unwavering commitment to quality, the emphasis on its POWER values, the strategic recognition of diversity, inclusion, and equal opportunity, its focus on innovation and advanced technologies, and its dedication to nurturing young talent and fostering revolutionary concepts."
+        },
+        {
+          "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+          "ground_truth": null,
+          "contexts": [
+            ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
+            ". The Group has conducted a thorough review and prioritisation of the material ESG factors",
+            "The ESG report should disclose: (i) the process to identify and the criteria for the selection of material ESG factors",
+            ". All 19 ESG Material Factors are elaborated upon in this Report",
+            "communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues",
+            ". • Consistency : The methodologies for working out this ESG Report are consist- ent with those adopted in the 2022 and 2021 ESG Reports to ensure compara- bility of information",
+            ". The Group’s material ESG factors are those that carry significant environmental, social, governance and economic impact on its business and influence the assessment and decision-making of in- ternal and external stakeholders"
+          ],
+          "baseline_answer": "The adjustments made to the ESG Material Factors by the Group include a thorough review and prioritization of the factors, enhancing clarity and consistency, and aligning with recognized industry and ESG standards and practices.",
+          "optimized_answer": "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include a thorough review and prioritization of the material ESG factors, incorporating communication and materiality assessment into the preparation of the ESG Report, and ensuring consistency with methodologies adopted in previous ESG Reports to maintain comparability of information."
+        }
+      ],
+      "baseline_instructions": {
+        "predict": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+      },
+      "baseline_demos": {
+        "predict": []
+      },
+      "instructions": {
+        "predict": "Prompt the Language Model to answer questions based on provided context by following a structured approach. Present the question, then provide the relevant context. The response should include a step-by-step reasoning that outlines how the answer is derived from the context, followed by the actual answer. Ensure that the answer is accurate and based solely on the information contained within the context, without introducing any new information or assumptions."
+      },
+      "demos": {
+        "predict": [
+          {
+            "augmented": true,
+            "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+            "context": ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side\n. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions\n. One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS\n. ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing\n. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources\n. Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations\n. ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers",
+            "reasoning": "The primary focus of ASMPT’s WORKS Optimisation system is contrasted with traditional inspection systems by considering the entire operational process on the software side, rather than focusing on individual products and manufacturing stations. This comprehensive approach is aimed at achieving an Intelligent Factory, which results in less energy and material consumption, reduced costs, and waste.",
+            "answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations."
+          }
+        ]
+      },
+      "trial_scores": [
+        202.88,
+        214.06,
+        200.58,
+        214.06,
+        208.56,
+        201.66,
+        200.58,
+        208.56,
+        214.06,
+        208.56,
+        214.06
+      ],
+      "best_score_progression": [
+        214.06,
+        214.06,
+        214.06,
+        214.06,
+        214.06,
+        214.06,
+        214.06,
+        214.06,
+        214.06,
+        214.06
+      ],
+      "mipro_auto": "light",
+      "dspy_metric_used": "embed_rubric",
+      "dspy_optimizer_used": "mipro",
+      "winning_demos": [
+        {
+          "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+          "answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+          "reasoning": "The primary focus of ASMPT’s WORKS Optimisation system is contrasted with traditional inspection systems by considering the entire operational process on the software side, rather than focusing on individual products and manufacturing stations. This comprehensive approach is aimed at achieving an Intelligent Factory, which results in less energy and material consumption, reduced costs, and waste.",
+          "context": ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side\n. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions\n. One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS\n. ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing\n. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources\n. Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations\n. ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers"
+        }
+      ],
+      "proposed_instructions_by_predictor": {
+        "0": [
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.",
+          "Prompt the Language Model to answer questions based on provided context by following a structured approach. Present the question, then provide the relevant context. The response should include a step-by-step reasoning that outlines how the answer is derived from the context, followed by the actual answer. Ensure that the answer is accurate and based solely on the information contained within the context, without introducing any new information or assumptions.",
+          "Create an instruction for a Language Model that prompts it to answer specific questions about the ASMPT’s WORKS Optimisation system by carefully analyzing the provided context. The instruction should guide the model to synthesize information from the context, ensuring a step-by-step reasoning process that leads to a concise and accurate answer. The model must adhere to the context, avoiding the introduction of new facts, and focus on the primary aspects of the context relevant to the question. The instruction should be clear, informative, and descriptive to effectively guide the model's response."
+        ]
+      },
+      "trial_log": [
+        {
+          "trial": 1,
+          "score": 202.88,
+          "kind": "default",
+          "params": null
+        },
+        {
+          "trial": 2,
+          "score": 214.06,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']"
+        },
+        {
+          "trial": 3,
+          "score": 200.58,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+        },
+        {
+          "trial": 4,
+          "score": 214.06,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 5,
+          "score": 208.56,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2']"
+        },
+        {
+          "trial": 6,
+          "score": 201.66,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 7,
+          "score": 200.58,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+        },
+        {
+          "trial": 8,
+          "score": 208.56,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 9,
+          "score": 214.06,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4']"
+        },
+        {
+          "trial": 10,
+          "score": 208.56,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
+        },
+        {
+          "trial": 11,
+          "score": 214.06,
+          "kind": "minibatch",
+          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']"
+        }
+      ],
+      "gt_mode": "no_gt",
+      "optimizer": "MIPROv2",
+      "trainset_size": 3
+    }
+  },
+  "diagnosis": {
+    "no_gt": {
+      "baseline": {
+        "summary": "Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.50.",
+        "expected_thresholds": {
+          "context_precision": 0.8,
+          "context_recall": 0.8,
+          "context_entities_recall": 0.75,
+          "hit_rate_at_k": 0.85,
+          "faithfulness": 0.9,
+          "response_relevancy": 0.85,
+          "context_utilization": 0.75,
+          "noise_sensitivity": 0.2,
+          "hallucination": 0.1,
+          "answer_correctness": 0.85,
+          "answer_accuracy": 0.85,
+          "citation_accuracy": 0.85,
+          "user_success_rate": 0.85
+        },
+        "metric_gaps": {},
+        "hypotheses": [],
+        "optimization_candidates": [],
+        "priority_actions": [
+          "Run parser and chunking search before retriever tuning."
+        ],
+        "causal_signals": [
+          {
+            "node": "corpus_chunking_defect",
+            "component": "retrieval",
+            "posterior": 0.503,
+            "prior": 0.4482,
+            "evidence": [
+              "Traces show a small number of retrieved chunks per query."
+            ],
+            "recommended_experiment": "Run parser and chunking search before retriever tuning."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.4068,
+            "prior": 0.3922,
+            "evidence": [
+              "Verification spans are sparse.",
+              "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
+            "node": "retrieval_recall_defect",
+            "component": "retrieval",
+            "posterior": 0.3751,
+            "prior": 0.3273,
+            "evidence": [
+              "Precision is acceptable, so evidence miss is more likely than noise.",
+              "Upstream propagation from corpus_chunking_defect (+0.03) via causal edge."
+            ],
+            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+          },
+          {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.3545,
+            "prior": 0.332,
+            "evidence": [
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "citation_binding_defect",
+            "component": "e2e",
+            "posterior": 0.1435,
+            "prior": 0.143,
+            "evidence": [],
+            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+          },
+          {
+            "node": "distribution_shift",
+            "component": "pipeline",
+            "posterior": 0.1399,
+            "prior": 0.1399,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
+            "node": "context_packing_defect",
+            "component": "generation",
+            "posterior": 0.1352,
+            "prior": 0.1335,
+            "evidence": [
+              "Upstream propagation from retrieval_recall_defect (+0.01) via causal edge."
+            ],
+            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+          },
+          {
+            "node": "judge_or_metric_instability",
+            "component": "pipeline",
+            "posterior": 0.0752,
+            "prior": 0.0752,
+            "evidence": [],
+            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+          }
+        ],
+        "causal_graph": {
+          "nodes": [
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.503,
+              "prior": 0.4482,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.4068,
+              "prior": 0.3922,
+              "evidence": [
+                "Verification spans are sparse.",
+                "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.3751,
+              "prior": 0.3273,
+              "evidence": [
+                "Precision is acceptable, so evidence miss is more likely than noise.",
+                "Upstream propagation from corpus_chunking_defect (+0.03) via causal edge."
+              ],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.3545,
+              "prior": 0.332,
+              "evidence": [
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.1435,
+              "prior": 0.143,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "pipeline",
+              "posterior": 0.1399,
+              "prior": 0.1399,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.1352,
+              "prior": 0.1335,
+              "evidence": [
+                "Upstream propagation from retrieval_recall_defect (+0.01) via causal edge."
+              ],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "pipeline",
+              "posterior": 0.0752,
+              "prior": 0.0752,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "edges": [
+            {
+              "source": "corpus_chunking_defect",
+              "target": "retrieval_recall_defect",
+              "weight": 0.55,
+              "rationale": "Poor parsing and chunk boundaries directly suppress recall."
+            },
+            {
+              "source": "retrieval_recall_defect",
+              "target": "context_packing_defect",
+              "weight": 0.22,
+              "rationale": "Weak recall increases packing pressure on partial evidence."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "context_packing_defect",
+              "weight": 0.18,
+              "rationale": "Noisy retrieval degrades packed context quality."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "grounding_defect",
+              "weight": 0.45,
+              "rationale": "Noisy retrieval raises unsupported reasoning risk."
+            },
+            {
+              "source": "context_packing_defect",
+              "target": "grounding_defect",
+              "weight": 0.4,
+              "rationale": "Poor packing directly weakens grounding."
+            },
+            {
+              "source": "grounding_defect",
+              "target": "citation_binding_defect",
+              "weight": 0.3,
+              "rationale": "Unsupported claims often come with weak citation mapping."
+            },
+            {
+              "source": "judge_or_metric_instability",
+              "target": "distribution_shift",
+              "weight": 0.1,
+              "rationale": "Evaluator disagreement can indicate shift or judge mismatch."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "retrieval_recall_defect",
+              "weight": 0.3,
+              "rationale": "Shifted traffic often first breaks evidence coverage."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "grounding_defect",
+              "weight": 0.18,
+              "rationale": "Shifted domains also weaken grounding reliability."
+            }
+          ]
+        },
+        "evaluator_agreement": {},
+        "diagnosis_confidence": 0.75,
+        "disambiguation_actions": [],
+        "rule_based": {
+          "source": "rule",
+          "summary": "Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.50.",
+          "hypotheses": [],
+          "causal_signals": [
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.503,
+              "prior": 0.4482,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.4068,
+              "prior": 0.3922,
+              "evidence": [
+                "Verification spans are sparse.",
+                "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.3751,
+              "prior": 0.3273,
+              "evidence": [
+                "Precision is acceptable, so evidence miss is more likely than noise.",
+                "Upstream propagation from corpus_chunking_defect (+0.03) via causal edge."
+              ],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.3545,
+              "prior": 0.332,
+              "evidence": [
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.1435,
+              "prior": 0.143,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "pipeline",
+              "posterior": 0.1399,
+              "prior": 0.1399,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.1352,
+              "prior": 0.1335,
+              "evidence": [
+                "Upstream propagation from retrieval_recall_defect (+0.01) via causal edge."
+              ],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "pipeline",
+              "posterior": 0.0752,
+              "prior": 0.0752,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "metric_gaps": {},
+          "optimization_candidates": [],
+          "priority_actions": [
+            "Run parser and chunking search before retriever tuning."
+          ],
+          "disambiguation_actions": [],
+          "diagnosis_confidence": 0.75
+        },
+        "llm_based": null,
+        "synthesis": null,
+        "active_source": "rule"
+      },
+      "optimized": null
+    }
+  },
+  "extras": {
+    "synthesized_questions": [
+      {
+        "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
+        "source_chunk_ids": [
+          331,
+          154
+        ]
+      },
+      {
+        "question": "What is the primary reason for ASMPT's success according to the passage?",
+        "source_chunk_ids": [
+          404,
+          49
+        ]
+      },
+      {
+        "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+        "source_chunk_ids": [
+          74,
+          96
+        ]
+      }
+    ],
+    "pdf_meta": {
+      "page_count": 114,
+      "chunks": 548,
+      "chunk_size": 512,
+      "chunk_overlap": 50,
+      "raw_text_chars": 211339
+    }
+  }
+}

@@ -66,6 +66,97 @@ def _logit(p: float) -> float:
     return math.log(p / (1.0 - p))
 
 
+# =====================================================================
+# Escalation ladders (history-aware diagnosis)
+# =====================================================================
+# When a defect is STILL below threshold *after* the optimization that
+# targets it was already tried, repeating the same advice ("add a
+# reranker") is useless. Each ladder escalates: level 0 is the first
+# attempt, level 1 assumes the basic fix was tried and didn't land,
+# level 2 is the "the obvious lever is exhausted, change the approach"
+# tier. The level is chosen by how many times the defect's targeting
+# optimization already appears in the run history.
+#
+# Each entry: {"actions": [...], "candidates": [...], "note": str}.
+_ESCALATION_LADDERS: dict[str, list[dict]] = {
+    'retrieval_precision_defect': [
+        {
+            'actions': ['Add or tune a reranker.', 'Reduce top-k, or separate the recall stage from the final evidence stage.', 'Use metadata or section-aware filters.'],
+            'candidates': ['autorag_pipeline_search'],
+            'note': '',
+        },
+        {
+            'actions': ['Basic precision tuning already ran and precision is still low — escalate: add a cross-encoder reranker (not just a score cutoff).', 'Switch to hybrid retrieval (BM25 + dense) so lexical precision complements semantic recall.', 'Add query rewriting / decomposition to sharpen the retrieval target.'],
+            'candidates': ['autorag_pipeline_search', 'corpus_chunking_search'],
+            'note': 'Retrieval BO already attempted; raising retrieval complexity.',
+        },
+        {
+            'actions': ['Precision is stuck after repeated retrieval tuning — move to the corpus level: re-chunk with section-aware / semantic splitting so chunks carry cleaner single-topic evidence.', 'Add metadata filters to constrain the candidate pool before ranking.', 'Audit chunk boundaries against the actual question set — the corpus may lack the granularity this query distribution needs.'],
+            'candidates': ['corpus_chunking_search', 'joint_ablation_eval'],
+            'note': 'Retrieval levers exhausted; escalating to corpus chunking + ablation.',
+        },
+    ],
+    'retrieval_recall_defect': [
+        {
+            'actions': ['Increase recall with hybrid retrieval or a larger candidate pool before reranking.', 'Tune chunk size, overlap, and document segmentation.', 'Inspect query rewriting and metadata filters.'],
+            'candidates': ['autorag_pipeline_search', 'corpus_chunking_search'],
+            'note': '',
+        },
+        {
+            'actions': ['Recall tuning already ran and recall is still low — escalate: multi-query expansion or HyDE to cast a wider net.', 'Increase top_k substantially and let a reranker prune the noise.', 'Re-chunk smaller so relevant spans are not buried inside large chunks.'],
+            'candidates': ['autorag_pipeline_search', 'corpus_chunking_search'],
+            'note': 'Retrieval BO already attempted; widening the retrieval net.',
+        },
+        {
+            'actions': ['Recall is stuck after repeated tuning — the evidence may simply not be in the corpus, or chunking is destroying it. Audit a sample of failing questions against the raw document.', 'Try parent-document or sentence-window retrieval to preserve context around hits.'],
+            'candidates': ['corpus_chunking_search', 'joint_ablation_eval'],
+            'note': 'Retrieval levers exhausted; suspect corpus coverage.',
+        },
+    ],
+    'grounding_defect': [
+        {
+            'actions': ['Optimize the synthesis prompt to require evidence-backed answers.', 'Use structured answer templates with citation requirements.', 'Add answer compression or a claim-verification stage.'],
+            'candidates': ['dspy_prompt_optimization'],
+            'note': '',
+        },
+        {
+            'actions': ['Prompt tuning already ran and grounding is still weak — escalate: add a claim-level self-check / verification pass after generation.', 'Constrain the answer to quoted evidence only.', 'Try a stronger generator LM; prompt optimization alone has plateaued.'],
+            'candidates': ['dspy_prompt_optimization', 'joint_ablation_eval'],
+            'note': 'Prompt optimization already attempted; adding verification / stronger LM.',
+        },
+        {
+            'actions': ['Grounding is stuck after repeated prompt tuning — the upstream retrieval is likely feeding noise. Re-check precision first, then revisit generation.', 'Consider a retrieve-then-verify architecture where each claim is checked against a retrieved span.'],
+            'candidates': ['joint_ablation_eval'],
+            'note': 'Generation levers exhausted; suspect upstream retrieval noise.',
+        },
+    ],
+}
+
+# Which optimization candidate "targets" each defect. Used to count how
+# many times the relevant lever was already pulled when picking the
+# escalation level.
+_DEFECT_TARGETING_CANDIDATES: dict[str, set[str]] = {
+    'retrieval_precision_defect': {'autorag_pipeline_search'},
+    'retrieval_recall_defect': {'autorag_pipeline_search', 'corpus_chunking_search'},
+    'grounding_defect': {'dspy_prompt_optimization'},
+}
+
+
+def _escalation_level(defect: str, applied_candidates: list[str]) -> int:
+    """How far up the ladder to climb for ``defect``.
+
+    Counts how many of the applied optimization candidates target this
+    defect; that count (clamped to the ladder length) is the level. A
+    defect with no prior attempts stays at level 0 (the base advice).
+    """
+    ladder = _ESCALATION_LADDERS.get(defect)
+    if not ladder:
+        return 0
+    targeting = _DEFECT_TARGETING_CANDIDATES.get(defect, set())
+    tries = sum(1 for c in applied_candidates if c in targeting)
+    return max(0, min(tries, len(ladder) - 1))
+
+
 class RuleBasedRootCauseAnalyzer:
     def __init__(self, thresholds: dict[str, float] | None = None, root: str | None = None):
         self.thresholds = thresholds or DEFAULT_THRESHOLDS.copy()
@@ -349,7 +440,16 @@ class RuleBasedRootCauseAnalyzer:
         edges = [CausalEdge(source=u, target=v, weight=float(d['weight']), rationale=d['rationale']) for u, v, d in self.graph.edges(data=True)]
         return CausalGraph(nodes=nodes, edges=edges)
 
-    def analyze(self, result: EvaluationResult) -> DiagnosisReport:
+    def analyze(
+        self,
+        result: EvaluationResult,
+        optimization_history: list[str] | None = None,
+    ) -> DiagnosisReport:
+        # ``optimization_history`` is the list of optimization candidate
+        # names already applied to this RAG (e.g. ["autorag_pipeline_search"]
+        # after one retrieval tune). Used to escalate recommendations
+        # when a defect persists despite the obvious fix having run.
+        applied = list(optimization_history or [])
         gaps = self._metric_gaps(result)
         cp = result.score('context_precision', 1.0) or 1.0
         cr = result.score('context_recall', 1.0) or 1.0
@@ -370,20 +470,35 @@ class RuleBasedRootCauseAnalyzer:
         disambiguation: list[str] = []
 
         if cr < self.thresholds['context_recall'] and cp >= self.thresholds['context_precision']:
-            hypotheses.append(DiagnosisHypothesis(component='retrieval', root_cause='evidence miss despite acceptable retrieval precision', severity='high', confidence=0.86, evidence=[f"context_recall={cr:.2f} is below target {self.thresholds['context_recall']:.2f}", f"context_precision={cp:.2f} is not the primary bottleneck", f"entity recall proxy={cer:.2f} suggests missing supporting facts"], recommended_actions=['Increase recall with hybrid retrieval or larger candidate pool before reranking.', 'Tune chunk size, overlap, and document segmentation.', 'Inspect query rewriting and metadata filters.']))
-            candidates.extend(['autorag_pipeline_search', 'corpus_chunking_search'])
-            actions.append('Prioritize retrieval recall experiments before generator prompt tuning.')
+            _lvl = _escalation_level('retrieval_recall_defect', applied)
+            _rung = _ESCALATION_LADDERS['retrieval_recall_defect'][_lvl]
+            _ev = [f"context_recall={cr:.2f} is below target {self.thresholds['context_recall']:.2f}", f"context_precision={cp:.2f} is not the primary bottleneck", f"entity recall proxy={cer:.2f} suggests missing supporting facts"]
+            if _lvl > 0:
+                _ev.append(f"retrieval tuning was already applied {applied.count('autorag_pipeline_search')}x but recall is still below target (escalation level {_lvl}).")
+            hypotheses.append(DiagnosisHypothesis(component='retrieval', root_cause=('evidence miss despite acceptable retrieval precision' if _lvl == 0 else 'recall still failing after retrieval tuning — escalate retrieval strategy'), severity='high', confidence=0.86, evidence=_ev, recommended_actions=list(_rung['actions'])))
+            candidates.extend(_rung['candidates'])
+            actions.append('Prioritize retrieval recall experiments before generator prompt tuning.' if _lvl == 0 else _rung['note'])
             disambiguation.append('Hold the generator fixed and compare recall with and without chunking changes.')
 
         if cp < self.thresholds['context_precision']:
-            hypotheses.append(DiagnosisHypothesis(component='retrieval', root_cause='retrieval noise or weak ranking quality', severity='high', confidence=0.84, evidence=[f"context_precision={cp:.2f} is below target {self.thresholds['context_precision']:.2f}", 'Noisy contexts usually propagate to hallucination and citation failures.'], recommended_actions=['Add or tune reranker.', 'Reduce top-k or separate recall stage from final evidence stage.', 'Use metadata or section-aware filters.']))
-            candidates.append('autorag_pipeline_search')
-            actions.append('Improve ranking precision and evidence filtering.')
+            _lvl = _escalation_level('retrieval_precision_defect', applied)
+            _rung = _ESCALATION_LADDERS['retrieval_precision_defect'][_lvl]
+            _ev = [f"context_precision={cp:.2f} is below target {self.thresholds['context_precision']:.2f}", 'Noisy contexts usually propagate to hallucination and citation failures.']
+            if _lvl > 0:
+                _ev.append(f"retrieval tuning was already applied {applied.count('autorag_pipeline_search')}x but precision is still below target (escalation level {_lvl}).")
+            hypotheses.append(DiagnosisHypothesis(component='retrieval', root_cause=('retrieval noise or weak ranking quality' if _lvl == 0 else 'precision still failing after retrieval tuning — escalate retrieval complexity'), severity='high', confidence=0.84, evidence=_ev, recommended_actions=list(_rung['actions'])))
+            candidates.extend(_rung['candidates'])
+            actions.append('Improve ranking precision and evidence filtering.' if _lvl == 0 else _rung['note'])
 
         if faith < self.thresholds['faithfulness'] and cr >= 0.7:
-            hypotheses.append(DiagnosisHypothesis(component='generation', root_cause='generator is not grounding sufficiently on retrieved evidence', severity='high', confidence=0.83, evidence=[f"faithfulness={faith:.2f} is below target {self.thresholds['faithfulness']:.2f}", f"context_recall={cr:.2f} indicates at least some relevant evidence is available", f"context_utilization={util:.2f} suggests evidence may not be used effectively"], recommended_actions=['Optimize synthesis prompt to require evidence-backed answers.', 'Use structured answer templates with citation requirements.', 'Add answer compression or claim verification stage.']))
-            candidates.append('dspy_prompt_optimization')
-            actions.append('Tune generator behavior after retrieval quality is acceptable.')
+            _lvl = _escalation_level('grounding_defect', applied)
+            _rung = _ESCALATION_LADDERS['grounding_defect'][_lvl]
+            _ev = [f"faithfulness={faith:.2f} is below target {self.thresholds['faithfulness']:.2f}", f"context_recall={cr:.2f} indicates at least some relevant evidence is available", f"context_utilization={util:.2f} suggests evidence may not be used effectively"]
+            if _lvl > 0:
+                _ev.append(f"prompt tuning was already applied {applied.count('dspy_prompt_optimization')}x but grounding is still weak (escalation level {_lvl}).")
+            hypotheses.append(DiagnosisHypothesis(component='generation', root_cause=('generator is not grounding sufficiently on retrieved evidence' if _lvl == 0 else 'grounding still weak after prompt tuning — escalate generation strategy'), severity='high', confidence=0.83, evidence=_ev, recommended_actions=list(_rung['actions'])))
+            candidates.extend(_rung['candidates'])
+            actions.append('Tune generator behavior after retrieval quality is acceptable.' if _lvl == 0 else _rung['note'])
             disambiguation.append('Compare the same retrieved context under a citation-first prompt and a claim-then-evidence prompt.')
 
         if noise > self.thresholds['noise_sensitivity'] or hall > self.thresholds['hallucination']:

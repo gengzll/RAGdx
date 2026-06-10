@@ -48,8 +48,19 @@ class RAGDiagnosisEngine:
         self.llm_explainer = llm_explainer
         self.planner = OptimizationPlanner()
 
-    def diagnose(self, result: EvaluationResult, use_llm: bool = False, use_both: bool = False) -> DiagnosisReport:
-        rule_report = self.analyzer.analyze(result)
+    def diagnose(
+        self,
+        result: EvaluationResult,
+        use_llm: bool = False,
+        use_both: bool = False,
+        optimization_history: list[str] | None = None,
+    ) -> DiagnosisReport:
+        # ``optimization_history`` lets the rule analyzer escalate its
+        # recommendations when a defect persists despite the targeting
+        # optimization already having run (history-aware diagnosis).
+        rule_report = self.analyzer.analyze(
+            result, optimization_history=optimization_history,
+        )
         if use_both:
             if self.llm_explainer is None:
                 raise ValueError("LLM diagnosis requested but no llm_explainer is configured.")

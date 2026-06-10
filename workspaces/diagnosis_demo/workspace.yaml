@@ -1,6 +1,6 @@
 schema_version: 1
 name: diagnosis_demo
-created_at: '2026-06-09T14:37:00Z'
+created_at: '2026-06-10T02:53:27Z'
 rag_config: rag_config.yaml
 questions: questions.jsonl
 corpus: e0522-asmptesgreport.pdf
@@ -8,45 +8,45 @@ evaluator: ragas
 mode: auto
 current:
   latest_eval: post_1.eval.json
-  baseline_run_id: 07c698623fbb
+  baseline_run_id: 6c3e00304770
   latest_diagnose: post_1.eval.diagnose.json
   latest_tune_rag: tune_rag_joint.json
   latest_report: report.html
 notes: ''
 history:
-- ts: '2026-06-09T14:56:11Z'
+- ts: '2026-06-10T03:22:37Z'
   command: eval
   output: baseline.eval.json
-  run_id: 01591b475fbc
+  run_id: 3790113a7363
   extra:
     evaluator: ragas
-- ts: '2026-06-09T14:56:25Z'
+- ts: '2026-06-10T03:23:17Z'
   command: diagnose
   output: baseline.eval.diagnose.json
   run_id: null
   extra:
     mode: rule
     source_eval: baseline.eval.json
-- ts: '2026-06-09T15:04:06Z'
+- ts: '2026-06-10T03:34:42Z'
   command: tune-rag
   output: tune_rag_joint.json
-  run_id: 0805baada393
+  run_id: 642ddfc97a6e
   extra:
     stage: joint
-- ts: '2026-06-09T15:06:41Z'
+- ts: '2026-06-10T03:38:24Z'
   command: eval
   output: post_1.eval.json
-  run_id: 07c698623fbb
+  run_id: 6c3e00304770
   extra:
     evaluator: ragas
-- ts: '2026-06-09T15:06:56Z'
+- ts: '2026-06-10T03:38:38Z'
   command: diagnose
   output: post_1.eval.diagnose.json
   run_id: null
   extra:
     mode: rule
     source_eval: post_1.eval.json
-- ts: '2026-06-09T15:07:11Z'
+- ts: '2026-06-10T03:38:53Z'
   command: report
   output: report.html
   run_id: null
