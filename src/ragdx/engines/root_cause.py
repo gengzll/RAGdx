@@ -191,8 +191,8 @@ class RuleBasedRootCauseAnalyzer:
             'context_packing_defect': 'generation',
             'grounding_defect': 'generation',
             'citation_binding_defect': 'e2e',
-            'judge_or_metric_instability': 'pipeline',
-            'distribution_shift': 'pipeline',
+            'judge_or_metric_instability': 'e2e',
+            'distribution_shift': 'e2e',
         }
         self.node_actions = {
             'corpus_chunking_defect': 'Run parser and chunking search before retriever tuning.',
@@ -507,7 +507,7 @@ class RuleBasedRootCauseAnalyzer:
             actions.append('Run ablations to separate noisy retrieval from generator overreach.')
 
         if ans < self.thresholds['answer_correctness'] and not hypotheses:
-            hypotheses.append(DiagnosisHypothesis(component='pipeline', root_cause='end-to-end quality is weak but component-level signals are inconclusive', severity='medium', confidence=0.62, evidence=[f"answer_correctness={ans:.2f} is below target"], recommended_actions=['Run controlled ablations over retriever, reranker, and answer prompt.', 'Inspect difficult examples and metric-label alignment.']))
+            hypotheses.append(DiagnosisHypothesis(component='e2e', root_cause='end-to-end quality is weak but component-level signals are inconclusive', severity='medium', confidence=0.62, evidence=[f"answer_correctness={ans:.2f} is below target"], recommended_actions=['Run controlled ablations over retriever, reranker, and answer prompt.', 'Inspect difficult examples and metric-label alignment.']))
             candidates.append('joint_ablation_eval')
             actions.append('Review evaluation set quality and run component ablations.')
 

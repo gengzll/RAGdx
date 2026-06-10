@@ -251,7 +251,6 @@ def _render_causal_graph_svg(signals: list[dict], graph: dict | None = None) -> 
         "retrieval":  "#1d4ed8",   # blue
         "generation": "#c2410c",   # orange
         "e2e":        "#15803d",   # green
-        "pipeline":   "#6b7280",   # grey
     }
     edges_default = [
         ("corpus_chunking_defect", "retrieval_recall_defect"),
@@ -301,7 +300,7 @@ def _render_causal_graph_svg(signals: list[dict], graph: dict | None = None) -> 
         post_val = float(post) if isinstance(post, (int, float)) else 0.0
         # Radius: 12..28 px scaled by posterior.
         r = 12 + int(16 * max(0.0, min(1.0, post_val)))
-        comp = sig.get("component") or "pipeline"
+        comp = sig.get("component") or "e2e"
         fill = comp_colors.get(comp, "#9ca3af")
         opacity = 0.4 + 0.6 * post_val  # stronger fill for higher posterior
         bits.append(
@@ -565,13 +564,22 @@ def _render_layer_overview(layer_scores: dict) -> str:
     per-metric breakdown (oriented values, so lower-is-better metrics
     already inverted). Returns ``""`` when no layer has a score.
     """
+    from ragdx.core.metrics import layer_catalog
+
     layers = ("retrieval", "generation", "e2e")
-    have = [
-        lyr for lyr in layers
-        if isinstance((layer_scores.get(lyr) or {}).get("score"), (int, float))
-    ]
-    if not have:
+    have_any = any(
+        isinstance((layer_scores.get(lyr) or {}).get("score"), (int, float))
+        for lyr in layers
+    )
+    if not have_any and not layer_scores:
         return ""
+
+    # The full catalog per layer is keyed off whatever metrics were
+    # actually computed (the ``raw`` values in layer_scores).
+    computed: dict[str, float] = {}
+    for lyr in layers:
+        computed.update((layer_scores.get(lyr) or {}).get("raw") or {})
+    catalog = layer_catalog(computed)
 
     def _bar_color(s: float) -> str:
         # red < 0.6 < amber < 0.8 < green
@@ -584,50 +592,76 @@ def _render_layer_overview(layer_scores: dict) -> str:
     parts: list[str] = [
         '<h4>Three-layer score overview</h4>',
         '<p class="caption">Aggregate score per layer (weighted mean of '
-        'the layer\'s metrics; lower-is-better metrics like '
-        '<code>hallucination</code> are inverted so higher = healthier). '
-        'Click a layer to see the per-metric breakdown.</p>',
+        'the layer\'s <em>computed</em> metrics; lower-is-better metrics '
+        'like <code>hallucination</code> are inverted so higher = '
+        'healthier). Every metric in the layer is listed when you expand '
+        'it — ones not computed in this run show why '
+        '(needs ground truth / deepeval / traces / feedback).</p>',
     ]
     for lyr in layers:
         d = layer_scores.get(lyr) or {}
         s = d.get("score")
-        if not isinstance(s, (int, float)):
-            continue
-        pct = round(s * 100)
-        color = _bar_color(s)
-        # The bar row.
-        bar = (
-            f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
-            f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
-            f'<div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative">'
-            f'<div style="width:{pct}%;background:{color};height:100%;border-radius:5px"></div>'
-            f'</div>'
-            f'<div style="width:48px;text-align:right;font-variant-numeric:tabular-nums">{s:.2f}</div>'
-            f'</div>'
-        )
-        # Per-metric detail (oriented + raw).
-        metrics = d.get("metrics") or {}
         raw = d.get("raw") or {}
-        if metrics:
-            rows = []
-            for m, ov in metrics.items():
-                rv = raw.get(m)
-                note = ""
-                if isinstance(rv, (int, float)) and abs(rv - ov) > 1e-9:
-                    note = f" (raw {rv:.3f}, inverted)"
-                rows.append(
-                    f"<tr><td><code>{_esc(m)}</code></td>"
-                    f"<td>{ov:.3f}{_esc(note)}</td></tr>"
-                )
-            detail = (
-                "<table><thead><tr><th>metric</th><th>oriented value</th></tr>"
-                f"</thead><tbody>{''.join(rows)}</tbody></table>"
+        oriented = d.get("metrics") or {}
+
+        # The aggregate bar (only when the layer has a score).
+        if isinstance(s, (int, float)):
+            pct = round(s * 100)
+            color = _bar_color(s)
+            bar = (
+                f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
+                f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
+                f'<div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative">'
+                f'<div style="width:{pct}%;background:{color};height:100%;border-radius:5px"></div>'
+                f'</div>'
+                f'<div style="width:48px;text-align:right;font-variant-numeric:tabular-nums">{s:.2f}</div>'
+                f'</div>'
             )
-            parts.append(bar + _details(
-                f"{lyr} — {d.get('n', len(metrics))} metric(s)", detail,
-            ))
         else:
-            parts.append(bar)
+            # No computed metrics in this layer -- show a muted bar so
+            # the layer still appears in the overview.
+            bar = (
+                f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0">'
+                f'<div style="width:90px;font-weight:600;text-transform:capitalize">{_esc(lyr)}</div>'
+                f'<div style="flex:1;color:var(--muted);font-size:12px">no metrics computed in this run</div>'
+                f'<div style="width:48px;text-align:right">—</div>'
+                f'</div>'
+            )
+
+        # Full catalog detail: computed value OR requires-badge.
+        entries = catalog.get(lyr) or []
+        n_computed = sum(1 for e in entries if e["computed"])
+        rows = []
+        for e in entries:
+            name = e["name"]
+            if e["computed"]:
+                ov = oriented.get(name)
+                rv = raw.get(name)
+                if isinstance(ov, (int, float)):
+                    note = ""
+                    if isinstance(rv, (int, float)) and abs(rv - ov) > 1e-9:
+                        note = f" (raw {rv:.3f}, inverted)"
+                    val = f"{ov:.3f}{note}"
+                else:
+                    val = f"{rv:.3f}" if isinstance(rv, (int, float)) else "—"
+                rows.append(
+                    f'<tr><td><code>{_esc(name)}</code></td>'
+                    f'<td>{_esc(val)}</td></tr>'
+                )
+            else:
+                badge = e["requires_label"] or "not computed"
+                rows.append(
+                    f'<tr><td><code>{_esc(name)}</code></td>'
+                    f'<td><span class="tag" style="background:#f3f4f6;color:#6b7280">'
+                    f'{_esc(badge)}</span></td></tr>'
+                )
+        detail = (
+            '<table><thead><tr><th>metric</th><th>value / status</th></tr>'
+            f'</thead><tbody>{"".join(rows)}</tbody></table>'
+        )
+        parts.append(bar + _details(
+            f"{lyr} — {n_computed}/{len(entries)} metric(s) computed", detail,
+        ))
     return "\n".join(parts)
 
 
@@ -841,14 +875,29 @@ def _render_optimized_diagnosis(bundle: dict) -> str:
     bodies = [b for b in bodies if b]
     if not bodies:
         return ""
-    header = '<h2>Diagnosis (optimized) — what still needs attention</h2>'
-    caption = (
-        '<p class="caption">Same analysis re-run on the optimized config. '
-        'Compare the posteriors here with the baseline diagnosis above: '
-        'a node whose posterior dropped is a hypothesis we successfully '
-        'attacked; a node whose posterior is still high is the next '
-        'thing to tune.</p>'
-    )
+    # When the bundle carries no baseline diagnosis (the one-shot
+    # ``ragdx experiment`` flow produces a single final diagnosis), this
+    # IS the diagnosis -- title it plainly rather than implying a
+    # baseline comparison that doesn't exist.
+    has_baseline = any(_diagnosis_view(bundle, "baseline").values())
+    if has_baseline:
+        header = '<h2>Diagnosis (optimized) — what still needs attention</h2>'
+        caption = (
+            '<p class="caption">Same analysis re-run on the optimized config. '
+            'Compare the posteriors here with the baseline diagnosis above: '
+            'a node whose posterior dropped is a hypothesis we successfully '
+            'attacked; a node whose posterior is still high is the next '
+            'thing to tune.</p>'
+        )
+    else:
+        header = '<h2>Diagnosis — final system</h2>'
+        caption = (
+            '<p class="caption">Rule-based root-cause analysis of the '
+            'fully-optimized system (after Bayesian search + DSPy prompt '
+            'tuning). The weakest layer and highest-posterior causal nodes '
+            'are what to attack next. For an LLM-refined view, run '
+            '<code>ragdx diagnose --use-both</code> on the saved run.</p>'
+        )
     return header + caption + "\n".join(bodies)
 
 

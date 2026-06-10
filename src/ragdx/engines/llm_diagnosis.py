@@ -85,7 +85,7 @@ Output requirements:
 """.strip()
 
 
-_VALID_COMPONENTS = {"retrieval", "generation", "e2e", "pipeline"}
+_VALID_COMPONENTS = {"retrieval", "generation", "e2e"}
 _VALID_SEVERITIES = {"low", "medium", "high", "critical"}
 
 
@@ -93,12 +93,15 @@ def _normalize_component(value: Any) -> str:
     """Coerce LLM-emitted component labels to the canonical literal set.
 
     LLMs occasionally emit values like ``"e2e / citation mapping"`` or
-    ``"Pipeline observability"``; we map by prefix or substring match
-    rather than reject outright.
+    ``"system observability"``; we map by prefix or substring match
+    rather than reject outright. The three canonical layers are
+    retrieval / generation / e2e; anything else (including the old
+    "pipeline" / system-level labels) falls back to ``"e2e"`` since
+    those are whole-system concerns.
     """
 
     if not isinstance(value, str):
-        return "pipeline"
+        return "e2e"
     text = value.strip().lower()
     if text in _VALID_COMPONENTS:
         return text
@@ -108,7 +111,7 @@ def _normalize_component(value: Any) -> str:
     for candidate in _VALID_COMPONENTS:
         if candidate in text:
             return candidate
-    return "pipeline"
+    return "e2e"
 
 
 def _normalize_severity(value: Any) -> str:

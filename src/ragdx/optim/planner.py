@@ -62,7 +62,10 @@ MINIMIZE_METRICS = {"hallucination", "noise_sensitivity", "latency_ms", "cost_us
 COMPONENT_METRICS = {
     "retrieval": ["context_recall", "context_precision", "citation_accuracy", "latency_ms", "cost_usd"],
     "generation": ["faithfulness", "response_relevancy", "citation_accuracy", "hallucination", "cost_usd"],
-    "pipeline": ["answer_correctness", "citation_accuracy", "faithfulness", "context_recall", "latency_ms", "cost_usd"],
+    # ``e2e`` is the whole-system bucket (formerly "pipeline"). The
+    # diagnosis exposes only three layers -- retrieval / generation /
+    # e2e -- so cross-cutting / orchestration stages map here.
+    "e2e": ["answer_correctness", "citation_accuracy", "faithfulness", "context_recall", "latency_ms", "cost_usd"],
 }
 
 
@@ -83,7 +86,7 @@ class OptimizationPlanner:
         return json.loads(text)
 
     def _component_metrics(self, component: str, objective_metric: str) -> list[str]:
-        metrics = list(COMPONENT_METRICS.get(component, COMPONENT_METRICS["pipeline"]))
+        metrics = list(COMPONENT_METRICS.get(component, COMPONENT_METRICS["e2e"]))
         if objective_metric not in metrics:
             metrics.insert(0, objective_metric)
         seen = []
@@ -169,7 +172,7 @@ class OptimizationPlanner:
 
 
     def _component_for_stage(self, stage: str, target_component: str) -> str:
-        return {"corpus": "retrieval", "retrieval": "retrieval", "generation": "generation", "orchestration": "pipeline", "joint": "pipeline"}.get(stage, target_component)
+        return {"corpus": "retrieval", "retrieval": "retrieval", "generation": "generation", "orchestration": "e2e", "joint": "e2e"}.get(stage, target_component)
 
     def _metric_direction(self, metric: str) -> str:
         if metric in MAXIMIZE_METRICS:
@@ -392,8 +395,8 @@ class OptimizationPlanner:
             "corpus": "retrieval",
             "retrieval": "retrieval",
             "generation": "generation",
-            "orchestration": "pipeline",
-            "joint": "pipeline",
+            "orchestration": "e2e",
+            "joint": "e2e",
         }
         updated: list[OptimizationExperiment] = []
         for exp in experiments:
@@ -540,12 +543,12 @@ class OptimizationPlanner:
             )
 
         if orchestration_needed:
-            target_specs, baseline_metrics, metric_directions, target_thresholds, objective_weights = self._build_metric_plan("pipeline", objective_metric, result, report)
+            target_specs, baseline_metrics, metric_directions, target_thresholds, objective_weights = self._build_metric_plan("e2e", objective_metric, result, report)
             add_experiment(
                 OptimizationExperiment(
                     name="orchestration-policy-search",
                     tool="manual",
-                    target_component="pipeline",
+                    target_component="e2e",
                     stage="orchestration",
                     description="Tune abstention, retry, and planner policies when drift, evaluation instability, or user feedback requires policy-level adaptation.",
                     parameters={
@@ -571,12 +574,12 @@ class OptimizationPlanner:
             )
 
         if "joint_ablation_eval" in candidates or not experiments:
-            target_specs, baseline_metrics, metric_directions, target_thresholds, objective_weights = self._build_metric_plan("pipeline", objective_metric, result, report)
+            target_specs, baseline_metrics, metric_directions, target_thresholds, objective_weights = self._build_metric_plan("e2e", objective_metric, result, report)
             add_experiment(
                 OptimizationExperiment(
                     name="joint-pipeline-optimization",
                     tool="manual",
-                    target_component="pipeline",
+                    target_component="e2e",
                     stage="joint",
                     description="Run multi-objective search over retrieval/generation operating profiles when component-level root cause is mixed.",
                     parameters={
@@ -603,12 +606,12 @@ class OptimizationPlanner:
 
         if runtime_framework in {"langchain", "llamaindex"}:
             framework_tool = runtime_framework
-            target_specs, baseline_metrics, metric_directions, target_thresholds, objective_weights = self._build_metric_plan("pipeline", objective_metric, result, report)
+            target_specs, baseline_metrics, metric_directions, target_thresholds, objective_weights = self._build_metric_plan("e2e", objective_metric, result, report)
             add_experiment(
                 OptimizationExperiment(
                     name=f"{runtime_framework}-stack-validation",
                     tool=framework_tool,
-                    target_component="pipeline",
+                    target_component="e2e",
                     stage="joint",
                     description=f"Validate and optimize the end-to-end {runtime_framework} runtime with executable configs.",
                     parameters={

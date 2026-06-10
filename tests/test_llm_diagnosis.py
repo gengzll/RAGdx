@@ -56,4 +56,7 @@ def test_llm_diagnosis_normalizes_hypothesis_components():
     combined = explainer.summarize_both(result, rule_report, llm_report)
 
     assert combined.hypotheses[0].component == "e2e"
-    assert combined.hypotheses[1].component == "pipeline"
+    # "pipeline / observability" is no longer a valid component -- the
+    # three canonical layers are retrieval / generation / e2e, and
+    # system-level concerns fall back to e2e.
+    assert combined.hypotheses[1].component == "e2e"

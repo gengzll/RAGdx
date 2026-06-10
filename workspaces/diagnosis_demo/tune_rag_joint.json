@@ -471,19 +471,19 @@
           {
             "node": "grounding_defect",
             "component": "generation",
-            "posterior": 0.8985,
-            "prior": 0.8908,
+            "posterior": 0.951,
+            "prior": 0.9476,
             "evidence": [
               "Verification spans are sparse.",
-              "Upstream propagation from retrieval_precision_defect (+0.02) via causal edge."
+              "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
             ],
             "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
           },
           {
             "node": "retrieval_precision_defect",
             "component": "retrieval",
-            "posterior": 0.8317,
-            "prior": 0.7773,
+            "posterior": 0.9177,
+            "prior": 0.8873,
             "evidence": [
               "context_precision=0.58 is below target.",
               "Sparse rerank spans suggest weak post-retrieval filtering."
@@ -493,32 +493,32 @@
           {
             "node": "retrieval_recall_defect",
             "component": "retrieval",
-            "posterior": 0.7282,
-            "prior": 0.7272,
+            "posterior": 0.8347,
+            "prior": 0.834,
             "evidence": [],
             "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
           },
           {
             "node": "citation_binding_defect",
             "component": "e2e",
-            "posterior": 0.3119,
-            "prior": 0.3114,
+            "posterior": 0.3736,
+            "prior": 0.3734,
             "evidence": [],
             "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
           },
           {
             "node": "distribution_shift",
-            "component": "pipeline",
-            "posterior": 0.2824,
-            "prior": 0.2824,
+            "component": "e2e",
+            "posterior": 0.3184,
+            "prior": 0.3184,
             "evidence": [],
             "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
           },
           {
             "node": "context_packing_defect",
             "component": "generation",
-            "posterior": 0.2691,
-            "prior": 0.2518,
+            "posterior": 0.3171,
+            "prior": 0.2989,
             "evidence": [
               "Enough evidence exists but packing may be letting noise dominate."
             ],
@@ -526,9 +526,9 @@
           },
           {
             "node": "judge_or_metric_instability",
-            "component": "pipeline",
-            "posterior": 0.121,
-            "prior": 0.121,
+            "component": "e2e",
+            "posterior": 0.1364,
+            "prior": 0.1364,
             "evidence": [],
             "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
           }
@@ -548,19 +548,19 @@
             {
               "node": "grounding_defect",
               "component": "generation",
-              "posterior": 0.8985,
-              "prior": 0.8908,
+              "posterior": 0.951,
+              "prior": 0.9476,
               "evidence": [
                 "Verification spans are sparse.",
-                "Upstream propagation from retrieval_precision_defect (+0.02) via causal edge."
+                "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
               ],
               "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
             },
             {
               "node": "retrieval_precision_defect",
               "component": "retrieval",
-              "posterior": 0.8317,
-              "prior": 0.7773,
+              "posterior": 0.9177,
+              "prior": 0.8873,
               "evidence": [
                 "context_precision=0.58 is below target.",
                 "Sparse rerank spans suggest weak post-retrieval filtering."
@@ -570,32 +570,32 @@
             {
               "node": "retrieval_recall_defect",
               "component": "retrieval",
-              "posterior": 0.7282,
-              "prior": 0.7272,
+              "posterior": 0.8347,
+              "prior": 0.834,
               "evidence": [],
               "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
             },
             {
               "node": "citation_binding_defect",
               "component": "e2e",
-              "posterior": 0.3119,
-              "prior": 0.3114,
+              "posterior": 0.3736,
+              "prior": 0.3734,
               "evidence": [],
               "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
             },
             {
               "node": "distribution_shift",
-              "component": "pipeline",
-              "posterior": 0.2824,
-              "prior": 0.2824,
+              "component": "e2e",
+              "posterior": 0.3184,
+              "prior": 0.3184,
               "evidence": [],
               "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
             },
             {
               "node": "context_packing_defect",
               "component": "generation",
-              "posterior": 0.2691,
-              "prior": 0.2518,
+              "posterior": 0.3171,
+              "prior": 0.2989,
               "evidence": [
                 "Enough evidence exists but packing may be letting noise dominate."
               ],
@@ -603,9 +603,9 @@
             },
             {
               "node": "judge_or_metric_instability",
-              "component": "pipeline",
-              "posterior": 0.121,
-              "prior": 0.121,
+              "component": "e2e",
+              "posterior": 0.1364,
+              "prior": 0.1364,
               "evidence": [],
               "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
             }
@@ -732,19 +732,19 @@
             {
               "node": "grounding_defect",
               "component": "generation",
-              "posterior": 0.8985,
-              "prior": 0.8908,
+              "posterior": 0.951,
+              "prior": 0.9476,
               "evidence": [
                 "Verification spans are sparse.",
-                "Upstream propagation from retrieval_precision_defect (+0.02) via causal edge."
+                "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
               ],
               "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
             },
             {
               "node": "retrieval_precision_defect",
               "component": "retrieval",
-              "posterior": 0.8317,
-              "prior": 0.7773,
+              "posterior": 0.9177,
+              "prior": 0.8873,
               "evidence": [
                 "context_precision=0.58 is below target.",
                 "Sparse rerank spans suggest weak post-retrieval filtering."
@@ -754,32 +754,32 @@
             {
               "node": "retrieval_recall_defect",
               "component": "retrieval",
-              "posterior": 0.7282,
-              "prior": 0.7272,
+              "posterior": 0.8347,
+              "prior": 0.834,
               "evidence": [],
               "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
             },
             {
               "node": "citation_binding_defect",
               "component": "e2e",
-              "posterior": 0.3119,
-              "prior": 0.3114,
+              "posterior": 0.3736,
+              "prior": 0.3734,
               "evidence": [],
               "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
             },
             {
               "node": "distribution_shift",
-              "component": "pipeline",
-              "posterior": 0.2824,
-              "prior": 0.2824,
+              "component": "e2e",
+              "posterior": 0.3184,
+              "prior": 0.3184,
               "evidence": [],
               "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
             },
             {
               "node": "context_packing_defect",
               "component": "generation",
-              "posterior": 0.2691,
-              "prior": 0.2518,
+              "posterior": 0.3171,
+              "prior": 0.2989,
               "evidence": [
                 "Enough evidence exists but packing may be letting noise dominate."
               ],
@@ -787,9 +787,9 @@
             },
             {
               "node": "judge_or_metric_instability",
-              "component": "pipeline",
-              "posterior": 0.121,
-              "prior": 0.121,
+              "component": "e2e",
+              "posterior": 0.1364,
+              "prior": 0.1364,
               "evidence": [],
               "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
             }
@@ -871,19 +871,18 @@
           {
             "node": "grounding_defect",
             "component": "generation",
-            "posterior": 0.899,
-            "prior": 0.892,
+            "posterior": 0.9513,
+            "prior": 0.9481,
             "evidence": [
-              "Verification spans are sparse.",
-              "Upstream propagation from retrieval_precision_defect (+0.02) via causal edge."
+              "Verification spans are sparse."
             ],
             "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
           },
           {
             "node": "retrieval_precision_defect",
             "component": "retrieval",
-            "posterior": 0.8251,
-            "prior": 0.7855,
+            "posterior": 0.914,
+            "prior": 0.8919,
             "evidence": [
               "context_precision=0.67 is below target.",
               "Sparse rerank spans suggest weak post-retrieval filtering."
@@ -893,42 +892,42 @@
           {
             "node": "retrieval_recall_defect",
             "component": "retrieval",
-            "posterior": 0.7283,
-            "prior": 0.7273,
+            "posterior": 0.8348,
+            "prior": 0.8341,
             "evidence": [],
             "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
           },
           {
             "node": "citation_binding_defect",
             "component": "e2e",
-            "posterior": 0.3119,
-            "prior": 0.3115,
+            "posterior": 0.3736,
+            "prior": 0.3734,
             "evidence": [],
             "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
           },
           {
-            "node": "distribution_shift",
-            "component": "pipeline",
-            "posterior": 0.2824,
-            "prior": 0.2824,
-            "evidence": [],
-            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-          },
-          {
             "node": "context_packing_defect",
             "component": "generation",
-            "posterior": 0.2713,
-            "prior": 0.2544,
+            "posterior": 0.3196,
+            "prior": 0.3016,
             "evidence": [
               "Enough evidence exists but packing may be letting noise dominate."
             ],
             "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
           },
           {
+            "node": "distribution_shift",
+            "component": "e2e",
+            "posterior": 0.3184,
+            "prior": 0.3184,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
             "node": "judge_or_metric_instability",
-            "component": "pipeline",
-            "posterior": 0.121,
-            "prior": 0.121,
+            "component": "e2e",
+            "posterior": 0.1364,
+            "prior": 0.1364,
             "evidence": [],
             "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
           }
@@ -948,19 +947,18 @@
             {
               "node": "grounding_defect",
               "component": "generation",
-              "posterior": 0.899,
-              "prior": 0.892,
+              "posterior": 0.9513,
+              "prior": 0.9481,
               "evidence": [
-                "Verification spans are sparse.",
-                "Upstream propagation from retrieval_precision_defect (+0.02) via causal edge."
+                "Verification spans are sparse."
               ],
               "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
             },
             {
               "node": "retrieval_precision_defect",
               "component": "retrieval",
-              "posterior": 0.8251,
-              "prior": 0.7855,
+              "posterior": 0.914,
+              "prior": 0.8919,
               "evidence": [
                 "context_precision=0.67 is below target.",
                 "Sparse rerank spans suggest weak post-retrieval filtering."
@@ -970,42 +968,42 @@
             {
               "node": "retrieval_recall_defect",
               "component": "retrieval",
-              "posterior": 0.7283,
-              "prior": 0.7273,
+              "posterior": 0.8348,
+              "prior": 0.8341,
               "evidence": [],
               "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
             },
             {
               "node": "citation_binding_defect",
               "component": "e2e",
-              "posterior": 0.3119,
-              "prior": 0.3115,
+              "posterior": 0.3736,
+              "prior": 0.3734,
               "evidence": [],
               "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
             },
             {
-              "node": "distribution_shift",
-              "component": "pipeline",
-              "posterior": 0.2824,
-              "prior": 0.2824,
-              "evidence": [],
-              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-            },
-            {
               "node": "context_packing_defect",
               "component": "generation",
-              "posterior": 0.2713,
-              "prior": 0.2544,
+              "posterior": 0.3196,
+              "prior": 0.3016,
               "evidence": [
                 "Enough evidence exists but packing may be letting noise dominate."
               ],
               "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
             },
             {
+              "node": "distribution_shift",
+              "component": "e2e",
+              "posterior": 0.3184,
+              "prior": 0.3184,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
               "node": "judge_or_metric_instability",
-              "component": "pipeline",
-              "posterior": 0.121,
-              "prior": 0.121,
+              "component": "e2e",
+              "posterior": 0.1364,
+              "prior": 0.1364,
               "evidence": [],
               "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
             }
@@ -1133,19 +1131,18 @@
             {
               "node": "grounding_defect",
               "component": "generation",
-              "posterior": 0.899,
-              "prior": 0.892,
+              "posterior": 0.9513,
+              "prior": 0.9481,
               "evidence": [
-                "Verification spans are sparse.",
-                "Upstream propagation from retrieval_precision_defect (+0.02) via causal edge."
+                "Verification spans are sparse."
               ],
               "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
             },
             {
               "node": "retrieval_precision_defect",
               "component": "retrieval",
-              "posterior": 0.8251,
-              "prior": 0.7855,
+              "posterior": 0.914,
+              "prior": 0.8919,
               "evidence": [
                 "context_precision=0.67 is below target.",
                 "Sparse rerank spans suggest weak post-retrieval filtering."
@@ -1155,42 +1152,42 @@
             {
               "node": "retrieval_recall_defect",
               "component": "retrieval",
-              "posterior": 0.7283,
-              "prior": 0.7273,
+              "posterior": 0.8348,
+              "prior": 0.8341,
               "evidence": [],
               "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
             },
             {
               "node": "citation_binding_defect",
               "component": "e2e",
-              "posterior": 0.3119,
-              "prior": 0.3115,
+              "posterior": 0.3736,
+              "prior": 0.3734,
               "evidence": [],
               "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
             },
             {
-              "node": "distribution_shift",
-              "component": "pipeline",
-              "posterior": 0.2824,
-              "prior": 0.2824,
-              "evidence": [],
-              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-            },
-            {
               "node": "context_packing_defect",
               "component": "generation",
-              "posterior": 0.2713,
-              "prior": 0.2544,
+              "posterior": 0.3196,
+              "prior": 0.3016,
               "evidence": [
                 "Enough evidence exists but packing may be letting noise dominate."
               ],
               "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
             },
             {
+              "node": "distribution_shift",
+              "component": "e2e",
+              "posterior": 0.3184,
+              "prior": 0.3184,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
               "node": "judge_or_metric_instability",
-              "component": "pipeline",
-              "posterior": 0.121,
-              "prior": 0.121,
+              "component": "e2e",
+              "posterior": 0.1364,
+              "prior": 0.1364,
               "evidence": [],
               "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
             }

@@ -127,3 +127,30 @@ def test_layer_of_covers_all_threshold_metrics() -> None:
     ):
         assert m in LAYER_OF, f"{m} not mapped to a layer"
         assert m in DEFAULT_THRESHOLDS or m in LAYER_OF
+
+
+def test_layer_catalog_shows_all_with_status() -> None:
+    from ragdx.core.metrics import layer_catalog
+    cat = layer_catalog({"context_precision": 0.55, "faithfulness": 1.0,
+                         "answer_relevancy": 0.86})
+    # retrieval: 1 computed + 3 requires-gt
+    names = {e["name"]: e for e in cat["retrieval"]}
+    assert names["context_precision"]["computed"] is True
+    assert names["context_recall"]["computed"] is False
+    assert names["context_recall"]["requires"] == "gt"
+    # e2e: nothing computed, all flagged
+    assert all(not e["computed"] for e in cat["e2e"])
+    assert {e["requires"] for e in cat["e2e"]} == {"gt", "traces", "deepeval", "feedback"}
+    # generation has the deepeval-only metrics flagged
+    gen = {e["name"]: e for e in cat["generation"]}
+    assert gen["hallucination"]["requires"] == "deepeval"
+    assert gen["bias"]["requires"] == "deepeval"
+
+
+def test_layer_catalog_relevancy_alias_collapsed() -> None:
+    from ragdx.core.metrics import layer_catalog
+    cat = layer_catalog({"answer_relevancy": 0.9})
+    names = [e["name"] for e in cat["generation"]]
+    # response_relevancy alias suppressed when answer_relevancy computed
+    assert "answer_relevancy" in names
+    assert "response_relevancy" not in names

@@ -60,9 +60,99 @@ LAYER_OF: dict[str, str] = {
 LAYERS = ("retrieval", "generation", "e2e")
 
 
+# Full metric catalog per layer, in display order, with the data
+# *requirement* each metric needs to be computed. The three-layer view
+# shows EVERY catalog metric: a computed value when available, or a
+# "requires <X>" badge otherwise -- so the reader sees the complete
+# evaluation surface, not just the handful the default run computed.
+#
+# ``requires`` values:
+#   "none"     -- computed by the default no-GT ragas run.
+#   "gt"       -- needs ground-truth answers (reference-based).
+#   "deepeval" -- only the deepeval evaluator produces it.
+#   "traces"   -- needs per-query trace data (e.g. citations).
+#   "feedback" -- derived from production feedback events.
+METRIC_CATALOG: dict[str, dict] = {
+    # ---- retrieval ----
+    "context_precision":       {"layer": "retrieval",  "requires": "none"},
+    "context_recall":          {"layer": "retrieval",  "requires": "gt"},
+    "context_entities_recall": {"layer": "retrieval",  "requires": "gt"},
+    "hit_rate_at_k":           {"layer": "retrieval",  "requires": "gt"},
+    # ---- generation ----
+    "faithfulness":            {"layer": "generation", "requires": "none"},
+    "answer_relevancy":        {"layer": "generation", "requires": "none"},
+    "response_relevancy":      {"layer": "generation", "requires": "none"},
+    "context_utilization":     {"layer": "generation", "requires": "gt"},
+    "noise_sensitivity":       {"layer": "generation", "requires": "gt"},
+    "hallucination":           {"layer": "generation", "requires": "deepeval"},
+    "bias":                    {"layer": "generation", "requires": "deepeval"},
+    "toxicity":                {"layer": "generation", "requires": "deepeval"},
+    # ---- e2e ----
+    "answer_correctness":      {"layer": "e2e",        "requires": "gt"},
+    "answer_accuracy":         {"layer": "e2e",        "requires": "gt"},
+    "citation_accuracy":       {"layer": "e2e",        "requires": "traces"},
+    "g_eval":                  {"layer": "e2e",        "requires": "deepeval"},
+    "user_success_rate":       {"layer": "e2e",        "requires": "feedback"},
+}
+
+# Human-readable badge text per requirement.
+REQUIRES_LABEL: dict[str, str] = {
+    "none": "",
+    "gt": "requires ground truth",
+    "deepeval": "requires --evaluator deepeval",
+    "traces": "requires trace data",
+    "feedback": "requires feedback",
+}
+
+
 def metric_layer(name: str) -> str | None:
     """Return the layer a metric belongs to, or ``None`` if unknown."""
+    if name in METRIC_CATALOG:
+        return METRIC_CATALOG[name]["layer"]
     return LAYER_OF.get(name)
+
+
+def layer_catalog(
+    computed: dict[str, float] | None = None,
+) -> dict[str, list[dict]]:
+    """Per-layer full metric list, computed-or-flagged.
+
+    For each layer returns an ordered list of ``{name, requires,
+    requires_label, computed, value}`` entries covering *every* catalog
+    metric in that layer. ``computed`` is True when the metric is in the
+    ``computed`` scores dict (so it shows a value); otherwise the
+    ``requires_label`` explains why it's absent.
+
+    ``response_relevancy`` and ``answer_relevancy`` are aliases -- if
+    one is computed, the other's row is suppressed to avoid a duplicate.
+    """
+    computed = computed or {}
+    # Collapse the answer_relevancy / response_relevancy alias.
+    have_relevancy = (
+        "answer_relevancy" in computed or "response_relevancy" in computed
+    )
+    out: dict[str, list[dict]] = {layer: [] for layer in LAYERS}
+    for name, meta in METRIC_CATALOG.items():
+        # Suppress the alias the run didn't use.
+        if name == "response_relevancy" and "answer_relevancy" in computed:
+            continue
+        if name == "answer_relevancy" and "response_relevancy" in computed:
+            continue
+        if name in ("answer_relevancy", "response_relevancy") and not have_relevancy:
+            # Show only one placeholder row for the relevancy pair.
+            if name == "response_relevancy":
+                continue
+        is_computed = name in computed and isinstance(
+            computed[name], (int, float)
+        )
+        out[meta["layer"]].append({
+            "name": name,
+            "requires": meta["requires"],
+            "requires_label": REQUIRES_LABEL.get(meta["requires"], ""),
+            "computed": is_computed,
+            "value": float(computed[name]) if is_computed else None,
+        })
+    return out
 
 
 def _oriented(name: str, value: float) -> float:
@@ -156,7 +246,10 @@ def weakest_layer(layer_scores: dict[str, dict]) -> str | None:
 __all__ = [
     "LAYERS",
     "LAYER_OF",
+    "METRIC_CATALOG",
+    "REQUIRES_LABEL",
     "compute_layer_scores",
+    "layer_catalog",
     "metric_layer",
     "weakest_layer",
 ]

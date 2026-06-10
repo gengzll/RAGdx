@@ -67,7 +67,7 @@ def _validate_metric_bucket(bucket: dict[str, float]) -> dict[str, float]:
     return cleaned
 
 
-LayerName = Literal["retrieval", "generation", "e2e", "pipeline"]
+LayerName = Literal["retrieval", "generation", "e2e"]
 Severity = Literal["low", "medium", "high", "critical"]
 ToolName = Literal["ragas", "ragchecker", "dspy", "autorag", "langchain", "llamaindex", "manual"]
 SearchStrategy = Literal["bayesian", "pareto_evolutionary"]

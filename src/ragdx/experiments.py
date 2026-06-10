@@ -1274,70 +1274,50 @@ def _compare_diagnoses(
 
 
 def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
-    """Run :class:`RAGDiagnosisEngine` (rule-based only) per mode.
+    """Run :class:`RAGDiagnosisEngine` (rule-based) on the FINAL system.
 
-    For each mode returns ``{baseline, optimized, comparison}``:
+    ``ragdx experiment`` is the one-shot "optimize everything" path:
+    BO -> DSPy -> diagnose. The diagnosis is computed at the END, from
+    the fully-optimized system -- there is no upfront baseline-and-
+    diagnose step, so this returns a *single* diagnosis per mode (the
+    final/optimized state), not a baseline/optimized/comparison triple.
 
-    * ``baseline``   -- diagnosis at the pre-optimization config; the
-       *driver* of the optimization narrative.
-    * ``optimized``  -- diagnosis at the optimized config; the
-       follow-up showing what (if anything) still needs work.
-    * ``comparison`` -- baseline-vs-optimized delta: resolved /
-       persisted / emerged hypotheses, posterior shifts per causal
-       node, metric deltas. Closes the loop on "did this optimization
-       move the right metrics?".
+    (The diagnose-first workspace loop -- ``ragdx workspace diagnose``
+    -> ``tune`` -> re-diagnose -- is where the baseline-vs-optimized
+    comparison lives; that's a different, deliberate workflow.)
 
-    Failures are caught and logged -- a missing diagnosis section is
-    preferable to a failed bundle write. Rule-based diagnosis is
-    deterministic and cheap (no LLM calls) so we always run it;
-    ``--use-llm`` / ``--use-both`` remain on the standalone
-    ``ragdx diagnose`` command for users who want a second opinion.
+    Returns ``{mode: <DiagnosisReport dump>}``. The HTML renderer treats
+    a flat per-mode report as the final diagnosis. Failures are caught
+    and logged -- a missing diagnosis section is preferable to a failed
+    bundle write.
     """
     from ragdx.core.diagnosis import RAGDiagnosisEngine
 
     engine = RAGDiagnosisEngine()
     out: dict[str, dict] = {}
     for mode, payload in results_by_mode.items():
-        baseline_scores = _baseline_scores_for_mode(payload)
-        optimized_scores = _winner_scores(payload.get("bayes_search") or {})
-
-        baseline_report: dict | None = None
-        optimized_report: dict | None = None
-        if baseline_scores:
-            try:
-                bres = _synth_eval_result(
-                    baseline_scores, mode=mode,
-                    extra_metadata={"phase": "baseline"},
-                )
-                baseline_report = engine.diagnose(bres).model_dump()
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.warning(
-                    "baseline diagnosis for mode=%s failed: %s", mode, exc,
-                )
-        if optimized_scores and optimized_scores != baseline_scores:
-            try:
-                ores = _synth_eval_result(
-                    optimized_scores, mode=mode,
-                    extra_metadata={"phase": "optimized"},
-                )
-                optimized_report = engine.diagnose(ores).model_dump()
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.warning(
-                    "optimized diagnosis for mode=%s failed: %s", mode, exc,
-                )
-        if baseline_report or optimized_report:
-            entry: dict = {
-                "baseline": baseline_report,
-                "optimized": optimized_report,
-            }
-            # Comparison only when we have both sides to compare.
-            if baseline_report and optimized_report:
-                entry["comparison"] = _compare_diagnoses(
-                    baseline_report, optimized_report,
-                    baseline_scores=baseline_scores,
-                    optimized_scores=optimized_scores,
-                )
-            out[mode] = entry
+        # The final system = the optimized (DSPy winner) scores when the
+        # generation stage ran, else the BO winner. ``_winner_scores``
+        # already resolves the best trial; ``_baseline_scores_for_mode``
+        # gives the DSPy-optimized scores when present.
+        dspy_opt = (
+            (payload.get("dspy_a_b") or {}).get("optimized_scores")
+        )
+        final_scores = (
+            dict(dspy_opt) if dspy_opt
+            else _winner_scores(payload.get("bayes_search") or {})
+        )
+        if not final_scores:
+            continue
+        try:
+            res = _synth_eval_result(
+                final_scores, mode=mode, extra_metadata={"phase": "final"},
+            )
+            out[mode] = engine.diagnose(res).model_dump()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "diagnosis for mode=%s failed (omitting): %s", mode, exc,
+            )
     return out
 
 
