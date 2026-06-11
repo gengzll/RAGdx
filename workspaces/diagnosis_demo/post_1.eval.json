@@ -3,15 +3,26 @@
     "context_precision": 0.6666666666166666
   },
   "generation": {
-    "faithfulness": 1.0
+    "faithfulness": 0.9188034188034188,
+    "hallucination": 0.4444,
+    "bias": 0.3333,
+    "toxicity": 0.0
   },
-  "e2e": {},
+  "e2e": {
+    "g_eval": 0.7667
+  },
   "metadata": {
     "n_records": 3,
     "n_chunks": 548,
     "model": "openai/glm-4-flash",
     "config_name": "esg-analyst-demo",
     "evaluator": "ragas",
+    "deepeval_supplement": {
+      "hallucination": 0.4444,
+      "bias": 0.3333,
+      "toxicity": 0.0,
+      "g_eval": 0.7667
+    },
     "workspace": "diagnosis_demo",
     "config_path": "D:\\work\\RAGdx-main\\RAGdx-main\\workspaces\\diagnosis_demo\\rag_config.yaml",
     "questions_path": "D:\\work\\RAGdx-main\\RAGdx-main\\workspaces\\diagnosis_demo\\questions.jsonl",

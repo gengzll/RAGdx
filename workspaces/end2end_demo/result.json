@@ -27,7 +27,7 @@
       "n_bo_init": 2,
       "n_questions": 3,
       "seed": 11,
-      "system_instruction": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+      "system_instruction": "# ROLE\nYou are a precise, document-grounded assistant specialized in ESG initiatives, financial statements, governance structure, employee relations, customer satisfaction. You answer questions strictly using the retrieved document context provided at query time.\n\n# CONTEXT\n- ESG reporting\n- financial performance\n- corporate governance\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: sustainability objectives (ESG goals, sustainable goals); financial performance metrics (financial indicators, performance metrics); board of directors (board, directors); employee engagement (employee relations, employee satisfaction); customer base (customer segment, customer group); governance practices (governance policies, governance strategies); risk management (risk mitigation, risk assessment); community impact (community engagement, community impact initiatives); executive leadership (executive team, management)\n\nQuantities you'll see: financial amounts, percentages, emissions, employee numbers, customer numbers, energy consumption, date ranges\n\nWhere answers live: financial statements, annual reports, ESG reports, governance reports, employee reports, customer reports, community reports\n\n# ANSWER POLICY\n- Cite the supporting context for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_performance_analysis\nIdentify financial performance metrics and trends over time.\n- Must cover: financial performance metrics; date ranges\n- How to answer: Analyze financial statements and annual reports to extract relevant metrics.; Compare metrics across different periods to identify trends.\n- Retrieval focus: Focus on the financial statements and annual reports sections.; Use reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## governance_structure_evaluation\nAssess the structure and effectiveness of corporate governance.\n- Must cover: governance structure; governance practices; board of directors\n- How to answer: Examine governance reports and annual reports to understand the governance structure.; Evaluate the effectiveness of governance practices and the composition of the board of directors.\n- Retrieval focus: Retrieve governance reports and annual reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## employee_engagement_inspection\nEvaluate employee engagement levels and initiatives.\n- Must cover: employee engagement; employee relations; ESG initiatives\n- How to answer: Review employee reports and ESG reports to assess engagement levels.; Identify specific initiatives aimed at improving employee engagement.\n- Retrieval focus: Access employee reports and ESG reports.; Utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported engagement data.\n\n## customer_satisfaction_assessment\nAnalyze customer satisfaction trends and factors.\n- Must cover: customer satisfaction; customer base; customer reports\n- How to answer: Examine customer reports and annual reports to understand satisfaction levels.; Identify factors contributing to customer satisfaction or dissatisfaction.\n- Retrieval focus: Focus on customer reports and annual reports.; Apply reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of overreliance on customer surveys that may not represent the entire customer base.\n\n## community_impact_evaluation\nAssess the impact of the company on the local community.\n- Must cover: community impact; ESG initiatives; community reports\n- How to answer: Review community reports and ESG reports to understand community impact.; Evaluate the effectiveness of community initiatives and their outcomes.\n- Retrieval focus: Access community reports and ESG reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in community impact reporting.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support.; Offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# TASK\nUse ONLY the context below to answer the user's question.\n\nContext:\n{context}\n\nQuestion:\n{question}"
     }
   },
   "questions": [
@@ -40,7 +40,7 @@
       "ground_truth": null
     },
     {
-      "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+      "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
       "ground_truth": null
     }
   ],
@@ -113,16 +113,16 @@
           },
           "n_chunks": 555,
           "scores": {
-            "context_precision": 0.6453968253680286,
-            "faithfulness": 1.0
+            "context_precision": 0.8676190475680285,
+            "faithfulness": 0.9166666666666666
           },
-          "composite_score": 1.6936190476104085,
+          "composite_score": 1.6352857142704085,
           "feasible": true,
           "violations": [],
           "answers_preview": [
-            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line in its defect analys",
-            "The primary reason for ASMPT's success according to the passage is its people's experience, commitment, and performance, along with a strong corporate culture that promotes diversity, inclusion, and e",
-            "The Group combined similar factors to enhance clarity and consistency. Adjustments included merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficie"
+            "The primary focus of ASMPT’s WORKS Optimisation system, in contrast to traditional inspection systems, is a comprehensive view of the entire operational process on the software side. It integrates and",
+            "The primary reason for ASMPT's success, according to the passage, is attributed to its people's experience, commitment, and performance. The passage states, \"ASMPT’s success is the result of its peopl",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with recognized standards and practices in the industry and the ESG arena. These adjustments included combining "
           ],
           "records": [
             {
@@ -137,10 +137,10 @@
                 ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers. This not only eliminates a complete work step, the taping of the dies, but also saves many tons of waste",
                 ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing. It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory"
               ],
-              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, integrating and visualising data from all machines on the line in its defect analysis, unlike traditional inspection systems that focus on individual products and manufacturing stations.",
+              "answer": "The primary focus of ASMPT’s WORKS Optimisation system, in contrast to traditional inspection systems, is a comprehensive view of the entire operational process on the software side. It integrates and visualises data from all machines on the line, using the standardised IPC-2591-CFX interface, and includes all machines in its defect analysis. This holistic approach contrasts with traditional systems that typically focus on individual products and manufacturing stations.",
               "scores": {
-                "faithfulness": 1.0,
-                "answer_relevancy": 0.9124924740187219,
+                "faithfulness": 0.75,
+                "answer_relevancy": 0.9930494495900005,
                 "context_precision": 0.699999999965
               }
             },
@@ -156,34 +156,34 @@
                 ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers. This not only eliminates a complete work step, the taping of the dies, but also saves many tons of waste",
                 ". They underline the commitment, ethical behaviour and moral at ASMPT at all levels of the corporate structure. Values such as diversity, equality, respect and open communication are key components of ASMPT’s corporate strategy.” Katie Xu Yifan, Chief Financial Officer, ASMPT"
               ],
-              "answer": "The primary reason for ASMPT's success according to the passage is its people's experience, commitment, and performance, along with a strong corporate culture that promotes diversity, inclusion, and equal opportunity.",
+              "answer": "The primary reason for ASMPT's success, according to the passage, is attributed to its people's experience, commitment, and performance. The passage states, \"ASMPT’s success is the result of its people’s experience, commitment and performance.\" Additionally, the company's strong corporate culture that promotes diversity, inclusion, and equal opportunity is highlighted as a contributing factor.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.9913135405909346,
+                "answer_relevancy": 0.9892906112730944,
                 "context_precision": 0.9028571428390857
               }
             },
             {
-              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
               "ground_truth": null,
               "contexts": [
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
                 ". Stage 3 Implementation The Board has endorsed this ESG Report, which en- compasses the materiality matrix below. The endorsed list of material ESG factors serves as a guide for develop- ing corporate strategies and goals, ongoing stakeholder engagement, as well as disclosures in the Annual Report, ESG Report and other corporate communication chan- nels. Periodic assessments are conducted to deter - mine the materiality of ESG factors to prevailing busi- ness contexts and external conditions",
                 ". The Group has conducted a thorough review and prioritisation of the material ESG factors. A three- stage materiality assessment process was adopted: Stage 1 Identification ASMPT identified the sustainability issues applicable to the Group via wide-ranging research, engagement and analysis. Main sources of input include sharehold- ers, employees, customers, peers, regulatory and standards bodies, and ratings agencies",
-                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
                 ". In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs",
                 ", including the process used to evaluate, prioritise and manage material ESG-related issues (including risks to the issuer’s businesses)",
-                ". The ESG Report has been prepared in accordance with the following four reporting principles contained in the listing rules: • Materiality : Stakeholder communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues. • Quantitative : The ESG Report presents environmental and social KPIs in the form of quantitative data, accompanied by explanations to illustrate their purposes and im- pacts",
-                ". About This Report P.3 NA NA Reporting Principle: Consistency The issuer should disclose in the ESG report any changes to the methods or KPIs used, or any other relevant factors affecting a mean- ingful comparison. About This Report P.3"
+                ". All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies",
+                ". The ESG Report has been prepared in accordance with the following four reporting principles contained in the listing rules: • Materiality : Stakeholder communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues. • Quantitative : The ESG Report presents environmental and social KPIs in the form of quantitative data, accompanied by explanations to illustrate their purposes and im- pacts"
               ],
-              "answer": "The Group combined similar factors to enhance clarity and consistency. Adjustments included merging \"Energy Management\" and \"Product Energy Efficiency\" into \"Energy Management & Product Energy Efficiency,\" and \"Business Ethics\" and \"Corporate Governance\" into \"Business Ethics & Corporate Governance.\"",
+              "answer": "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with recognized standards and practices in the industry and the ESG arena. These adjustments included combining similar factors:\n\n1. Combining “Energy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency”.\n2. Combining “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”.\n\nThese changes were made to streamline the factors and ensure they better reflect industry standards and practices.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.4992711751041079,
-                "context_precision": 0.3333333333
+                "answer_relevancy": 0.7699011247880744,
+                "context_precision": 0.9999999999
               }
             }
           ],
-          "elapsed_seconds": 168.1
+          "elapsed_seconds": 193.42
         },
         {
           "trial_index": 1,
@@ -194,16 +194,16 @@
           },
           "n_chunks": 278,
           "scores": {
-            "context_precision": 0.6666666666,
-            "faithfulness": 0.9166666666666666
+            "context_precision": 0.9999999999,
+            "faithfulness": 1.0
           },
-          "composite_score": 1.57499999998,
+          "composite_score": 1.79999999997,
           "feasible": true,
           "violations": [],
           "answers_preview": [
-            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and",
-            "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people.",
-            "The context does not provide specific details about adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency."
+            "ASMPT's WORKS Optimisation system primarily focuses on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus o",
+            "The primary reason for ASMPT's success, according to the passage, is a combination of factors including differentiation, leadership in markets, unwavering commitment to quality, the strength of its pe",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with industry standards and practices in the ESG arena. Specifically, they incorporated four additional ESG Mate"
           ],
           "records": [
             {
@@ -212,10 +212,10 @@
               "contexts": [
                 "Governance34 Zero DPMO through Collaboration and Integration The Group aims to achieve zero DPMO through the integration of intelligent quality control along the en- tire SMT line with ASMPT’s hardware and software. In terms of hardware quality control, ASMPT utilis- es the Process Lens solder paste inspection (SPI) system that can measure each solder paste depos- it and detects even the smallest deviations and trends. The exceptional performance of the SPI sys- tem makes it possible to carry out comprehensive measurements without significantly affecting the overall production time. This capability facilitates more stable printing processes, resulting in in - creased throughput and higher yields. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side"
               ],
-              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+              "answer": "ASMPT's WORKS Optimisation system primarily focuses on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations. This holistic approach allows for a more integrated and efficient quality control process along the entire SMT line.",
               "scores": {
-                "faithfulness": 1.0,
-                "answer_relevancy": 0.9546394441044378,
+                "faithfulness": NaN,
+                "answer_relevancy": 0.9932185675953061,
                 "context_precision": 0.9999999999
               }
             },
@@ -225,66 +225,62 @@
               "contexts": [
                 "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values"
               ],
-              "answer": "The primary reason for ASMPT's success according to the passage is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people.",
+              "answer": "The primary reason for ASMPT's success, according to the passage, is a combination of factors including differentiation, leadership in markets, unwavering commitment to quality, the strength of its people, and innovation. Specifically, the passage highlights:\n\n- **Differentiation**: ASMPT's distinctiveness from the competition.\n- **Market Leadership**: ASMPT being the leader in its businesses, technologies, and as a partner.\n- **Quality**: ASMPT's commitment to quality, evident in daily actions.\n- **People**: The experience, commitment, and performance of ASMPT's people.\n- **Innovation**: ASMPT's focus on innovation and investment in advanced technologies.\n\nThese elements are collectively referred to as the \"POWER VALUES\" in the ASMPT Corporate strategy, with people being at the heart of the company's success.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.9966196738406964,
+                "answer_relevancy": 0.9599633954891887,
                 "context_precision": 0.9999999999
               }
             },
             {
-              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
               "ground_truth": null,
               "contexts": [
-                ". Stage 2 Prioritisation The material sustainability issues have been priori- tised based on the expectations of our various stake- holders and a thorough analysis conducted by the Group. Priority is given to issues with the potential to make a significant impact on our business, operations, and to generate sustainable ESG value. Stage 3 Implementation The Board has endorsed this ESG Report, which en- compasses the materiality matrix below. The endorsed list of material ESG factors serves as a guide for develop- ing corporate strategies and goals, ongoing stakeholder engagement, as well as disclosures in the Annual Report, ESG Report and other corporate communication chan- nels. Periodic assessments are conducted to deter - mine the materiality of ESG factors to prevailing busi- ness contexts and external conditions"
+                ". The assessment identified nine “very high materiality” factors and ten “high materiality” factors that cut across the environmental, social and governance domains (“ESG Material Factors”), as shown in the figure below. All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors"
               ],
-              "answer": "The context does not provide specific details about adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency.",
+              "answer": "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with industry standards and practices in the ESG arena. Specifically, they incorporated four additional ESG Material Factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These additions were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies.",
               "scores": {
-                "faithfulness": 0.75,
-                "answer_relevancy": 0.0,
-                "context_precision": 0.0
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.8091107420528129,
+                "context_precision": 0.9999999999
               }
             }
           ],
-          "elapsed_seconds": 80.13
+          "elapsed_seconds": 264.66
         },
         {
           "trial_index": 2,
           "params": {
-            "chunk_size": 256,
-            "chunk_overlap": 100,
-            "top_k": 7
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 3
           },
-          "n_chunks": 1202,
+          "n_chunks": 278,
           "scores": {
-            "context_precision": 0.9999999999266667,
-            "faithfulness": 1.0
+            "context_precision": 0.9999999999222222,
+            "faithfulness": 0.9629629629629629
           },
-          "composite_score": 1.799999999978,
+          "composite_score": 1.7444444444211111,
           "feasible": true,
           "violations": [],
           "answers_preview": [
-            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and",
-            "The primary reason for ASMPT's success according to the passage is their unwavering commitment to quality, innovation, and the implementation of the POWER VALUES, which include a focus on people, dive",
-            "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency with recognized standards and practices in the industry and ESG arena."
+            "The primary focus of ASMPT’s WORKS Optimisation system, in contrast to traditional inspection systems, is a comprehensive view of the entire operational process. While traditional systems typically fo",
+            "The primary reason for ASMPT's success, according to the passage, is a combination of factors including:\n\n1. **Differentiation**: ASMPT's distinctiveness from the competition in key ways.\n2. **Market ",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with industry standards by incorporating four additional factors. These new factors are \"Product sustainability "
           ],
           "records": [
             {
               "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
               "ground_truth": null,
               "contexts": [
-                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
-                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
-                ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS",
-                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing",
-                ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
-                ". Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations",
-                ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers"
+                "Governance34 Zero DPMO through Collaboration and Integration The Group aims to achieve zero DPMO through the integration of intelligent quality control along the en- tire SMT line with ASMPT’s hardware and software. In terms of hardware quality control, ASMPT utilis- es the Process Lens solder paste inspection (SPI) system that can measure each solder paste depos- it and detects even the smallest deviations and trends. The exceptional performance of the SPI sys- tem makes it possible to carry out comprehensive measurements without significantly affecting the overall production time. This capability facilitates more stable printing processes, resulting in in - creased throughput and higher yields. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
+                ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees. The WORKS Software Suite’s powerful applica- tions for all workflows on the shop floor reduce op- erator workload and control and optimise produc - tion and material flow. WORKS Operations, for example, the application for smart working in the Intelligent Factory bundles, prioritises and distrib- utes tasks from production across lines and skill- based to operators with mobile devices. This intelli- gent guidance shortens response times and provides the most effective support for operators",
+                ". The introduc- tion of any new processes, materials, machines, or technologies—collectively known as the “4N Risk”—underwent thorough pre-assessment, with any po- tential risks being addressed prior to implementation. The result is a workplace where safety is paramount, and the TRIR stands as a testament to ASMPT’s dedication to maintaining a zero-incident environment since March 2022. Astounding result of Zero TRIR at ASMPT plant in Huizhou One of ASMPT’s people projects “ASMPT is excellently positioned in the area of safety and improvement initiatives. Our continuous training ensures that every employee is always up to date and actively contributes to the success and safety of the company.” Andreas Ernst, Head of Global Quality, ASMPT SMT Solutions"
               ],
-              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+              "answer": "The primary focus of ASMPT’s WORKS Optimisation system, in contrast to traditional inspection systems, is a comprehensive view of the entire operational process. While traditional systems typically focus on individual products and manufacturing stations, ASMPT’s intelligent inline system takes a holistic approach. It conducts in-depth analysis of three application fields – “Time”, “Condition”, and “Material” – across placement, machine, line, and facility levels. This holistic process optimisation aims to enhance resource efficiency. The context does not provide specific details on how this contrasts with traditional systems beyond the general statement of a more comprehensive approach.",
               "scores": {
-                "faithfulness": 1.0,
-                "answer_relevancy": 0.9546394441044378,
+                "faithfulness": 0.8888888888888888,
+                "answer_relevancy": 0.9887584023706574,
                 "context_precision": 0.9999999999
               }
             },
@@ -292,78 +288,66 @@
               "question": "What is the primary reason for ASMPT's success according to the passage?",
               "ground_truth": null,
               "contexts": [
-                ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
-                ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
-                ", ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
-                ". The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES",
-                ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers",
-                ". The ASMPT prerequisite: ONE ASMPT. The New Leaders’ Program 2023 prepares managers for their new role and their contribution to the company’s success. One of ASMPT’s people projects",
-                ". Beyond the allure of victory, this event stood as a testament to ASMPT’s unwavering ded- ication to nurturing young talent and fostering a cradle for revolutionary concepts that promise to shape our future"
+                "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                "; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit, and partner well both internally & externally ASMPT is a great place to work in all our locations around the world • Opportunities",
+                ". They underline the commitment, ethical behaviour and moral at ASMPT at all levels of the corporate structure. Values such as diversity, equality, respect and open communication are key components of ASMPT’s corporate strategy.” Katie Xu Yifan, Chief Financial Officer, ASMPT"
               ],
-              "answer": "The primary reason for ASMPT's success according to the passage is their unwavering commitment to quality, innovation, and the implementation of the POWER VALUES, which include a focus on people, diversity, inclusion, equal opportunity, and social & environmental responsibility.",
+              "answer": "The primary reason for ASMPT's success, according to the passage, is a combination of factors including:\n\n1. **Differentiation**: ASMPT's distinctiveness from the competition in key ways.\n2. **Market Leadership**: ASMPT being the leader in its businesses, technologies, and as a partner.\n3. **Quality**: ASMPT's unwavering commitment to quality, evident in the daily actions of its people.\n4. **People**: The experience, commitment, and performance of ASMPT's employees.\n5. **Innovation**: ASMPT's focus on innovation and investment in advanced technologies.\n\nThese factors are underpinned by the \"POWER Values\" which guide the company's strategy and culture, emphasizing support and empowerment of employees, a distinctive culture, high-performance behavior, and a commitment to diversity, equality, respect, and open communication.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.9999999999998591,
-                "context_precision": 0.99999999998
+                "answer_relevancy": 0.965501496394988,
+                "context_precision": 0.9999999999666667
               }
             },
             {
-              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
               "ground_truth": null,
               "contexts": [
-                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
-                ". The Group has conducted a thorough review and prioritisation of the material ESG factors",
-                "The ESG report should disclose: (i) the process to identify and the criteria for the selection of material ESG factors",
-                ". All 19 ESG Material Factors are elaborated upon in this Report",
-                "communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues",
-                ". • Consistency : The methodologies for working out this ESG Report are consist- ent with those adopted in the 2022 and 2021 ESG Reports to ensure compara- bility of information",
-                ". The Group’s material ESG factors are those that carry significant environmental, social, governance and economic impact on its business and influence the assessment and decision-making of in- ternal and external stakeholders"
+                ". The assessment identified nine “very high materiality” factors and ten “high materiality” factors that cut across the environmental, social and governance domains (“ESG Material Factors”), as shown in the figure below. All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
+                ". Stage 2 Prioritisation The material sustainability issues have been priori- tised based on the expectations of our various stake- holders and a thorough analysis conducted by the Group. Priority is given to issues with the potential to make a significant impact on our business, operations, and to generate sustainable ESG value. Stage 3 Implementation The Board has endorsed this ESG Report, which en- compasses the materiality matrix below. The endorsed list of material ESG factors serves as a guide for develop- ing corporate strategies and goals, ongoing stakeholder engagement, as well as disclosures in the Annual Report, ESG Report and other corporate communication chan- nels. Periodic assessments are conducted to deter - mine the materiality of ESG factors to prevailing busi- ness contexts and external conditions",
+                ". The ESG Report has been prepared in accordance with the following four reporting principles contained in the listing rules: • Materiality : Stakeholder communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues. • Quantitative : The ESG Report presents environmental and social KPIs in the form of quantitative data, accompanied by explanations to illustrate their purposes and im- pacts. We also provide comparative data on environmental KPIs in the ESG Report. • Balance : This ESG Report follows the principle of balance and presents our ESG performance in an impartial manner. • Consistency : The methodologies for working out this ESG Report are consist- ent with those adopted in the 2022 and 2021 ESG Reports to ensure compara- bility of information"
               ],
-              "answer": "The Group made adjustments to the ESG Material Factors to enhance clarity and consistency with recognized standards and practices in the industry and ESG arena.",
+              "answer": "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with industry standards by incorporating four additional factors. These new factors are \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.8253629881483769,
+                "answer_relevancy": 0.9021021751791706,
                 "context_precision": 0.9999999999
               }
             }
           ],
-          "elapsed_seconds": 153.04
+          "elapsed_seconds": 147.27
         },
         {
           "trial_index": 3,
           "params": {
-            "chunk_size": 256,
-            "chunk_overlap": 100,
-            "top_k": 5
+            "chunk_size": 1024,
+            "chunk_overlap": 50,
+            "top_k": 1
           },
-          "n_chunks": 1202,
+          "n_chunks": 278,
           "scores": {
-            "context_precision": 0.9999999999266667,
-            "faithfulness": 1.0
+            "context_precision": 0.9999999999,
+            "faithfulness": 0.9666666666666667
           },
-          "composite_score": 1.799999999978,
+          "composite_score": 1.74999999997,
           "feasible": true,
           "violations": [],
           "answers_preview": [
-            "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and",
-            "The primary reason for ASMPT's success according to the passage is the combination of its unwavering commitment to quality, the POWER VALUES guiding its people, and its focus on diversity, inclusion, ",
-            "The Group made adjustments to the ESG Material Factors by conducting a thorough review and prioritisation of them."
+            "ASMPT's WORKS Optimisation system primarily focuses on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus o",
+            "The primary reason for ASMPT's success, according to the passage, is a combination of factors including differentiation, leadership in markets, unwavering commitment to quality, the strength of its pe",
+            "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with industry standards and practices in the ESG arena. Specifically, they incorporated four additional ESG Mate"
           ],
           "records": [
             {
               "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
               "ground_truth": null,
               "contexts": [
-                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
-                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
-                ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS",
-                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing",
-                ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources"
+                "Governance34 Zero DPMO through Collaboration and Integration The Group aims to achieve zero DPMO through the integration of intelligent quality control along the en- tire SMT line with ASMPT’s hardware and software. In terms of hardware quality control, ASMPT utilis- es the Process Lens solder paste inspection (SPI) system that can measure each solder paste depos- it and detects even the smallest deviations and trends. The exceptional performance of the SPI sys- tem makes it possible to carry out comprehensive measurements without significantly affecting the overall production time. This capability facilitates more stable printing processes, resulting in in - creased throughput and higher yields. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side"
               ],
-              "answer": "ASMPT’s WORKS Optimisation system takes a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
+              "answer": "ASMPT's WORKS Optimisation system primarily focuses on a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations. This holistic approach allows for a more integrated and efficient quality control process along the entire SMT line.",
               "scores": {
-                "faithfulness": 1.0,
-                "answer_relevancy": 0.9546394441044378,
+                "faithfulness": 0.9,
+                "answer_relevancy": 0.9932185675953061,
                 "context_precision": 0.9999999999
               }
             },
@@ -371,61 +355,57 @@
               "question": "What is the primary reason for ASMPT's success according to the passage?",
               "ground_truth": null,
               "contexts": [
-                ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
-                ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
-                ", ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
-                ". The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES",
-                ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers"
+                "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values"
               ],
-              "answer": "The primary reason for ASMPT's success according to the passage is the combination of its unwavering commitment to quality, the POWER VALUES guiding its people, and its focus on diversity, inclusion, equal opportunity, innovation, and social & environmental responsibility.",
+              "answer": "The primary reason for ASMPT's success, according to the passage, is a combination of factors including differentiation, leadership in markets, unwavering commitment to quality, the strength of its people, and innovation. Specifically, the passage highlights:\n\n- **Differentiation**: ASMPT's distinctiveness from the competition.\n- **Market Leadership**: ASMPT being the leader in its businesses, technologies, and as a partner.\n- **Quality**: ASMPT's commitment to quality, evident in daily actions.\n- **People**: The experience, commitment, and performance of ASMPT's people.\n- **Innovation**: ASMPT's focus on innovation and investment in advanced technologies.\n\nThese elements are collectively referred to as the \"POWER VALUES\" in the ASMPT Corporate strategy, with people being at the heart of the company's success.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.9913135405909346,
-                "context_precision": 0.99999999998
+                "answer_relevancy": 0.9599633954891887,
+                "context_precision": 0.9999999999
               }
             },
             {
-              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+              "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
               "ground_truth": null,
               "contexts": [
-                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
-                ". The Group has conducted a thorough review and prioritisation of the material ESG factors",
-                "The ESG report should disclose: (i) the process to identify and the criteria for the selection of material ESG factors",
-                ". All 19 ESG Material Factors are elaborated upon in this Report",
-                "communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues"
+                ". The assessment identified nine “very high materiality” factors and ten “high materiality” factors that cut across the environmental, social and governance domains (“ESG Material Factors”), as shown in the figure below. All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors"
               ],
-              "answer": "The Group made adjustments to the ESG Material Factors by conducting a thorough review and prioritisation of them.",
+              "answer": "The Group made adjustments to the ESG Material Factors to enhance clarity and alignment with industry standards and practices in the ESG arena. Specifically, they incorporated four additional ESG Material Factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These additions were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies.",
               "scores": {
                 "faithfulness": 1.0,
-                "answer_relevancy": 0.8940101167591313,
+                "answer_relevancy": 0.8091107420528129,
                 "context_precision": 0.9999999999
               }
             }
           ],
-          "elapsed_seconds": 104.78
+          "elapsed_seconds": 140.81
         }
       ],
       "best_params": {
-        "chunk_size": 256,
-        "chunk_overlap": 100,
-        "top_k": 7
+        "chunk_size": 1024,
+        "chunk_overlap": 0,
+        "top_k": 1
       },
-      "best_composite": 1.799999999978
+      "best_composite": 1.79999999997
     }
   },
   "dspy_a_b": {
     "no_gt": {
       "baseline_scores": {
-        "context_precision": 0.9999999999266667,
-        "faithfulness": 1.0
+        "context_precision": 0.9999999999,
+        "faithfulness": 0.8888888888888888
       },
       "optimized_scores": {
-        "context_precision": 0.9999999999266667,
-        "faithfulness": 0.9523809523809524
+        "context_precision": 0.9999999999,
+        "faithfulness": 1.0,
+        "hallucination": 0.0,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 0.9667
       },
       "delta": {
         "context_precision": 0.0,
-        "faithfulness": -0.04761904761904756
+        "faithfulness": 0.11111111111111116
       },
       "composite": {
         "objective_spec": {
@@ -443,213 +423,135 @@
           "mode": "weighted_sum"
         },
         "baseline": {
-          "score": 1.799999999978,
+          "score": 1.6333333333033333,
           "feasible": true,
           "violations": []
         },
         "optimized": {
-          "score": 1.7285714285494285,
+          "score": 1.79999999997,
           "feasible": true,
           "violations": []
         },
-        "delta": -0.07142857142857162
+        "delta": 0.16666666666666674
       },
       "baseline_sample_answers": [
-        "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-        "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, adherence to the POWER VALUES, strategic focus on diversity, inclusion, and equal opportunity, innovation, and social & environmental responsibility.",
-        "The adjustments made to the ESG Material Factors by the Group include a thorough review and prioritization of the factors, enhancing clarity and consistency, and aligning with recognized industry and ESG standards and practices."
+        "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations. This is inferred from the context which states, \"In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.\"",
+        "The primary reason for ASMPT's success, according to the passage, is the unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people. This is supported by the statement, \"The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people.\"",
+        "The adjustments made to the ESG Material Factors by the Group include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were made to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena."
       ],
       "optimized_sample_answers": [
-        "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, which contrasts with traditional inspection systems that focus on individual products and manufacturing stations.",
-        "The primary reasons for ASMPT's success, according to the passage, are its unwavering commitment to quality, the emphasis on its POWER values, the strategic recognition of diversity, inclusion, and equal opportunity, its focus on innovation and advanced technologies, and its dedication to nurturing young talent and fostering revolutionary concepts.",
-        "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include a thorough review and prioritization of the material ESG factors, incorporating communication and materiality assessment into the preparation of the ESG Report, and ensuring consistency with methodologies adopted in previous ESG Reports to maintain comparability of information."
+        "The primary focus of ASMPT’s WORKS Optimisation system is to take a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations.",
+        "The primary reasons for ASMPT's success, according to the passage, are:\n1. Differentiation - ASMPT's distinctiveness from the competition.\n2. Market Leadership - ASMPT's position as a leader in its businesses, technologies, and partnerships.\n3. Quality - ASMPT's unwavering commitment to quality across the company.\n4. People - The experience, commitment, and performance of ASMPT's employees, along with a strong corporate culture promoting diversity, inclusion, and equal opportunity.\n5. Innovation - ASMPT's focus on innovation and investment in advanced technologies.",
+        "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. Specifically, they incorporated four additional ESG Material Factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies."
       ],
       "records": [
         {
           "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
           "ground_truth": null,
           "contexts": [
-            ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
-            ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
-            ". One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS",
-            ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing",
-            ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
-            ". Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations",
-            ". ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers"
+            "Governance34 Zero DPMO through Collaboration and Integration The Group aims to achieve zero DPMO through the integration of intelligent quality control along the en- tire SMT line with ASMPT’s hardware and software. In terms of hardware quality control, ASMPT utilis- es the Process Lens solder paste inspection (SPI) system that can measure each solder paste depos- it and detects even the smallest deviations and trends. The exceptional performance of the SPI sys- tem makes it possible to carry out comprehensive measurements without significantly affecting the overall production time. This capability facilitates more stable printing processes, resulting in in - creased throughput and higher yields. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side"
           ],
-          "baseline_answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-          "optimized_answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, which contrasts with traditional inspection systems that focus on individual products and manufacturing stations."
+          "baseline_answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations. This is inferred from the context which states, \"In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.\"",
+          "optimized_answer": "The primary focus of ASMPT’s WORKS Optimisation system is to take a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations."
         },
         {
           "question": "What is the primary reason for ASMPT's success according to the passage?",
           "ground_truth": null,
           "contexts": [
-            ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
-            ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
-            ", ASMPT recognises that DEI is not merely a moral imperative but a strategic one, that is critical to our success",
-            ". The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES",
-            ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers",
-            ". The ASMPT prerequisite: ONE ASMPT. The New Leaders’ Program 2023 prepares managers for their new role and their contribution to the company’s success. One of ASMPT’s people projects",
-            ". Beyond the allure of victory, this event stood as a testament to ASMPT’s unwavering ded- ication to nurturing young talent and fostering a cradle for revolutionary concepts that promise to shape our future"
+            "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values"
           ],
-          "baseline_answer": "The primary reason for ASMPT's success is a combination of their unwavering commitment to quality, adherence to the POWER VALUES, strategic focus on diversity, inclusion, and equal opportunity, innovation, and social & environmental responsibility.",
-          "optimized_answer": "The primary reasons for ASMPT's success, according to the passage, are its unwavering commitment to quality, the emphasis on its POWER values, the strategic recognition of diversity, inclusion, and equal opportunity, its focus on innovation and advanced technologies, and its dedication to nurturing young talent and fostering revolutionary concepts."
+          "baseline_answer": "The primary reason for ASMPT's success, according to the passage, is the unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people. This is supported by the statement, \"The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people.\"",
+          "optimized_answer": "The primary reasons for ASMPT's success, according to the passage, are:\n1. Differentiation - ASMPT's distinctiveness from the competition.\n2. Market Leadership - ASMPT's position as a leader in its businesses, technologies, and partnerships.\n3. Quality - ASMPT's unwavering commitment to quality across the company.\n4. People - The experience, commitment, and performance of ASMPT's employees, along with a strong corporate culture promoting diversity, inclusion, and equal opportunity.\n5. Innovation - ASMPT's focus on innovation and investment in advanced technologies."
         },
         {
-          "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+          "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
           "ground_truth": null,
           "contexts": [
-            ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
-            ". The Group has conducted a thorough review and prioritisation of the material ESG factors",
-            "The ESG report should disclose: (i) the process to identify and the criteria for the selection of material ESG factors",
-            ". All 19 ESG Material Factors are elaborated upon in this Report",
-            "communication and materiality assessment have been incorporated into the preparation of this ESG Report as a basis for identifying ma- terial ESG issues",
-            ". • Consistency : The methodologies for working out this ESG Report are consist- ent with those adopted in the 2022 and 2021 ESG Reports to ensure compara- bility of information",
-            ". The Group’s material ESG factors are those that carry significant environmental, social, governance and economic impact on its business and influence the assessment and decision-making of in- ternal and external stakeholders"
+            ". The assessment identified nine “very high materiality” factors and ten “high materiality” factors that cut across the environmental, social and governance domains (“ESG Material Factors”), as shown in the figure below. All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors"
           ],
-          "baseline_answer": "The adjustments made to the ESG Material Factors by the Group include a thorough review and prioritization of the factors, enhancing clarity and consistency, and aligning with recognized industry and ESG standards and practices.",
-          "optimized_answer": "The adjustments made to the ESG Material Factors by the Group to enhance clarity and consistency include a thorough review and prioritization of the material ESG factors, incorporating communication and materiality assessment into the preparation of the ESG Report, and ensuring consistency with methodologies adopted in previous ESG Reports to maintain comparability of information."
+          "baseline_answer": "The adjustments made to the ESG Material Factors by the Group include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were made to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena.",
+          "optimized_answer": "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. Specifically, they incorporated four additional ESG Material Factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies."
         }
       ],
       "baseline_instructions": {
-        "predict": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+        "predict": "# ROLE\nYou are a precise, document-grounded assistant specialized in ESG initiatives, financial statements, governance structure, employee relations, customer satisfaction. You answer questions strictly using the retrieved document context provided at query time.\n\n# CONTEXT\n- ESG reporting\n- financial performance\n- corporate governance\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: sustainability objectives (ESG goals, sustainable goals); financial performance metrics (financial indicators, performance metrics); board of directors (board, directors); employee engagement (employee relations, employee satisfaction); customer base (customer segment, customer group); governance practices (governance policies, governance strategies); risk management (risk mitigation, risk assessment); community impact (community engagement, community impact initiatives); executive leadership (executive team, management)\n\nQuantities you'll see: financial amounts, percentages, emissions, employee numbers, customer numbers, energy consumption, date ranges\n\nWhere answers live: financial statements, annual reports, ESG reports, governance reports, employee reports, customer reports, community reports\n\n# ANSWER POLICY\n- Cite the supporting context for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_performance_analysis\nIdentify financial performance metrics and trends over time.\n- Must cover: financial performance metrics; date ranges\n- How to answer: Analyze financial statements and annual reports to extract relevant metrics.; Compare metrics across different periods to identify trends.\n- Retrieval focus: Focus on the financial statements and annual reports sections.; Use reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## governance_structure_evaluation\nAssess the structure and effectiveness of corporate governance.\n- Must cover: governance structure; governance practices; board of directors\n- How to answer: Examine governance reports and annual reports to understand the governance structure.; Evaluate the effectiveness of governance practices and the composition of the board of directors.\n- Retrieval focus: Retrieve governance reports and annual reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## employee_engagement_inspection\nEvaluate employee engagement levels and initiatives.\n- Must cover: employee engagement; employee relations; ESG initiatives\n- How to answer: Review employee reports and ESG reports to assess engagement levels.; Identify specific initiatives aimed at improving employee engagement.\n- Retrieval focus: Access employee reports and ESG reports.; Utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported engagement data.\n\n## customer_satisfaction_assessment\nAnalyze customer satisfaction trends and factors.\n- Must cover: customer satisfaction; customer base; customer reports\n- How to answer: Examine customer reports and annual reports to understand satisfaction levels.; Identify factors contributing to customer satisfaction or dissatisfaction.\n- Retrieval focus: Focus on customer reports and annual reports.; Apply reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of overreliance on customer surveys that may not represent the entire customer base.\n\n## community_impact_evaluation\nAssess the impact of the company on the local community.\n- Must cover: community impact; ESG initiatives; community reports\n- How to answer: Review community reports and ESG reports to understand community impact.; Evaluate the effectiveness of community initiatives and their outcomes.\n- Retrieval focus: Access community reports and ESG reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in community impact reporting.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support.; Offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# TASK\nUse ONLY the context below to answer the user's question.\n\nContext:\n{context}\n\nQuestion:\n{question}"
       },
       "baseline_demos": {
         "predict": []
       },
       "instructions": {
-        "predict": "Prompt the Language Model to answer questions based on provided context by following a structured approach. Present the question, then provide the relevant context. The response should include a step-by-step reasoning that outlines how the answer is derived from the context, followed by the actual answer. Ensure that the answer is accurate and based solely on the information contained within the context, without introducing any new information or assumptions."
+        "predict": "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance and governance.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the"
       },
       "demos": {
-        "predict": [
-          {
-            "augmented": true,
-            "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
-            "context": ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side\n. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions\n. One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS\n. ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing\n. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources\n. Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations\n. ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers",
-            "reasoning": "The primary focus of ASMPT’s WORKS Optimisation system is contrasted with traditional inspection systems by considering the entire operational process on the software side, rather than focusing on individual products and manufacturing stations. This comprehensive approach is aimed at achieving an Intelligent Factory, which results in less energy and material consumption, reduced costs, and waste.",
-            "answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations."
-          }
-        ]
+        "predict": []
       },
-      "trial_scores": [
-        202.88,
-        214.06,
-        200.58,
-        214.06,
-        208.56,
-        201.66,
-        200.58,
-        208.56,
-        214.06,
-        208.56,
-        214.06
-      ],
-      "best_score_progression": [
-        214.06,
-        214.06,
-        214.06,
-        214.06,
-        214.06,
-        214.06,
-        214.06,
-        214.06,
-        214.06,
-        214.06
-      ],
+      "trial_scores": [],
+      "best_score_progression": [],
       "mipro_auto": "light",
       "dspy_metric_used": "embed_rubric",
-      "dspy_optimizer_used": "mipro",
-      "winning_demos": [
-        {
-          "question": "What is the primary focus of ASMPT’s WORKS Optimisation system in contrast to traditional inspection systems?",
-          "answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations.",
-          "reasoning": "The primary focus of ASMPT’s WORKS Optimisation system is contrasted with traditional inspection systems by considering the entire operational process on the software side, rather than focusing on individual products and manufacturing stations. This comprehensive approach is aimed at achieving an Intelligent Factory, which results in less energy and material consumption, reduced costs, and waste.",
-          "context": ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side\n. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions\n. One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS\n. ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing\n. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources\n. Prioritised information about upcoming tasks with sufficient lead time makes the operator’s work on the shop floor much easier. One of ASMPT’s innovations\n. ASMPT is breaking new ground in waste avoid - ance. A good example of this is the SIPLACE CA placement machine, which can pick up and place dies directly from pre-separated wafers"
-        }
-      ],
+      "dspy_optimizer_used": "gepa",
+      "winning_demos": [],
       "proposed_instructions_by_predictor": {
-        "0": [
-          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.",
-          "Prompt the Language Model to answer questions based on provided context by following a structured approach. Present the question, then provide the relevant context. The response should include a step-by-step reasoning that outlines how the answer is derived from the context, followed by the actual answer. Ensure that the answer is accurate and based solely on the information contained within the context, without introducing any new information or assumptions.",
-          "Create an instruction for a Language Model that prompts it to answer specific questions about the ASMPT’s WORKS Optimisation system by carefully analyzing the provided context. The instruction should guide the model to synthesize information from the context, ensuring a step-by-step reasoning process that leads to a concise and accurate answer. The model must adhere to the context, avoiding the introduction of new facts, and focus on the primary aspects of the context relevant to the question. The instruction should be clear, informative, and descriptive to effectively guide the model's response."
+        "predict": [
+          "# ROLE\nYou are a precise, document-grounded assistant specialized in ESG initiatives, financial statements, governance structure, employee relations, customer satisfaction. You answer questions strictly using the retrieved document context provided at query time.\n\n# CONTEXT\n- ESG reporting\n- financial performance\n- corporate governance\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: sustainability objectives (ESG goals, sustainable goals); financial performance metrics (financial indicators, performance metrics); board of directors (board, directors); employee engagement (employee relations, employee satisfaction); customer base (customer segment, customer group); governance practices (governance policies, governance strategies); risk management (risk mitigation, risk assessment); community impact (community engagement, community impact initiatives); executive leadership (executive team, management)\n\nQuantities you'll see: financial amounts, percentages, emissions, employee numbers, customer numbers, energy consumption, date ranges\n\nWhere answers live: financial statements, annual reports, ESG reports, governance reports, employee reports, customer reports, community reports\n\n# ANSWER POLICY\n- Cite the supporting context for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_performance_analysis\nIdentify financial performance metrics and trends over time.\n- Must cover: financial performance metrics; date ranges\n- How to answer: Analyze financial statements and annual reports to extract relevant metrics.; Compare metrics across different periods to identify trends.\n- Retrieval focus: Focus on the financial statements and annual reports sections.; Use reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## governance_structure_evaluation\nAssess the structure and effectiveness of corporate governance.\n- Must cover: governance structure; governance practices; board of directors\n- How to answer: Examine governance reports and annual reports to understand the governance structure.; Evaluate the effectiveness of governance practices and the composition of the board of directors.\n- Retrieval focus: Retrieve governance reports and annual reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## employee_engagement_inspection\nEvaluate employee engagement levels and initiatives.\n- Must cover: employee engagement; employee relations; ESG initiatives\n- How to answer: Review employee reports and ESG reports to assess engagement levels.; Identify specific initiatives aimed at improving employee engagement.\n- Retrieval focus: Access employee reports and ESG reports.; Utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported engagement data.\n\n## customer_satisfaction_assessment\nAnalyze customer satisfaction trends and factors.\n- Must cover: customer satisfaction; customer base; customer reports\n- How to answer: Examine customer reports and annual reports to understand satisfaction levels.; Identify factors contributing to customer satisfaction or dissatisfaction.\n- Retrieval focus: Focus on customer reports and annual reports.; Apply reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of overreliance on customer surveys that may not represent the entire customer base.\n\n## community_impact_evaluation\nAssess the impact of the company on the local community.\n- Must cover: community impact; ESG initiatives; community reports\n- How to answer: Review community reports and ESG reports to understand community impact.; Evaluate the effectiveness of community initiatives and their outcomes.\n- Retrieval focus: Access community reports and ESG reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in community impact reporting.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support.; Offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# TASK\nUse ONLY the context below to answer the user's question.\n\nContext:\n{context}\n\nQuestion:\n{question}",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance and governance.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG strategies.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG initiatives.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG strategies.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate"
         ]
       },
       "trial_log": [
         {
+          "trial": 0,
+          "score": 2.1074371540843164,
+          "kind": "default (baseline program)",
+          "params": "Program 0 (seed)"
+        },
+        {
           "trial": 1,
-          "score": 202.88,
-          "kind": "default",
-          "params": null
+          "score": 6.36858069313277,
+          "kind": "subsample (accepted)",
+          "params": "Iter 1: proposed score 6.37 vs prior best 6.32"
+        },
+        {
+          "trial": 1,
+          "score": 2.122967445511702,
+          "kind": "full valset eval (accepted)",
+          "params": "Iter 1: added as program 1"
         },
         {
           "trial": 2,
-          "score": 214.06,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']"
+          "score": 6.351523865682809,
+          "kind": "subsample (rejected)",
+          "params": "Iter 2: proposed score 6.35 vs prior best 6.37"
         },
         {
           "trial": 3,
-          "score": 200.58,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
+          "score": 6.351523865682809,
+          "kind": "subsample (rejected)",
+          "params": "Iter 3: proposed score 6.35 vs prior best 6.37"
         },
         {
           "trial": 4,
-          "score": 214.06,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5']"
-        },
-        {
-          "trial": 5,
-          "score": 208.56,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2']"
-        },
-        {
-          "trial": 6,
-          "score": 201.66,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5']"
-        },
-        {
-          "trial": 7,
-          "score": 200.58,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0']"
-        },
-        {
-          "trial": 8,
-          "score": 208.56,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
-        },
-        {
-          "trial": 9,
-          "score": 214.06,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4']"
-        },
-        {
-          "trial": 10,
-          "score": 208.56,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5']"
-        },
-        {
-          "trial": 11,
-          "score": 214.06,
-          "kind": "minibatch",
-          "params": "['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3']"
+          "score": 6.351523865682809,
+          "kind": "subsample (rejected)",
+          "params": "Iter 4: proposed score 6.35 vs prior best 6.37"
         }
       ],
       "gt_mode": "no_gt",
-      "optimizer": "MIPROv2",
-      "trainset_size": 3
+      "optimizer": "GEPA",
+      "trainset_size": 3,
+      "deepeval_supplement": {
+        "hallucination": 0.0,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 0.9667
+      }
     }
   },
   "diagnosis": {
     "no_gt": {
-      "summary": "Weakest layer: generation (0.95). Layer scores: retrieval=1.00, generation=0.95. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+      "summary": "Weakest layer: e2e (0.97). Layer scores: retrieval=1.00, generation=1.00, e2e=0.97. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
       "expected_thresholds": {
         "context_precision": 0.8,
         "context_recall": 0.8,
@@ -683,64 +585,64 @@
           "recommended_experiment": "Run parser and chunking search before retriever tuning."
         },
         {
-          "node": "grounding_defect",
-          "component": "generation",
-          "posterior": 0.9499,
-          "prior": 0.9472,
-          "evidence": [
-            "Verification spans are sparse."
-          ],
-          "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
-        },
-        {
-          "node": "retrieval_precision_defect",
-          "component": "retrieval",
-          "posterior": 0.8955,
-          "prior": 0.8858,
-          "evidence": [
-            "Sparse rerank spans suggest weak post-retrieval filtering."
-          ],
-          "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-        },
-        {
           "node": "retrieval_recall_defect",
           "component": "retrieval",
-          "posterior": 0.8548,
-          "prior": 0.8303,
+          "posterior": 0.9581,
+          "prior": 0.95,
           "evidence": [
             "Precision is acceptable, so evidence miss is more likely than noise."
           ],
           "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
         },
         {
+          "node": "retrieval_precision_defect",
+          "component": "retrieval",
+          "posterior": 0.9545,
+          "prior": 0.95,
+          "evidence": [
+            "Sparse rerank spans suggest weak post-retrieval filtering."
+          ],
+          "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+        },
+        {
+          "node": "grounding_defect",
+          "component": "generation",
+          "posterior": 0.9524,
+          "prior": 0.95,
+          "evidence": [
+            "Verification spans are sparse."
+          ],
+          "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+        },
+        {
           "node": "citation_binding_defect",
           "component": "e2e",
-          "posterior": 0.3736,
-          "prior": 0.3734,
+          "posterior": 0.6838,
+          "prior": 0.6836,
           "evidence": [],
           "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
         },
         {
-          "node": "distribution_shift",
-          "component": "e2e",
-          "posterior": 0.3184,
-          "prior": 0.3184,
-          "evidence": [],
-          "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-        },
-        {
           "node": "context_packing_defect",
           "component": "generation",
-          "posterior": 0.3002,
-          "prior": 0.2987,
+          "posterior": 0.5165,
+          "prior": 0.5159,
           "evidence": [],
           "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
         },
         {
+          "node": "distribution_shift",
+          "component": "e2e",
+          "posterior": 0.4344,
+          "prior": 0.4344,
+          "evidence": [],
+          "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+        },
+        {
           "node": "judge_or_metric_instability",
           "component": "e2e",
-          "posterior": 0.1364,
-          "prior": 0.1364,
+          "posterior": 0.2137,
+          "prior": 0.2137,
           "evidence": [],
           "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
         }
@@ -758,64 +660,64 @@
             "recommended_experiment": "Run parser and chunking search before retriever tuning."
           },
           {
-            "node": "grounding_defect",
-            "component": "generation",
-            "posterior": 0.9499,
-            "prior": 0.9472,
-            "evidence": [
-              "Verification spans are sparse."
-            ],
-            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
-          },
-          {
-            "node": "retrieval_precision_defect",
-            "component": "retrieval",
-            "posterior": 0.8955,
-            "prior": 0.8858,
-            "evidence": [
-              "Sparse rerank spans suggest weak post-retrieval filtering."
-            ],
-            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-          },
-          {
             "node": "retrieval_recall_defect",
             "component": "retrieval",
-            "posterior": 0.8548,
-            "prior": 0.8303,
+            "posterior": 0.9581,
+            "prior": 0.95,
             "evidence": [
               "Precision is acceptable, so evidence miss is more likely than noise."
             ],
             "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
           },
           {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9545,
+            "prior": 0.95,
+            "evidence": [
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.9524,
+            "prior": 0.95,
+            "evidence": [
+              "Verification spans are sparse."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
             "node": "citation_binding_defect",
             "component": "e2e",
-            "posterior": 0.3736,
-            "prior": 0.3734,
+            "posterior": 0.6838,
+            "prior": 0.6836,
             "evidence": [],
             "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
           },
           {
-            "node": "distribution_shift",
-            "component": "e2e",
-            "posterior": 0.3184,
-            "prior": 0.3184,
-            "evidence": [],
-            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-          },
-          {
             "node": "context_packing_defect",
             "component": "generation",
-            "posterior": 0.3002,
-            "prior": 0.2987,
+            "posterior": 0.5165,
+            "prior": 0.5159,
             "evidence": [],
             "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
           },
           {
+            "node": "distribution_shift",
+            "component": "e2e",
+            "posterior": 0.4344,
+            "prior": 0.4344,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
             "node": "judge_or_metric_instability",
             "component": "e2e",
-            "posterior": 0.1364,
-            "prior": 0.1364,
+            "posterior": 0.2137,
+            "prior": 0.2137,
             "evidence": [],
             "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
           }
@@ -887,30 +789,40 @@
             "context_precision": 1.0
           },
           "raw": {
-            "context_precision": 0.9999999999266667
+            "context_precision": 0.9999999999
           },
           "n": 1
         },
         "generation": {
-          "score": 0.9524,
+          "score": 1.0,
           "metrics": {
-            "faithfulness": 0.9524
+            "faithfulness": 1.0,
+            "hallucination": 1.0,
+            "bias": 1.0,
+            "toxicity": 1.0
           },
           "raw": {
-            "faithfulness": 0.9523809523809524
+            "faithfulness": 1.0,
+            "hallucination": 0.0,
+            "bias": 0.0,
+            "toxicity": 0.0
           },
-          "n": 1
+          "n": 4
         },
         "e2e": {
-          "score": null,
-          "metrics": {},
-          "raw": {},
-          "n": 0
+          "score": 0.9667,
+          "metrics": {
+            "g_eval": 0.9667
+          },
+          "raw": {
+            "g_eval": 0.9667
+          },
+          "n": 1
         }
       },
       "rule_based": {
         "source": "rule",
-        "summary": "Weakest layer: generation (0.95). Layer scores: retrieval=1.00, generation=0.95. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+        "summary": "Weakest layer: e2e (0.97). Layer scores: retrieval=1.00, generation=1.00, e2e=0.97. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
         "hypotheses": [],
         "causal_signals": [
           {
@@ -924,64 +836,64 @@
             "recommended_experiment": "Run parser and chunking search before retriever tuning."
           },
           {
-            "node": "grounding_defect",
-            "component": "generation",
-            "posterior": 0.9499,
-            "prior": 0.9472,
-            "evidence": [
-              "Verification spans are sparse."
-            ],
-            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
-          },
-          {
-            "node": "retrieval_precision_defect",
-            "component": "retrieval",
-            "posterior": 0.8955,
-            "prior": 0.8858,
-            "evidence": [
-              "Sparse rerank spans suggest weak post-retrieval filtering."
-            ],
-            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-          },
-          {
             "node": "retrieval_recall_defect",
             "component": "retrieval",
-            "posterior": 0.8548,
-            "prior": 0.8303,
+            "posterior": 0.9581,
+            "prior": 0.95,
             "evidence": [
               "Precision is acceptable, so evidence miss is more likely than noise."
             ],
             "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
           },
           {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9545,
+            "prior": 0.95,
+            "evidence": [
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.9524,
+            "prior": 0.95,
+            "evidence": [
+              "Verification spans are sparse."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
             "node": "citation_binding_defect",
             "component": "e2e",
-            "posterior": 0.3736,
-            "prior": 0.3734,
+            "posterior": 0.6838,
+            "prior": 0.6836,
             "evidence": [],
             "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
           },
           {
-            "node": "distribution_shift",
-            "component": "e2e",
-            "posterior": 0.3184,
-            "prior": 0.3184,
-            "evidence": [],
-            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-          },
-          {
             "node": "context_packing_defect",
             "component": "generation",
-            "posterior": 0.3002,
-            "prior": 0.2987,
+            "posterior": 0.5165,
+            "prior": 0.5159,
             "evidence": [],
             "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
           },
           {
+            "node": "distribution_shift",
+            "component": "e2e",
+            "posterior": 0.4344,
+            "prior": 0.4344,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
             "node": "judge_or_metric_instability",
             "component": "e2e",
-            "posterior": 0.1364,
-            "prior": 0.1364,
+            "posterior": 0.2137,
+            "prior": 0.2137,
             "evidence": [],
             "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
           }
@@ -1016,7 +928,7 @@
         ]
       },
       {
-        "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and consistency?",
+        "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
         "source_chunk_ids": [
           74,
           96

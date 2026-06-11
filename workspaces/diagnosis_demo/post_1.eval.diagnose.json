@@ -1,5 +1,5 @@
 {
-  "summary": "Weakest layer: retrieval (0.67). Layer scores: retrieval=0.67, generation=1.00. Primary bottleneck: precision still failing after retrieval tuning — escalate retrieval complexity. 1 diagnosis hypotheses were generated. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+  "summary": "Weakest layer: retrieval (0.67). Layer scores: retrieval=0.67, generation=0.79, e2e=0.77. Primary bottleneck: precision still failing after retrieval tuning — escalate retrieval complexity. 2 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.31.",
   "expected_thresholds": {
     "context_precision": 0.8,
     "context_recall": 0.8,
@@ -16,6 +16,7 @@
     "user_success_rate": 0.85
   },
   "metric_gaps": {
+    "hallucination": 0.3444,
     "context_precision": 0.1333
   },
   "hypotheses": [
@@ -34,22 +35,53 @@
         "Switch to hybrid retrieval (BM25 + dense) so lexical precision complements semantic recall.",
         "Add query rewriting / decomposition to sharpen the retrieval target."
       ]
+    },
+    {
+      "component": "generation",
+      "root_cause": "answer is fragile under distractors or unsupported reasoning",
+      "severity": "high",
+      "confidence": 0.81,
+      "evidence": [
+        "noise_sensitivity=0.00",
+        "hallucination=0.44",
+        "The generator likely overweights spurious or weakly relevant text."
+      ],
+      "recommended_actions": [
+        "Constrain the answer to quoted or cited evidence.",
+        "Use context packing with stronger ordering and section labels.",
+        "Add a verifier or claim-level grounding pass."
+      ]
     }
   ],
   "optimization_candidates": [
     "autorag_pipeline_search",
-    "corpus_chunking_search"
+    "corpus_chunking_search",
+    "dspy_prompt_optimization",
+    "joint_ablation_eval"
   ],
   "priority_actions": [
     "Retrieval BO already attempted; raising retrieval complexity.",
-    "Run parser and chunking search before retriever tuning."
+    "Run ablations to separate noisy retrieval from generator overreach.",
+    "Strengthen reranking, filtering, and precision-oriented retrieval settings."
   ],
   "causal_signals": [
     {
+      "node": "retrieval_precision_defect",
+      "component": "retrieval",
+      "posterior": 0.3132,
+      "prior": 0.2389,
+      "evidence": [
+        "context_precision=0.67 is below target.",
+        "Hallucination rises when noisy passages enter the context window.",
+        "Sparse rerank spans suggest weak post-retrieval filtering."
+      ],
+      "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+    },
+    {
       "node": "corpus_chunking_defect",
       "component": "retrieval",
-      "posterior": 0.9595,
-      "prior": 0.95,
+      "posterior": 0.2858,
+      "prior": 0.2431,
       "evidence": [
         "Traces show a small number of retrieved chunks per query."
       ],
@@ -58,63 +90,59 @@
     {
       "node": "grounding_defect",
       "component": "generation",
-      "posterior": 0.9522,
-      "prior": 0.9491,
+      "posterior": 0.278,
+      "prior": 0.2173,
       "evidence": [
-        "Verification spans are sparse."
+        "Hallucination exceeds threshold.",
+        "Verification spans are sparse.",
+        "Upstream propagation from retrieval_precision_defect (+0.03) via causal edge."
       ],
       "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
     },
     {
-      "node": "retrieval_precision_defect",
-      "component": "retrieval",
-      "posterior": 0.9193,
-      "prior": 0.8984,
-      "evidence": [
-        "context_precision=0.67 is below target.",
-        "Sparse rerank spans suggest weak post-retrieval filtering."
-      ],
-      "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-    },
-    {
       "node": "retrieval_recall_defect",
       "component": "retrieval",
-      "posterior": 0.835,
-      "prior": 0.8343,
-      "evidence": [],
+      "posterior": 0.2068,
+      "prior": 0.203,
+      "evidence": [
+        "Upstream propagation from corpus_chunking_defect (+0.02) via causal edge."
+      ],
       "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
-    },
-    {
-      "node": "citation_binding_defect",
-      "component": "e2e",
-      "posterior": 0.3736,
-      "prior": 0.3734,
-      "evidence": [],
-      "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
     },
     {
       "node": "context_packing_defect",
       "component": "generation",
-      "posterior": 0.3251,
-      "prior": 0.307,
+      "posterior": 0.1174,
+      "prior": 0.108,
       "evidence": [
-        "Enough evidence exists but packing may be letting noise dominate."
+        "Enough evidence exists but packing may be letting noise dominate.",
+        "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
       ],
       "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
     },
     {
+      "node": "citation_binding_defect",
+      "component": "e2e",
+      "posterior": 0.1027,
+      "prior": 0.101,
+      "evidence": [
+        "Upstream propagation from grounding_defect (+0.02) via causal edge."
+      ],
+      "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+    },
+    {
       "node": "distribution_shift",
       "component": "e2e",
-      "posterior": 0.3184,
-      "prior": 0.3184,
+      "posterior": 0.08,
+      "prior": 0.08,
       "evidence": [],
       "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
     },
     {
       "node": "judge_or_metric_instability",
       "component": "e2e",
-      "posterior": 0.1364,
-      "prior": 0.1364,
+      "posterior": 0.06,
+      "prior": 0.06,
       "evidence": [],
       "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
     }
@@ -122,10 +150,22 @@
   "causal_graph": {
     "nodes": [
       {
+        "node": "retrieval_precision_defect",
+        "component": "retrieval",
+        "posterior": 0.3132,
+        "prior": 0.2389,
+        "evidence": [
+          "context_precision=0.67 is below target.",
+          "Hallucination rises when noisy passages enter the context window.",
+          "Sparse rerank spans suggest weak post-retrieval filtering."
+        ],
+        "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+      },
+      {
         "node": "corpus_chunking_defect",
         "component": "retrieval",
-        "posterior": 0.9595,
-        "prior": 0.95,
+        "posterior": 0.2858,
+        "prior": 0.2431,
         "evidence": [
           "Traces show a small number of retrieved chunks per query."
         ],
@@ -134,63 +174,59 @@
       {
         "node": "grounding_defect",
         "component": "generation",
-        "posterior": 0.9522,
-        "prior": 0.9491,
+        "posterior": 0.278,
+        "prior": 0.2173,
         "evidence": [
-          "Verification spans are sparse."
+          "Hallucination exceeds threshold.",
+          "Verification spans are sparse.",
+          "Upstream propagation from retrieval_precision_defect (+0.03) via causal edge."
         ],
         "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
       },
       {
-        "node": "retrieval_precision_defect",
-        "component": "retrieval",
-        "posterior": 0.9193,
-        "prior": 0.8984,
-        "evidence": [
-          "context_precision=0.67 is below target.",
-          "Sparse rerank spans suggest weak post-retrieval filtering."
-        ],
-        "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-      },
-      {
         "node": "retrieval_recall_defect",
         "component": "retrieval",
-        "posterior": 0.835,
-        "prior": 0.8343,
-        "evidence": [],
+        "posterior": 0.2068,
+        "prior": 0.203,
+        "evidence": [
+          "Upstream propagation from corpus_chunking_defect (+0.02) via causal edge."
+        ],
         "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
-      },
-      {
-        "node": "citation_binding_defect",
-        "component": "e2e",
-        "posterior": 0.3736,
-        "prior": 0.3734,
-        "evidence": [],
-        "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
       },
       {
         "node": "context_packing_defect",
         "component": "generation",
-        "posterior": 0.3251,
-        "prior": 0.307,
+        "posterior": 0.1174,
+        "prior": 0.108,
         "evidence": [
-          "Enough evidence exists but packing may be letting noise dominate."
+          "Enough evidence exists but packing may be letting noise dominate.",
+          "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
         ],
         "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
       },
       {
+        "node": "citation_binding_defect",
+        "component": "e2e",
+        "posterior": 0.1027,
+        "prior": 0.101,
+        "evidence": [
+          "Upstream propagation from grounding_defect (+0.02) via causal edge."
+        ],
+        "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+      },
+      {
         "node": "distribution_shift",
         "component": "e2e",
-        "posterior": 0.3184,
-        "prior": 0.3184,
+        "posterior": 0.08,
+        "prior": 0.08,
         "evidence": [],
         "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
       },
       {
         "node": "judge_or_metric_instability",
         "component": "e2e",
-        "posterior": 0.1364,
-        "prior": 0.1364,
+        "posterior": 0.06,
+        "prior": 0.06,
         "evidence": [],
         "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
       }
@@ -253,7 +289,7 @@
     ]
   },
   "evaluator_agreement": {},
-  "diagnosis_confidence": 0.84,
+  "diagnosis_confidence": 0.825,
   "disambiguation_actions": [],
   "layer_scores": {
     "retrieval": {
@@ -267,25 +303,35 @@
       "n": 1
     },
     "generation": {
-      "score": 1.0,
+      "score": 0.7853,
       "metrics": {
-        "faithfulness": 1.0
+        "faithfulness": 0.9188,
+        "hallucination": 0.5556,
+        "bias": 0.6667,
+        "toxicity": 1.0
       },
       "raw": {
-        "faithfulness": 1.0
+        "faithfulness": 0.9188034188034188,
+        "hallucination": 0.4444,
+        "bias": 0.3333,
+        "toxicity": 0.0
       },
-      "n": 1
+      "n": 4
     },
     "e2e": {
-      "score": null,
-      "metrics": {},
-      "raw": {},
-      "n": 0
+      "score": 0.7667,
+      "metrics": {
+        "g_eval": 0.7667
+      },
+      "raw": {
+        "g_eval": 0.7667
+      },
+      "n": 1
     }
   },
   "rule_based": {
     "source": "rule",
-    "summary": "Weakest layer: retrieval (0.67). Layer scores: retrieval=0.67, generation=1.00. Primary bottleneck: precision still failing after retrieval tuning — escalate retrieval complexity. 1 diagnosis hypotheses were generated. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+    "summary": "Weakest layer: retrieval (0.67). Layer scores: retrieval=0.67, generation=0.79, e2e=0.77. Primary bottleneck: precision still failing after retrieval tuning — escalate retrieval complexity. 2 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.31.",
     "hypotheses": [
       {
         "component": "retrieval",
@@ -302,14 +348,42 @@
           "Switch to hybrid retrieval (BM25 + dense) so lexical precision complements semantic recall.",
           "Add query rewriting / decomposition to sharpen the retrieval target."
         ]
+      },
+      {
+        "component": "generation",
+        "root_cause": "answer is fragile under distractors or unsupported reasoning",
+        "severity": "high",
+        "confidence": 0.81,
+        "evidence": [
+          "noise_sensitivity=0.00",
+          "hallucination=0.44",
+          "The generator likely overweights spurious or weakly relevant text."
+        ],
+        "recommended_actions": [
+          "Constrain the answer to quoted or cited evidence.",
+          "Use context packing with stronger ordering and section labels.",
+          "Add a verifier or claim-level grounding pass."
+        ]
       }
     ],
     "causal_signals": [
       {
+        "node": "retrieval_precision_defect",
+        "component": "retrieval",
+        "posterior": 0.3132,
+        "prior": 0.2389,
+        "evidence": [
+          "context_precision=0.67 is below target.",
+          "Hallucination rises when noisy passages enter the context window.",
+          "Sparse rerank spans suggest weak post-retrieval filtering."
+        ],
+        "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+      },
+      {
         "node": "corpus_chunking_defect",
         "component": "retrieval",
-        "posterior": 0.9595,
-        "prior": 0.95,
+        "posterior": 0.2858,
+        "prior": 0.2431,
         "evidence": [
           "Traces show a small number of retrieved chunks per query."
         ],
@@ -318,80 +392,80 @@
       {
         "node": "grounding_defect",
         "component": "generation",
-        "posterior": 0.9522,
-        "prior": 0.9491,
+        "posterior": 0.278,
+        "prior": 0.2173,
         "evidence": [
-          "Verification spans are sparse."
+          "Hallucination exceeds threshold.",
+          "Verification spans are sparse.",
+          "Upstream propagation from retrieval_precision_defect (+0.03) via causal edge."
         ],
         "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
       },
       {
-        "node": "retrieval_precision_defect",
-        "component": "retrieval",
-        "posterior": 0.9193,
-        "prior": 0.8984,
-        "evidence": [
-          "context_precision=0.67 is below target.",
-          "Sparse rerank spans suggest weak post-retrieval filtering."
-        ],
-        "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-      },
-      {
         "node": "retrieval_recall_defect",
         "component": "retrieval",
-        "posterior": 0.835,
-        "prior": 0.8343,
-        "evidence": [],
+        "posterior": 0.2068,
+        "prior": 0.203,
+        "evidence": [
+          "Upstream propagation from corpus_chunking_defect (+0.02) via causal edge."
+        ],
         "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
-      },
-      {
-        "node": "citation_binding_defect",
-        "component": "e2e",
-        "posterior": 0.3736,
-        "prior": 0.3734,
-        "evidence": [],
-        "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
       },
       {
         "node": "context_packing_defect",
         "component": "generation",
-        "posterior": 0.3251,
-        "prior": 0.307,
+        "posterior": 0.1174,
+        "prior": 0.108,
         "evidence": [
-          "Enough evidence exists but packing may be letting noise dominate."
+          "Enough evidence exists but packing may be letting noise dominate.",
+          "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
         ],
         "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
       },
       {
+        "node": "citation_binding_defect",
+        "component": "e2e",
+        "posterior": 0.1027,
+        "prior": 0.101,
+        "evidence": [
+          "Upstream propagation from grounding_defect (+0.02) via causal edge."
+        ],
+        "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+      },
+      {
         "node": "distribution_shift",
         "component": "e2e",
-        "posterior": 0.3184,
-        "prior": 0.3184,
+        "posterior": 0.08,
+        "prior": 0.08,
         "evidence": [],
         "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
       },
       {
         "node": "judge_or_metric_instability",
         "component": "e2e",
-        "posterior": 0.1364,
-        "prior": 0.1364,
+        "posterior": 0.06,
+        "prior": 0.06,
         "evidence": [],
         "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
       }
     ],
     "metric_gaps": {
+      "hallucination": 0.3444,
       "context_precision": 0.1333
     },
     "optimization_candidates": [
       "autorag_pipeline_search",
-      "corpus_chunking_search"
+      "corpus_chunking_search",
+      "dspy_prompt_optimization",
+      "joint_ablation_eval"
     ],
     "priority_actions": [
       "Retrieval BO already attempted; raising retrieval complexity.",
-      "Run parser and chunking search before retriever tuning."
+      "Run ablations to separate noisy retrieval from generator overreach.",
+      "Strengthen reranking, filtering, and precision-oriented retrieval settings."
     ],
     "disambiguation_actions": [],
-    "diagnosis_confidence": 0.84
+    "diagnosis_confidence": 0.825
   },
   "llm_based": null,
   "synthesis": null,
