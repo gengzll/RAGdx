@@ -94,9 +94,14 @@ class GenerationOptimizer(StageOptimizer):
         """
         # Lazy imports: dspy + the MIPRO log handler aren't needed if
         # no caller invokes this stage.
+        import time as _time
+
         import dspy
 
         from ragdx.experiments import _evaluate_with_ragas, _MIPROTrialScoreCapture
+
+        _t0 = _time.time()
+        _phase_marks: dict[str, float] = {}
 
         runtime = ctx.runtime
         records_with_ctxs = ctx.records
@@ -340,6 +345,7 @@ class GenerationOptimizer(StageOptimizer):
             capture = _CapturePlaceholder()
             _patch_installed = False
         else:
+            _phase_marks["baseline_s"] = round(_time.time() - _t0, 2)
             logger.info("[DSPy/%s] (b) MIPROv2 optimisation", ctx.label)
             capture = _MIPROTrialScoreCapture()
             capture.setLevel(logging.INFO)
@@ -580,6 +586,9 @@ class GenerationOptimizer(StageOptimizer):
                 "skipped": [],
             }
         else:
+            _phase_marks["optimize_s"] = round(
+                _time.time() - _t0 - _phase_marks.get("baseline_s", 0.0), 2,
+            )
             logger.info("[DSPy/%s] (c) optimised re-run", ctx.label)
             optimised_answered = _run_program(opt_result["optimized_program"])
             opt_eval = _evaluate_with_ragas(
@@ -685,7 +694,17 @@ class GenerationOptimizer(StageOptimizer):
             ctx.base_config, best_params_payload,
         )
 
+        _total_s = round(_time.time() - _t0, 2)
+        _phase_marks["re_eval_s"] = round(
+            _total_s - _phase_marks.get("baseline_s", 0.0)
+            - _phase_marks.get("optimize_s", 0.0), 2,
+        )
+        _phase_marks["total_s"] = _total_s
         extras = {
+            # Wall-clock per phase: (a) baseline answer+eval, (b) the
+            # optimizer search, (c) optimized answer+re-eval. Rendered
+            # in the report's Run cost section.
+            "stage_elapsed": dict(_phase_marks),
             "baseline_scores": baseline_scores,
             "optimized_scores": optimised_scores,
             "delta": delta,

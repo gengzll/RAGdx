@@ -71,3 +71,15 @@ history:
   run_id: null
   extra:
     source: tune_rag_joint.json
+- ts: '2026-06-11T15:27:15Z'
+  command: report
+  output: report.html
+  run_id: null
+  extra:
+    source: tune_rag_joint.json
+- ts: '2026-06-11T15:29:59Z'
+  command: report
+  output: report.html
+  run_id: null
+  extra:
+    source: tune_rag_joint.json

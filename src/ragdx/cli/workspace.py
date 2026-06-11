@@ -774,7 +774,7 @@ def _delegate_to_tune(
             _o_scores = dict(_matching[0].scores or {}) if _matching else {}
         eng = RAGDiagnosisEngine()
         b_rep = (
-            eng.diagnose(_synth_eval_result(_b_scores, mode=mode_label)).model_dump()
+            eng.diagnose(_synth_eval_result(_b_scores, mode=mode_label), learn=False).model_dump()
             if _b_scores else None
         )
         # Always emit the post-optimization diagnosis when scores exist
@@ -783,7 +783,7 @@ def _delegate_to_tune(
         # ("where did the optimized diagnosis go?"); an honest
         # "no change" comparison is more useful.
         o_rep = (
-            eng.diagnose(_synth_eval_result(_o_scores, mode=mode_label)).model_dump()
+            eng.diagnose(_synth_eval_result(_o_scores, mode=mode_label), learn=False).model_dump()
             if _o_scores else None
         )
         if b_rep or o_rep:
@@ -901,6 +901,59 @@ def report_cmd(
         raise typer.BadParameter(f"Source bundle not found: {src_path}")
 
     bundle = json.loads(src_path.read_text(encoding="utf-8"))
+
+    # Refresh the bundle's pre/post diagnosis from the workspace's
+    # eval files when the loop has produced them. A tune bundle's
+    # in-line diagnosis is built from BO trial scores (the only data
+    # available at tune time) -- but the workspace's first / latest
+    # evals carry the FULL metric set (incl. the deepeval
+    # supplement), so a report rendered after the re-eval step shows
+    # the complete three-layer picture on both sides.
+    try:
+        eval_outputs = [
+            h.output for h in ws.history
+            if h.command == "eval" and h.output
+        ]
+        if bundle.get("diagnosis") and len(eval_outputs) >= 2:
+            from ragdx.core.diagnosis import RAGDiagnosisEngine
+            from ragdx.experiments import _compare_diagnoses
+            from ragdx.schemas.models import EvaluationResult
+
+            def _load_eval(rel: str) -> tuple[EvaluationResult, dict]:
+                ev = json.loads(ws.path(rel).read_text(encoding="utf-8"))
+                r = EvaluationResult(
+                    **{k: ev.get(k, {}) for k in ("retrieval", "generation", "e2e")},
+                    metadata=ev.get("metadata", {}),
+                )
+                flat = {**r.retrieval, **r.generation, **r.e2e}
+                return r, flat
+
+            pre_r, pre_flat = _load_eval(eval_outputs[0])
+            post_r, post_flat = _load_eval(eval_outputs[-1])
+            hist = [
+                {"tune-rag": "autorag_pipeline_search",
+                 "tune-prompt": "dspy_prompt_optimization"}[h.command]
+                for h in ws.history
+                if h.command in ("tune-rag", "tune-prompt")
+            ]
+            eng = RAGDiagnosisEngine()
+            b_rep = eng.diagnose(pre_r, learn=False).model_dump()
+            o_rep = eng.diagnose(
+                post_r, optimization_history=hist, learn=False,
+            ).model_dump()
+            mode_key = next(iter(bundle["diagnosis"].keys()))
+            entry: dict = {"baseline": b_rep, "optimized": o_rep,
+                           "comparison": _compare_diagnoses(
+                               b_rep, o_rep,
+                               baseline_scores=pre_flat,
+                               optimized_scores=post_flat,
+                           )}
+            bundle["diagnosis"][mode_key] = entry
+            print("[dim]Diagnosis refreshed from workspace evals "
+                  f"({eval_outputs[0]} -> {eval_outputs[-1]})[/dim]")
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[yellow]Diagnosis refresh skipped:[/yellow] {exc}")
+
     html = render_report(bundle, title=f"ragdx workspace - {ws.name}")
     out_path = ws.path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -713,7 +713,7 @@ def tune(
                 rep = _engine.diagnose(_synth_eval_result(
                     scores, mode=mode_label,
                     extra_metadata={"phase": phase},
-                ))
+                ), learn=False)
                 return rep.model_dump()
             except Exception as exc:  # pragma: no cover - defensive
                 print(f"[yellow]{phase} diagnosis skipped:[/yellow] {exc}")

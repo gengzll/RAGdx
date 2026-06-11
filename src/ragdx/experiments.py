@@ -1133,14 +1133,31 @@ def _run_one_mode(
     # a judge timeout degrades to "not computed" rather than failing the
     # run. No-op when deepeval isn't installed.
     try:
-        extra = _supplement_deepeval_metrics(
-            gen_result.extras.get("records") or [], runtime,
-        )
+        recs = gen_result.extras.get("records") or []
+        extra = _supplement_deepeval_metrics(recs, runtime)
         if extra:
             opt = dict(gen_result.extras.get("optimized_scores") or {})
             opt.update(extra)
             gen_result.extras["optimized_scores"] = opt
             gen_result.extras["deepeval_supplement"] = extra
+        # Symmetric: supplement the BASELINE answers too, so the
+        # composite objective / before-after comparison weighs the
+        # same metric set on both sides (the objective now includes
+        # g_eval / hallucination / bias / toxicity).
+        base_payload = [
+            {
+                "question": r.get("question"),
+                "contexts": r.get("contexts") or [],
+                "answer": r.get("baseline_answer") or "",
+            }
+            for r in recs
+        ]
+        base_extra = _supplement_deepeval_metrics(base_payload, runtime)
+        if base_extra:
+            base = dict(gen_result.extras.get("baseline_scores") or {})
+            base.update(base_extra)
+            gen_result.extras["baseline_scores"] = base
+            gen_result.extras["deepeval_supplement_baseline"] = base_extra
     except Exception as exc:  # pragma: no cover - depends on judge LM
         logger.warning("deepeval supplement skipped: %s", exc)
 
@@ -1388,26 +1405,24 @@ def _compare_diagnoses(
 
 
 def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
-    """Diagnose the system BEFORE and AFTER the prompt optimization.
+    """Diagnose the FINAL system only (the one-shot experiment contract).
 
     ``ragdx experiment`` is the one-shot path: BO -> DSPy -> diagnose
-    at the end. There is no upfront diagnose ceremony, but the final
-    report still needs both sides of the optimization story, so per
-    mode this emits the ``{baseline, optimized, comparison}`` triple:
+    at the END. There is no baseline ceremony anywhere in this flow --
+    the DSPy A/B section already tells the before/after story for the
+    prompt stage, and the diagnosis answers "what should I attack
+    NEXT on the finished system". So this returns ONE flat
+    :class:`DiagnosisReport` dump per mode (the renderer shows it as
+    "Diagnosis — final system").
 
-    * ``baseline``   -- the system at the BO winner config with the
-       seed prompt (``dspy_a_b.baseline_scores``), i.e. *before*
-       prompt tuning.
-    * ``optimized``  -- the final system after prompt tuning,
-       including the deepeval supplements merged into
-       ``optimized_scores``. Always emitted when scores exist, even
-       if identical to the baseline -- an honest "no change" beats a
-       silently missing section.
-    * ``comparison`` -- resolved / persisted / emerged hypotheses,
-       posterior shifts, metric deltas.
+    The pre/post double diagnosis lives in the diagnose-first
+    workspace loop (``ragdx workspace diagnose`` -> ``tune`` ->
+    re-diagnose), where the user explicitly evaluates before and
+    after -- that's a different, deliberate workflow.
 
-    Failures are caught and logged -- a missing diagnosis section is
-    preferable to a failed bundle write.
+    Uses ``learn=False``: bundle diagnoses are report-style renders of
+    a fixed score snapshot, and writing their posteriors back to the
+    causal prior store saturates it after a few regenerations.
     """
     from ragdx.core.diagnosis import RAGDiagnosisEngine
 
@@ -1415,41 +1430,21 @@ def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for mode, payload in results_by_mode.items():
         dspy_ab = payload.get("dspy_a_b") or {}
-        baseline_scores = dict(dspy_ab.get("baseline_scores") or {})
-        optimized_scores = dict(dspy_ab.get("optimized_scores") or {})
-        if not baseline_scores and not optimized_scores:
-            # No DSPy stage ran -- fall back to the BO winner as the
-            # single post-optimization snapshot.
-            optimized_scores = _winner_scores(
-                payload.get("bayes_search") or {}
-            )
-
-        def _diag(scores: dict, phase: str, _mode: str = mode) -> dict | None:
-            if not scores:
-                return None
-            try:
-                res = _synth_eval_result(
-                    scores, mode=_mode, extra_metadata={"phase": phase},
-                )
-                return engine.diagnose(res).model_dump()
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.warning(
-                    "%s diagnosis for mode=%s failed: %s", phase, _mode, exc,
-                )
-                return None
-
-        b_rep = _diag(baseline_scores, "baseline")
-        o_rep = _diag(optimized_scores, "optimized")
-        if not (b_rep or o_rep):
+        final_scores = dict(dspy_ab.get("optimized_scores") or {})
+        if not final_scores:
+            # No DSPy stage ran -- the BO winner IS the final system.
+            final_scores = _winner_scores(payload.get("bayes_search") or {})
+        if not final_scores:
             continue
-        entry: dict = {"baseline": b_rep, "optimized": o_rep}
-        if b_rep and o_rep:
-            entry["comparison"] = _compare_diagnoses(
-                b_rep, o_rep,
-                baseline_scores=baseline_scores,
-                optimized_scores=optimized_scores,
+        try:
+            res = _synth_eval_result(
+                final_scores, mode=mode, extra_metadata={"phase": "final"},
             )
-        out[mode] = entry
+            out[mode] = engine.diagnose(res, learn=False).model_dump()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "final diagnosis for mode=%s failed: %s", mode, exc,
+            )
     return out
 
 

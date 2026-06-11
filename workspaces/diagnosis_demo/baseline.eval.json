@@ -3,10 +3,13 @@
     "context_precision": 0.6666666666166666
   },
   "generation": {
-    "faithfulness": 0.9166666666666667
+    "faithfulness": 0.9166666666666667,
+    "hallucination": 0.4444,
+    "bias": 0.3333,
+    "toxicity": 0.0
   },
   "e2e": {
-    "hallucination": 0.4444
+    "g_eval": 0.7667
   },
   "metadata": {
     "n_records": 3,
@@ -35,11 +38,6 @@
         "raw_text_chars": 211339
       },
       "questions_path": "D:\\work\\RAGdx-main\\RAGdx-main\\workspaces\\diagnosis_demo\\questions.jsonl"
-    },
-    "unmapped_scores": {
-      "bias": 0.3333,
-      "toxicity": 0.0,
-      "g_eval": 0.7667
     }
   },
   "raw_tool_outputs": {},

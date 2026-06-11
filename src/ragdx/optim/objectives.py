@@ -83,7 +83,15 @@ class CompositeObjective:
         Metrics missing from ``values`` or NaN contribute nothing. In
         ``weighted_mean`` mode, only metrics that actually contributed count
         toward the divisor — so missing metrics don't drag the mean down.
+
+        Lower-is-better metrics (``hallucination``, ``toxicity``, ...;
+        see :data:`ragdx.core.thresholds.LOWER_IS_BETTER`) are inverted
+        (``1 - value``) before weighting, so a positive weight always
+        means "reward the healthy direction". Without this, putting
+        ``hallucination`` in the objective would *reward* hallucinating.
         """
+        from ragdx.core.thresholds import LOWER_IS_BETTER
+
         if not self.metrics:
             return 0.0
         total = 0.0
@@ -98,6 +106,8 @@ class CompositeObjective:
                 continue
             if math.isnan(value):
                 continue
+            if name in LOWER_IS_BETTER:
+                value = 1.0 - max(0.0, min(1.0, value))
             total += value * float(weight)
             weight_sum += float(weight)
         if self.mode == "weighted_mean" and weight_sum > 0:
@@ -253,6 +263,14 @@ def default_objective(mode: GTMode) -> CompositeObjective:
     # produce a real ``hallucination`` score, override with
     # ``default_objective(...).with_overrides(constraints=
     # {"hallucination": ("max", 0.15)})``.
+    # The deepeval-supplement metrics (g_eval / hallucination / bias /
+    # toxicity) carry positive weights too. Two notes:
+    # * lower-is-better ones are direction-inverted inside ``score()``,
+    #   so their weight rewards the *clean* direction;
+    # * they are weights, NOT constraints -- BO inner-loop trials don't
+    #   compute them (the deepeval supplement runs once on the final
+    #   answers), and a constraint on a missing metric would mark every
+    #   trial infeasible. Missing-metric weights simply contribute 0.
     if mode == "with_gt":
         return CompositeObjective(
             metrics={
@@ -261,6 +279,10 @@ def default_objective(mode: GTMode) -> CompositeObjective:
                 "context_recall": 1.0,
                 "answer_relevancy": 0.5,
                 "context_precision": 0.3,
+                "g_eval": 1.0,
+                "hallucination": 0.5,
+                "bias": 0.25,
+                "toxicity": 0.25,
             },
             constraints={
                 "faithfulness": ("min", 0.85),
@@ -274,6 +296,10 @@ def default_objective(mode: GTMode) -> CompositeObjective:
             "faithfulness": 1.5,
             "answer_relevancy": 1.0,
             "context_precision": 0.3,
+            "g_eval": 1.0,
+            "hallucination": 0.5,
+            "bias": 0.25,
+            "toxicity": 0.25,
         },
         constraints={
             "faithfulness": ("min", 0.85),

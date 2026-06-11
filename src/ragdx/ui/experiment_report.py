@@ -97,20 +97,30 @@ _REPORT_JS = """
 // for lower-is-better inversion server-side).
 function ragdxRecomputeLayer(layerEl){
   var inputs = layerEl.querySelectorAll('input.lw');
-  var num=0, den=0;
+  var num=0, den=0, custom=false;
   inputs.forEach(function(inp){
     var w = parseFloat(inp.value); if(isNaN(w)||w<0) w=0;
+    if(Math.abs(w-1)>1e-9) custom=true;
     var ov = parseFloat(inp.getAttribute('data-oriented'));
     if(!isNaN(ov) && w>0){ num += ov*w; den += w; }
   });
   var fill = layerEl.querySelector('.ovbar-fill');
   var st = layerEl.querySelector('.ovscore');
-  if(den<=0){ if(st) st.textContent='-'; if(fill) fill.style.width='0%'; return; }
+  // "custom weights active" marker: when any weight deviates from 1,
+  // tag the score so the user can SEE the recompute fired even when
+  // the weighted mean happens to equal the default (e.g. all metric
+  // values identical -- any weighting gives the same mean).
+  var displayScore = function(s){
+    if(st){ st.textContent = s; st.title = custom ? 'custom weights applied' : '';
+      st.style.fontStyle = custom ? 'italic' : 'normal';
+      st.style.color = custom ? '#1a73e8' : ''; }
+  };
+  if(den<=0){ displayScore('-'); if(fill) fill.style.width='0%'; return; }
   var score = num/den;
   var pct = Math.round(score*100);
   if(fill){ fill.style.width = pct+'%';
     fill.style.background = score<0.6?'#dc2626':(score<0.8?'#d97706':'#16a34a'); }
-  if(st) st.textContent = score.toFixed(2);
+  displayScore(score.toFixed(2) + (custom ? '\\u2009\\u2696' : ''));
 }
 // item 6: per-trial visibility checkboxes toggle each trial block.
 document.addEventListener('change', function(e){
@@ -505,17 +515,32 @@ def _render_run_cost(bundle: dict) -> str:
             "mean per question (s)": f"{per_question:.1f}" if per_question else "-",
         })
     for mode, payload in dspy.items():
-        # GenerationOptimizer doesn't carry trial timings; we report the
-        # baseline+optimized eval cycle as one "section" if we have any
-        # data at all to be honest about cost shape.
         if not payload:
             continue
+        n_q = len((payload or {}).get("records") or [])
+        # GenerationOptimizer records per-phase wall time in
+        # ``stage_elapsed`` (baseline_s / optimize_s / re_eval_s /
+        # total_s). Older bundles lack it -> "-".
+        se = (payload or {}).get("stage_elapsed") or {}
+        total_s = se.get("total_s")
+        if isinstance(total_s, (int, float)):
+            total_seconds += float(total_s)
+            phase_bits = " / ".join(
+                f"{k.replace('_s','')} {se[k]:.0f}s"
+                for k in ("baseline_s", "optimize_s", "re_eval_s")
+                if isinstance(se.get(k), (int, float))
+            )
+            total_str = f"{total_s:.1f}" + (f"  ({phase_bits})" if phase_bits else "")
+            per_q = f"{total_s / n_q:.1f}" if n_q else "-"
+        else:
+            total_str = "-"
+            per_q = "-"
         rows.append({
             "section": f"DSPy ({mode})",
-            "trials": "n/a",
-            "questions / trial": len((payload or {}).get("records") or []) or "n/a",
-            "total runtime (s)": "n/a (not tracked yet)",
-            "mean per question (s)": "n/a",
+            "trials": "phases: baseline / optimize / re-eval",
+            "questions / trial": n_q or "-",
+            "total runtime (s)": total_str,
+            "mean per question (s)": per_q,
         })
     if not rows:
         return ""
@@ -835,31 +860,28 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
         parts.append('<h4>Causal signals (top 8 by posterior)</h4>')
         parts.append(
             '<p class="caption">Each row is a hypothesized defect. '
-            '<strong>prior</strong> = how likely this defect was before '
-            'looking at the metrics (learned from this experiment\'s '
-            'history); <strong>posterior</strong> = how likely it is '
+            '<strong>posterior</strong> = how likely that defect is '
             'after weighing the metrics, traces, and causal propagation. '
-            'Lower is healthier; the top row is the prime suspect.</p>'
+            'Lower is healthier; the top row is the prime suspect. '
+            '(The pre-evidence prior is omitted — it tracks the learned '
+            'store and adds little per-report signal.)</p>'
         )
         # Phase 4d: anchor per node so evidence can link back.
         sig_head = (
-            '<tr><th>node</th><th>layer</th><th>prior</th>'
+            '<tr><th>node</th><th>layer</th>'
             '<th>posterior</th><th>what it means</th>'
             '<th>recommended experiment</th></tr>'
         )
         sig_rows_html: list[str] = []
         for s in signals[:8]:
             node = s.get("node", "")
-            prior_val = s.get("prior", 0.0)
             post_val = s.get("posterior", 0.0)
-            prior_str = f"{prior_val:.2f}" if isinstance(prior_val, (int, float)) else str(prior_val)
             post_str = f"{post_val:.2f}" if isinstance(post_val, (int, float)) else str(post_val)
             meaning = (CAUSAL_NODE_GLOSSARY.get(node) or {}).get("desc", "")
             sig_rows_html.append(
                 f'<tr id="signal-{_esc(node)}">'
                 f'<td><code>{_esc(node)}</code></td>'
                 f'<td>{_esc(s.get("component", ""))}</td>'
-                f'<td>{_esc(prior_str)}</td>'
                 f'<td>{_esc(post_str)}</td>'
                 f'<td class="subtle">{_esc(meaning)}</td>'
                 f'<td>{_esc(s.get("recommended_experiment", ""))}</td>'
@@ -1564,18 +1586,33 @@ def _render_dspy_a_b(bundle: dict) -> str:
         # scoring Y, ..." at a glance. Complements the table below.
         if proposed and trial_log:
             # Map params → score so we can attach a score to each
-            # candidate index. MIPROv2's params look like
-            # ['Predictor 0: Instruction 1', ...] -- regex out the int.
+            # candidate index. Two formats:
+            # * MIPROv2: params like 'Predictor 0: Instruction 1'.
+            # * GEPA: params like 'Iter 2: proposed score 5.96 vs ...';
+            #   candidates = [seed] + one proposal per iteration, so
+            #   "Iter N" maps to candidate index N, and the seed
+            #   (index 0) takes the baseline-program score (the trial
+            #   whose kind mentions 'default'/'baseline').
             import re as _re
             score_by_idx: dict[str, dict[int, float]] = {}
             for t in trial_log:
                 p = str(t.get("params") or "")
+                k = str(t.get("kind") or "")
                 s = t.get("score")
                 if not isinstance(s, (int, float)):
                     continue
                 for m in _re.finditer(r"Instruction (\d+)", p):
                     score_by_idx.setdefault("predict", {}).setdefault(
                         int(m.group(1)), float(s),
+                    )
+                gm = _re.match(r"Iter (\d+):", p)
+                if gm:
+                    score_by_idx.setdefault("predict", {}).setdefault(
+                        int(gm.group(1)), float(s),
+                    )
+                if "default" in k or "baseline" in k or "seed" in p.lower():
+                    score_by_idx.setdefault("predict", {}).setdefault(
+                        0, float(s),
                     )
 
             timeline_html: list[str] = [

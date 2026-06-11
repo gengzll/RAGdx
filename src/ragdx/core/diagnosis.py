@@ -54,12 +54,17 @@ class RAGDiagnosisEngine:
         use_llm: bool = False,
         use_both: bool = False,
         optimization_history: list[str] | None = None,
+        *,
+        learn: bool = True,
     ) -> DiagnosisReport:
         # ``optimization_history`` lets the rule analyzer escalate its
         # recommendations when a defect persists despite the targeting
         # optimization already having run (history-aware diagnosis).
+        # ``learn=False`` = report-style diagnosis: don't write the
+        # posteriors back to the causal prior store (repeated bundle
+        # renders would otherwise saturate the priors).
         rule_report = self.analyzer.analyze(
-            result, optimization_history=optimization_history,
+            result, optimization_history=optimization_history, learn=learn,
         )
         if use_both:
             if self.llm_explainer is None:

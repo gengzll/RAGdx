@@ -444,11 +444,21 @@ class RuleBasedRootCauseAnalyzer:
         self,
         result: EvaluationResult,
         optimization_history: list[str] | None = None,
+        *,
+        learn: bool = True,
     ) -> DiagnosisReport:
         # ``optimization_history`` is the list of optimization candidate
         # names already applied to this RAG (e.g. ["autorag_pipeline_search"]
         # after one retrieval tune). Used to escalate recommendations
         # when a defect persists despite the obvious fix having run.
+        #
+        # ``learn=False`` skips the posterior write-back to the causal
+        # prior store. Report-style diagnoses (bundle regeneration,
+        # repeated renders of the same scores) must NOT learn -- every
+        # write-back nudges the priors toward the posteriors, and a few
+        # re-renders saturate every prior to the 0.95 clamp, after
+        # which prior == posterior and the diagnosis loses all
+        # discrimination (observed twice on the demo store).
         applied = list(optimization_history or [])
         gaps = self._metric_gaps(result)
         cp = result.score('context_precision', 1.0) or 1.0
@@ -582,5 +592,6 @@ class RuleBasedRootCauseAnalyzer:
             # New: per-layer aggregate scores for the three-layer view.
             layer_scores=layer_scores,
         )
-        self.store.update_causal_priors_from_report(report, result.feedback_events)
+        if learn:
+            self.store.update_causal_priors_from_report(report, result.feedback_events)
         return report
