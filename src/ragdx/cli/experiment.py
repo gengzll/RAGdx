@@ -109,6 +109,19 @@ def experiment(
         False, "--no-save",
         help="Skip writing result.json (only return in-memory).",
     ),
+    resume: str = typer.Option(
+        "", "--resume",
+        help="Resume an interrupted experiment. Pass the experiment "
+        "group id printed at the original run's start, or ``auto`` to "
+        "pick the most recently interrupted one. Completed stages "
+        "(BO / DSPy, per mode) replay from their checkpoints without "
+        "LLM calls; the interrupted stage continues from its last "
+        "saved trial / phase.",
+    ),
+    no_checkpoint: bool = typer.Option(
+        False, "--no-checkpoint",
+        help="Disable per-trial / per-phase checkpointing for this run.",
+    ),
 ):
     """Run the complete end-to-end RAG optimization experiment.
 
@@ -175,6 +188,8 @@ def experiment(
             llm_max_retries=llm_max_retries,
             system_instruction=resolved_instruction,
             save=not no_save,
+            resume=resume,
+            no_checkpoint=no_checkpoint,
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc

@@ -1034,6 +1034,8 @@ def _run_one_mode(
     chunks_master: list[str],
     records: list[DatasetRecord],
     mode: str,
+    *,
+    ckpts: _ExperimentCheckpoints | None = None,
 ) -> dict:
     """Drive one GT mode through Joint (BO) + Generation (DSPy MIPROv2).
 
@@ -1043,13 +1045,20 @@ def _run_one_mode(
     comes from ``GenerationOptimizer``'s extras. Both produce the
     exact same shape they did pre-PR3 (locked in by the
     ``new_demo1`` / ``new_demo2`` snapshot tests).
+
+    ``ckpts`` threads the per-(mode, stage) experiment checkpoints into
+    the stage optimizers, which save after every BO trial / generation
+    phase. ``None`` (the default, and what unit tests pass implicitly)
+    keeps the no-checkpoint behaviour.
     """
     objective = (cfg.objective_overrides or {}).get(mode) or default_objective(mode)
     metrics = _build_ragas_metrics_for_mode(mode)
     base_rag_config = _make_rag_config(cfg, runtime)
     re_chunk_fn = _make_pdf_re_chunk_fn(cfg, chunks_master)
+    ckpt_store = ckpts.store if ckpts is not None else None
 
     # --- Stage 1: Joint BO over (chunk_size, chunk_overlap, top_k) ----
+    ckpt_joint = ckpts.get(mode, "joint") if ckpts is not None else None
     joint_ctx = StageContext(
         base_config=base_rag_config,
         chunks_master=chunks_master,
@@ -1065,8 +1074,12 @@ def _run_one_mode(
         chunk_sizes=cfg.chunk_sizes,
         chunk_overlaps=cfg.chunk_overlaps,
         top_ks=cfg.top_ks,
+        checkpoint=ckpt_joint,
+        checkpoint_store=ckpt_store,
     )
     joint_result = JointOptimizer().optimize(joint_ctx)
+    if ckpts is not None:
+        ckpts.complete(ckpt_joint)
 
     # --- Build the BO winner's pipeline + pre-retrieve records --------
     # GenerationOptimizer operates on records that already carry
@@ -1094,7 +1107,8 @@ def _run_one_mode(
         for r in records
     ]
 
-    # --- Stage 2: Generation (DSPy MIPROv2 prompt optimization) -------
+    # --- Stage 2: Generation (DSPy prompt optimization) ---------------
+    ckpt_gen = ckpts.get(mode, "generation") if ckpts is not None else None
     gen_ctx = StageContext(
         base_config=winner_config,
         chunks_master=winner_chunks,
@@ -1103,8 +1117,12 @@ def _run_one_mode(
         metrics=metrics,
         runtime=runtime,
         label=mode,
+        checkpoint=ckpt_gen,
+        checkpoint_store=ckpt_store,
     )
     gen_result = GenerationOptimizer().optimize(gen_ctx)
+    if ckpts is not None:
+        ckpts.complete(ckpt_gen)
 
     # --- Stage 3: deepeval supplement (item 1) -----------------------
     # ragas gives us context_precision / faithfulness / answer_relevancy.
@@ -1685,6 +1703,109 @@ def migrate_legacy_bundle(bundle: dict) -> dict:
 
 
 # =====================================================================
+# Experiment checkpointing
+# =====================================================================
+# One ``ragdx experiment`` run spans up to four long stages (2 modes x
+# {joint BO, DSPy generation}), each resumable on its own. We persist
+# one Checkpoint per (mode, stage), tied together by an
+# ``experiment_group`` id in ``cli_args`` so ``--resume`` can pick the
+# whole set back up. Completed stages replay from their checkpoint in
+# seconds (zero LLM calls); the interrupted stage continues from its
+# last completed trial / phase.
+class _ExperimentCheckpoints:
+    """Per-(mode, stage) checkpoint registry for one experiment run."""
+
+    def __init__(self, resume: str = "", enabled: bool = True) -> None:
+        self.enabled = enabled
+        self.store = None
+        self.group_id = ""
+        self._by_key: dict[tuple[str, str], Any] = {}
+        if not enabled:
+            return
+        from uuid import uuid4
+
+        from ragdx.checkpoint import CheckpointStore
+        self.store = CheckpointStore()
+        if resume:
+            # Group ALL experiment checkpoints (any status: completed
+            # stages replay instantly, interrupted ones continue).
+            groups: dict[str, list] = {}
+            for c in self.store.list():
+                if c.kind != "experiment":
+                    continue
+                g = str(c.cli_args.get("experiment_group") or "")
+                if g:
+                    groups.setdefault(g, []).append(c)
+            resumable = {
+                g: cs for g, cs in groups.items()
+                if any(c.status != "completed" for c in cs)
+            }
+            if resume.lower() in {"auto", "latest", "true"}:
+                if not resumable:
+                    raise ValueError(
+                        "No interrupted experiment checkpoint to resume. "
+                        "Run `ragdx checkpoints` to see what's stored."
+                    )
+                self.group_id = max(
+                    resumable,
+                    key=lambda g: max(c.updated_at for c in resumable[g]),
+                )
+            else:
+                if resume not in groups:
+                    raise ValueError(
+                        f"No experiment checkpoints for group {resume!r}. "
+                        "Run `ragdx checkpoints` to see what's stored."
+                    )
+                self.group_id = resume
+            for c in groups[self.group_id]:
+                key = (
+                    str(c.cli_args.get("mode") or ""),
+                    str(c.cli_args.get("stage") or ""),
+                )
+                if c.status != "completed":
+                    c.status = "running"
+                    c.interrupted_reason = ""
+                self._by_key[key] = c
+            logger.info(
+                "Resuming experiment group %s (%d stage checkpoint(s): %s)",
+                self.group_id, len(self._by_key),
+                ", ".join(f"{m}/{s}" for m, s in self._by_key),
+            )
+        else:
+            self.group_id = "exp_" + uuid4().hex[:8]
+
+    def get(self, mode: str, stage: str, *, name: str = "") -> Any:
+        """Fetch (resume) or create the checkpoint for ``(mode, stage)``."""
+        if not self.enabled or self.store is None:
+            return None
+        key = (mode, stage)
+        ck = self._by_key.get(key)
+        if ck is None:
+            from ragdx.checkpoint import Checkpoint
+            ck = Checkpoint(
+                kind="experiment",
+                name=name or f"experiment/{mode}/{stage}",
+                cli_args={
+                    "experiment_group": self.group_id,
+                    "mode": mode,
+                    "stage": stage,
+                },
+            )
+            self.store.save(ck)
+            self._by_key[key] = ck
+        return ck
+
+    def complete(self, ck: Any) -> None:
+        """Best-effort completion marker (never sinks the run)."""
+        if ck is None or self.store is None:
+            return
+        try:
+            self.store.mark_completed(ck.checkpoint_id)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("checkpoint finalize skipped: %s", exc)
+
+
+# =====================================================================
 # Public entry point
 # =====================================================================
 def run_experiment(
@@ -1709,6 +1830,8 @@ def run_experiment(
     llm_max_retries: int = 5,
     system_instruction: str | None = None,
     save: bool = True,
+    resume: str = "",
+    no_checkpoint: bool = False,
 ) -> ExperimentResult:
     """Run the complete demo pipeline once and return the bundle.
 
@@ -1810,6 +1933,18 @@ def run_experiment(
     runtime = _build_runtime(cfg)
     chunks_master, base_records, source_meta = _load_corpus_and_records(cfg, runtime)
 
+    # Checkpointing: one Checkpoint per (mode, stage), grouped by an
+    # experiment id. ``resume="auto"`` (or a group id) picks the run
+    # back up -- completed stages replay without LLM calls, the
+    # interrupted stage continues from its last saved trial / phase.
+    ckpts = _ExperimentCheckpoints(resume=resume, enabled=not no_checkpoint)
+    if ckpts.enabled and not resume:
+        logger.info(
+            "Experiment checkpoints enabled (group %s). Resume an "
+            "interrupted run with `ragdx experiment ... --resume %s` "
+            "(or --resume auto).", ckpts.group_id, ckpts.group_id,
+        )
+
     results_by_mode: dict[str, dict] = {}
     if cfg.mode in ("with_gt", "both"):
         records_gt = [
@@ -1819,7 +1954,8 @@ def run_experiment(
             for r in base_records
         ]
         results_by_mode["with_gt"] = _run_one_mode(
-            cfg, runtime, chunks_master, records_gt, "with_gt"
+            cfg, runtime, chunks_master, records_gt, "with_gt",
+            ckpts=ckpts,
         )
     if cfg.mode in ("no_gt", "both"):
         records_no = [
@@ -1829,7 +1965,8 @@ def run_experiment(
             for r in base_records
         ]
         results_by_mode["no_gt"] = _run_one_mode(
-            cfg, runtime, chunks_master, records_no, "no_gt"
+            cfg, runtime, chunks_master, records_no, "no_gt",
+            ckpts=ckpts,
         )
 
     bundle = _build_unified_bundle(cfg, results_by_mode, source_meta, base_records)
