@@ -810,6 +810,18 @@ def _delegate_to_tune(
     if result.best_config is not None:
         result.best_config.scrubbed_for_commit().to_yaml(opt_yaml)
         print(f"[green]Wrote optimized config[/green] {opt_yaml}")
+        # Ship-ready deliverables: final/rag_config.yaml + final/prompt.md.
+        # "final" = the most recent tune's winner; each tune verb
+        # overwrites it, so the folder always carries the latest state.
+        try:
+            from ragdx.experiments import _write_final_deliverables
+            written = _write_final_deliverables(
+                ws.root, {mode_label: result.best_config},
+            )
+            for p in written:
+                print(f"[green]Wrote deliverable[/green] {p}")
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"[yellow]final deliverables skipped:[/yellow] {exc}")
 
     # Save the run to RunStore + workspace history.
     run_id: str | None = None

@@ -1152,6 +1152,10 @@ def _run_one_mode(
         # ``_dspy_before_after``.
         "dspy_a_b": gen_result.extras,
         "objective_spec": objective.to_dict(),
+        # The fully-optimized RAGConfig (BO winner params + DSPy winner
+        # prompt). In-memory object -- ``run_experiment`` pops it before
+        # the bundle is serialized and writes it to ``final/``.
+        "final_config": gen_result.best_config or winner_config,
     }
 
 
@@ -1705,6 +1709,46 @@ def migrate_legacy_bundle(bundle: dict) -> dict:
 
 
 # =====================================================================
+# Final deliverables (final/rag_config.yaml + final/prompt.md)
+# =====================================================================
+def _write_final_deliverables(
+    out_dir: Path,
+    final_configs: dict[str, Any],
+) -> list[Path]:
+    """Write the ship-ready artifacts into ``<out_dir>/final/``.
+
+    Two files per optimized config:
+
+    * ``rag_config.yaml`` -- the fully-optimized :class:`RAGConfig`
+      (BO winner params + DSPy winner prompt), credentials scrubbed.
+      Drop-in: point ``ragdx evaluate -c`` (or your own loader) at it.
+    * ``prompt.md`` -- just the winning ``system_instruction`` as
+      markdown, for prompt review / hand-off without YAML noise.
+
+    Single mode writes unsuffixed names; multi-mode runs write
+    ``rag_config.<mode>.yaml`` / ``prompt.<mode>.md`` per mode.
+    Returns the written paths. Best-effort caller-side: a failure to
+    write deliverables must never sink the run that produced them.
+    """
+    final_dir = Path(out_dir) / "final"
+    final_dir.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    multi = len(final_configs) > 1
+    for mode, config in final_configs.items():
+        if config is None:
+            continue
+        suffix = f".{mode}" if multi else ""
+        cfg_path = final_dir / f"rag_config{suffix}.yaml"
+        prompt_path = final_dir / f"prompt{suffix}.md"
+        scrubbed = config.scrubbed_for_commit()
+        scrubbed.to_yaml(cfg_path)
+        prompt_text = scrubbed.generator.system_instruction or ""
+        prompt_path.write_text(prompt_text, encoding="utf-8")
+        written.extend([cfg_path, prompt_path])
+    return written
+
+
+# =====================================================================
 # Experiment checkpointing
 # =====================================================================
 # One ``ragdx experiment`` run spans up to four long stages (2 modes x
@@ -1971,12 +2015,27 @@ def run_experiment(
             ckpts=ckpts,
         )
 
+    # Pop the in-memory final configs before serializing the bundle;
+    # they ship as ``final/`` files, not JSON.
+    final_configs = {
+        m: payload.pop("final_config", None)
+        for m, payload in results_by_mode.items()
+    }
+
     bundle = _build_unified_bundle(cfg, results_by_mode, source_meta, base_records)
 
     output_path = cfg.output_dir / "result.json"
     result = ExperimentResult(config=cfg, bundle=bundle, output_path=output_path)
     if save:
         result.save()
+        # Ship-ready deliverables next to the bundle: the optimized
+        # RAGConfig + the winning prompt as plain markdown.
+        try:
+            written = _write_final_deliverables(cfg.output_dir, final_configs)
+            for p in written:
+                logger.info("final deliverable written: %s", p)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("final deliverables skipped: %s", exc)
     return result
 
 

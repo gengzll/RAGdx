@@ -55,6 +55,9 @@ ragdx experiment-report workspaces/end2end_demo/result.json \
 |---|---|
 | `result.json` | ONE bundle with `bayes_search` (BO trials) + `dspy_a_b` (prompt before/after) + `diagnosis` (baseline → optimized → comparison), all from the single run |
 | `report.html` | the complete report: run metadata, baseline diagnosis, BO search + per-record metrics, **DSPy answer diff + candidate evolution timeline**, comparison, optimized diagnosis, causal-graph SVG, run cost |
+| `final/rag_config.yaml` | **the ship-ready deliverable**: the fully-optimized RAGConfig (BO winner params + DSPy winner prompt), credentials scrubbed — point `ragdx evaluate -c` at it |
+| `final/prompt.md` | the winning system prompt as plain markdown, for prompt review / hand-off without YAML noise |
+| `console.log` | the full execution transcript |
 
 The report's "Diagnosis (baseline)" section here describes the
 post-BO-pre-DSPy state, and "Diagnosis (optimized)" + "comparison"
@@ -122,6 +125,8 @@ escalation ladder instead of repeating the same advice.
 | `rag_optimized.tune_rag.yaml` | the tuned config (api_key scrubbed) |
 | `post_1.eval.json` / `post_1.eval.diagnose.json` | after optimization (**escalated** advice) |
 | `report.html` | baseline → comparison → optimized diagnoses side-by-side |
+| `final/rag_config.yaml` + `final/prompt.md` | **ship-ready deliverables** — the latest tune's winner config + its prompt; every tune verb refreshes them |
+| `console.log` | the full execution transcript |
 | `.ragdx/` | workspace-local store: RunStore, **causal priors**, and **checkpoints** — see below |
 
 ---

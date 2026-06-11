@@ -393,19 +393,19 @@
     "no_gt": {
       "baseline_scores": {
         "context_precision": 0.9999999999,
-        "faithfulness": 0.8888888888888888
+        "faithfulness": 0.9259259259259259
       },
       "optimized_scores": {
         "context_precision": 0.9999999999,
-        "faithfulness": 1.0,
+        "faithfulness": 0.9583333333333334,
         "hallucination": 0.0,
         "bias": 0.0,
         "toxicity": 0.0,
-        "g_eval": 0.9667
+        "g_eval": 0.9333
       },
       "delta": {
         "context_precision": 0.0,
-        "faithfulness": 0.11111111111111116
+        "faithfulness": 0.03240740740740744
       },
       "composite": {
         "objective_spec": {
@@ -423,16 +423,16 @@
           "mode": "weighted_sum"
         },
         "baseline": {
-          "score": 1.6333333333033333,
+          "score": 1.6888888888588889,
           "feasible": true,
           "violations": []
         },
         "optimized": {
-          "score": 1.79999999997,
+          "score": 1.73749999997,
           "feasible": true,
           "violations": []
         },
-        "delta": 0.16666666666666674
+        "delta": 0.04861111111111116
       },
       "baseline_sample_answers": [
         "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations. This is inferred from the context which states, \"In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.\"",
@@ -440,9 +440,9 @@
         "The adjustments made to the ESG Material Factors by the Group include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were made to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena."
       ],
       "optimized_sample_answers": [
-        "The primary focus of ASMPT’s WORKS Optimisation system is to take a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations.",
-        "The primary reasons for ASMPT's success, according to the passage, are:\n1. Differentiation - ASMPT's distinctiveness from the competition.\n2. Market Leadership - ASMPT's position as a leader in its businesses, technologies, and partnerships.\n3. Quality - ASMPT's unwavering commitment to quality across the company.\n4. People - The experience, commitment, and performance of ASMPT's employees, along with a strong corporate culture promoting diversity, inclusion, and equal opportunity.\n5. Innovation - ASMPT's focus on innovation and investment in advanced technologies.",
-        "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. Specifically, they incorporated four additional ESG Material Factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies."
+        "The primary focus of ASMPT's WORKS Optimisation system is to take a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations. This holistic approach is aimed at enhancing quality control and efficiency throughout the entire SMT (Surface Mount Technology) line.",
+        "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people. This is supported by the statement, \"The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people.\"",
+        "The Group made adjustments to the ESG Material Factors by incorporating four additional factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These changes were made to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena, based on the common expectations of key stakeholders and recommendations from industry standards bodies and ESG ratings agencies."
       ],
       "records": [
         {
@@ -452,7 +452,7 @@
             "Governance34 Zero DPMO through Collaboration and Integration The Group aims to achieve zero DPMO through the integration of intelligent quality control along the en- tire SMT line with ASMPT’s hardware and software. In terms of hardware quality control, ASMPT utilis- es the Process Lens solder paste inspection (SPI) system that can measure each solder paste depos- it and detects even the smallest deviations and trends. The exceptional performance of the SPI sys- tem makes it possible to carry out comprehensive measurements without significantly affecting the overall production time. This capability facilitates more stable printing processes, resulting in in - creased throughput and higher yields. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side"
           ],
           "baseline_answer": "The primary focus of ASMPT’s WORKS Optimisation system is on taking a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that focus on individual products and manufacturing stations. This is inferred from the context which states, \"In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side.\"",
-          "optimized_answer": "The primary focus of ASMPT’s WORKS Optimisation system is to take a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations."
+          "optimized_answer": "The primary focus of ASMPT's WORKS Optimisation system is to take a comprehensive view of the entire operational process on the software side, in contrast to traditional inspection systems that typically focus on individual products and manufacturing stations. This holistic approach is aimed at enhancing quality control and efficiency throughout the entire SMT (Surface Mount Technology) line."
         },
         {
           "question": "What is the primary reason for ASMPT's success according to the passage?",
@@ -461,7 +461,7 @@
             "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values"
           ],
           "baseline_answer": "The primary reason for ASMPT's success, according to the passage, is the unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people. This is supported by the statement, \"The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people.\"",
-          "optimized_answer": "The primary reasons for ASMPT's success, according to the passage, are:\n1. Differentiation - ASMPT's distinctiveness from the competition.\n2. Market Leadership - ASMPT's position as a leader in its businesses, technologies, and partnerships.\n3. Quality - ASMPT's unwavering commitment to quality across the company.\n4. People - The experience, commitment, and performance of ASMPT's employees, along with a strong corporate culture promoting diversity, inclusion, and equal opportunity.\n5. Innovation - ASMPT's focus on innovation and investment in advanced technologies."
+          "optimized_answer": "The primary reason for ASMPT's success, according to the passage, is its unwavering commitment to quality, which permeates every facet of the company and is evident in the daily actions of its people. This is supported by the statement, \"The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people.\""
         },
         {
           "question": "What adjustments were made to the ESG Material Factors by the Group to enhance clarity and alignment with industry standards?",
@@ -470,7 +470,7 @@
             ". The assessment identified nine “very high materiality” factors and ten “high materiality” factors that cut across the environmental, social and governance domains (“ESG Material Factors”), as shown in the figure below. All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors"
           ],
           "baseline_answer": "The adjustments made to the ESG Material Factors by the Group include the addition of four new factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were made to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena.",
-          "optimized_answer": "The Group made adjustments to the ESG Material Factors to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena. Specifically, they incorporated four additional ESG Material Factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These adjustments were based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies."
+          "optimized_answer": "The Group made adjustments to the ESG Material Factors by incorporating four additional factors: \"Product sustainability & Innovation\", \"Customer Relationship Management\", \"Environmental Compliance\", and \"Cybersecurity & IP Protection\". These changes were made to enhance clarity, consistency, and alignment with recognized standards and practices in the industry and ESG arena, based on the common expectations of key stakeholders and recommendations from industry standards bodies and ESG ratings agencies."
         }
       ],
       "baseline_instructions": {
@@ -480,7 +480,7 @@
         "predict": []
       },
       "instructions": {
-        "predict": "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance and governance.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the"
+        "predict": "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG initiatives.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the results in the context of the company's industry and historical performance.\n- Retrieval focus: Focus on the Income Statement, Balance Sheet, and Cash Flow Statement sections; use reasoning patterns such as data extraction and ratio analysis.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## esg_performance_evaluation\nEvaluate a company's ESG performance and initiatives.\n- Must cover: ESG metrics, sustainability goals, stakeholder engagement\n- How to answer: Review the ESG report and annual report to identify ESG metrics and goals; assess the effectiveness of sustainability initiatives and stakeholder engagement efforts.\n- Retrieval focus: Focus on the ESG report and relevant sections of the annual report; use reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in ESG reporting.\n\n## governance_structure_analysis\nAssess the structure and effectiveness of a company's corporate governance.\n- Must cover: board of directors, audit committee, governance policies\n- How to answer: Examine the governance report and annual report to understand the governance structure; evaluate the effectiveness of governance practices and board composition.\n- Retrieval focus: Retrieve governance reports and relevant sections of the annual report; apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## stakeholder_relations_inspection\nEvaluate a company's relationships with stakeholders.\n- Must cover: employee relations, customer satisfaction, community engagement\n- How to answer: Review the annual report, ESG report, and other relevant documents to assess stakeholder relations; identify specific initiatives aimed at improving these relationships.\n- Retrieval focus: Access annual reports, ESG reports, and other relevant documents; utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported stakeholder data.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support; offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# NEW INSTRUCTION\n## Inputs\n### question\nWhat are the key sustainability goals and initiatives of ASMPT, and how do they align with industry standards and best practices?\n\n### context\nASMPT Limited Environmental, Social and Governance Report 2023\n- The report outlines ASMPT's sustainability goals and initiatives, including a commitment to reducing carbon emissions, improving energy efficiency, and promoting responsible sourcing.\n- The report also discusses ASMPT's alignment with industry standards and best practices, such as ISO 14001 for environmental management and ISO 26000 for social responsibility.\n- The report highlights specific projects and achievements, such as the implementation of a new energy-efficient production line and the establishment of a sustainability committee.\n\n## Generated Outputs\n### reasoning\nThe question asks for the key sustainability goals and initiatives of ASMPT, as well as how they align with industry standards and best practices. The context provided in the ESG report outlines ASMPT's sustainability goals and initiatives, including specific projects and achievements. It also mentions the alignment with recognized industry standards and best practices. The reasoning involves identifying the key goals and initiatives, as well as the alignment with industry standards.\n\n### answer\nASMPT's key sustainability goals and initiatives include a commitment to reducing carbon emissions, improving energy efficiency, and promoting responsible sourcing. These goals align with industry standards and best practices, as evidenced by ASMPT's implementation of ISO 14001 for environmental management and ISO 26000 for social responsibility. Specific projects and achievements include the implementation of a new energy-efficient production line and the establishment of a sustainability committee.\n\n## Feedback\nEnsure that the assistant's response includes the following:\n- A clear identification of ASMPT's key sustainability goals and initiatives.\n- A discussion of how these goals and initiatives align with industry standards and best practices.\n- Citing specific examples from the provided context to support the answer."
       },
       "demos": {
         "predict": []
@@ -494,10 +494,10 @@
       "proposed_instructions_by_predictor": {
         "predict": [
           "# ROLE\nYou are a precise, document-grounded assistant specialized in ESG initiatives, financial statements, governance structure, employee relations, customer satisfaction. You answer questions strictly using the retrieved document context provided at query time.\n\n# CONTEXT\n- ESG reporting\n- financial performance\n- corporate governance\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: sustainability objectives (ESG goals, sustainable goals); financial performance metrics (financial indicators, performance metrics); board of directors (board, directors); employee engagement (employee relations, employee satisfaction); customer base (customer segment, customer group); governance practices (governance policies, governance strategies); risk management (risk mitigation, risk assessment); community impact (community engagement, community impact initiatives); executive leadership (executive team, management)\n\nQuantities you'll see: financial amounts, percentages, emissions, employee numbers, customer numbers, energy consumption, date ranges\n\nWhere answers live: financial statements, annual reports, ESG reports, governance reports, employee reports, customer reports, community reports\n\n# ANSWER POLICY\n- Cite the supporting context for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_performance_analysis\nIdentify financial performance metrics and trends over time.\n- Must cover: financial performance metrics; date ranges\n- How to answer: Analyze financial statements and annual reports to extract relevant metrics.; Compare metrics across different periods to identify trends.\n- Retrieval focus: Focus on the financial statements and annual reports sections.; Use reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## governance_structure_evaluation\nAssess the structure and effectiveness of corporate governance.\n- Must cover: governance structure; governance practices; board of directors\n- How to answer: Examine governance reports and annual reports to understand the governance structure.; Evaluate the effectiveness of governance practices and the composition of the board of directors.\n- Retrieval focus: Retrieve governance reports and annual reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## employee_engagement_inspection\nEvaluate employee engagement levels and initiatives.\n- Must cover: employee engagement; employee relations; ESG initiatives\n- How to answer: Review employee reports and ESG reports to assess engagement levels.; Identify specific initiatives aimed at improving employee engagement.\n- Retrieval focus: Access employee reports and ESG reports.; Utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported engagement data.\n\n## customer_satisfaction_assessment\nAnalyze customer satisfaction trends and factors.\n- Must cover: customer satisfaction; customer base; customer reports\n- How to answer: Examine customer reports and annual reports to understand satisfaction levels.; Identify factors contributing to customer satisfaction or dissatisfaction.\n- Retrieval focus: Focus on customer reports and annual reports.; Apply reasoning patterns such as extraction and comparison.\n- Watch out for: Be cautious of overreliance on customer surveys that may not represent the entire customer base.\n\n## community_impact_evaluation\nAssess the impact of the company on the local community.\n- Must cover: community impact; ESG initiatives; community reports\n- How to answer: Review community reports and ESG reports to understand community impact.; Evaluate the effectiveness of community initiatives and their outcomes.\n- Retrieval focus: Access community reports and ESG reports.; Apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in community impact reporting.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support.; Offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# TASK\nUse ONLY the context below to answer the user's question.\n\nContext:\n{context}\n\nQuestion:\n{question}",
-          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance and governance.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the",
-          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG strategies.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate",
-          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG initiatives.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate",
-          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG strategies.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate"
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance and governance.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the results in the context of the company's industry and historical performance.\n- Retrieval focus: Focus on the Income Statement, Balance Sheet, and Cash Flow Statement sections; use reasoning patterns such as data extraction and ratio analysis.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## esg_performance_evaluation\nEvaluate a company's ESG performance and initiatives.\n- Must cover: ESG metrics, sustainability goals, stakeholder engagement\n- How to answer: Review the ESG report and annual report to identify ESG metrics and goals; assess the effectiveness of sustainability initiatives and stakeholder engagement efforts.\n- Retrieval focus: Focus on the ESG report and relevant sections of the annual report; use reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in ESG reporting.\n\n## governance_structure_analysis\nAssess the structure and effectiveness of a company's corporate governance.\n- Must cover: board of directors, audit committee, governance policies\n- How to answer: Examine the governance report and annual report to understand the governance structure; evaluate the effectiveness of governance practices and board composition.\n- Retrieval focus: Retrieve governance reports and relevant sections of the annual report; apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## stakeholder_relations_inspection\nEvaluate a company's relationships with stakeholders.\n- Must cover: employee relations, customer satisfaction, community engagement\n- How to answer: Review the annual report, ESG report, and other relevant documents to assess stakeholder relations; identify specific initiatives aimed at improving these relationships.\n- Retrieval focus: Access annual reports, ESG reports, and other relevant documents; utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported stakeholder data.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support; offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG initiatives.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the results in the context of the company's industry and historical performance.\n- Retrieval focus: Focus on the Income Statement, Balance Sheet, and Cash Flow Statement sections; use reasoning patterns such as data extraction and ratio analysis.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## esg_performance_evaluation\nEvaluate a company's ESG performance and initiatives.\n- Must cover: ESG metrics, sustainability goals, stakeholder engagement\n- How to answer: Review the ESG report and annual report to identify ESG metrics and goals; assess the effectiveness of sustainability initiatives and stakeholder engagement efforts.\n- Retrieval focus: Focus on the ESG report and relevant sections of the annual report; use reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in ESG reporting.\n\n## governance_structure_analysis\nAssess the structure and effectiveness of a company's corporate governance.\n- Must cover: board of directors, audit committee, governance policies\n- How to answer: Examine the governance report and annual report to understand the governance structure; evaluate the effectiveness of governance practices and board composition.\n- Retrieval focus: Retrieve governance reports and relevant sections of the annual report; apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## stakeholder_relations_inspection\nEvaluate a company's relationships with stakeholders.\n- Must cover: employee relations, customer satisfaction, community engagement\n- How to answer: Review the annual report, ESG report, and other relevant documents to assess stakeholder relations; identify specific initiatives aimed at improving these relationships.\n- Retrieval focus: Access annual reports, ESG reports, and other relevant documents; utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported stakeholder data.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support; offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# NEW INSTRUCTION\n## Inputs\n### question\nWhat are the key sustainability initiatives implemented by the company in the last fiscal year, and how do these initiatives align with the company's ESG goals?\n\n### context\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG report for the last fiscal year\n- Annual report for the last fiscal year\n- Governance report for the last fiscal year\n\n## Detailed Task Description\n- Extract and synthesize information from the provided financial statements, ESG report, annual report, and governance report.\n- Identify the key sustainability initiatives implemented by the company in the last fiscal year.\n- Analyze how these initiatives align with the company's ESG goals as outlined in the ESG report and annual report.\n- Use financial ratios and key performance indicators to assess the impact of these initiatives on the company's financial performance.\n- Evaluate the effectiveness of the governance structure in supporting these sustainability initiatives.\n- Provide a comprehensive analysis of the company's ESG performance and governance practices in relation to the sustainability initiatives.\n\n## Niche and Domain Specific Factual Information\n- ESG Material Factors (e.g., Product sustainability & Innovation, Customer Relationship Management, Environmental Compliance, Cybersecurity & IP Protection)\n- Key Performance Indicators (KPIs) for sustainability (e.g., carbon emissions reduction, water usage reduction, waste reduction)\n- Financial ratios relevant to sustainability (e.g., return on investment in sustainability initiatives, cost savings from sustainability initiatives)\n\n## Generalizable Strategy\n- Use the provided context to identify the key sustainability initiatives and their alignment with ESG goals.\n- Analyze financial data to assess the impact of these initiatives on the company's financial performance.\n- Evaluate the governance structure to determine its effectiveness in supporting sustainability initiatives.\n- Synthesize the information to provide a comprehensive analysis of the company's ESG performance and governance practices.",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG initiatives.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the results in the context of the company's industry and historical performance.\n- Retrieval focus: Focus on the Income Statement, Balance Sheet, and Cash Flow Statement sections; use reasoning patterns such as data extraction and ratio analysis.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## esg_performance_evaluation\nEvaluate a company's ESG performance and initiatives.\n- Must cover: ESG metrics, sustainability goals, stakeholder engagement\n- How to answer: Review the ESG report and annual report to identify ESG metrics and goals; assess the effectiveness of sustainability initiatives and stakeholder engagement efforts.\n- Retrieval focus: Focus on the ESG report and relevant sections of the annual report; use reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in ESG reporting.\n\n## governance_structure_analysis\nAssess the structure and effectiveness of a company's corporate governance.\n- Must cover: board of directors, audit committee, governance policies\n- How to answer: Examine the governance report and annual report to understand the governance structure; evaluate the effectiveness of governance practices and board composition.\n- Retrieval focus: Retrieve governance reports and relevant sections of the annual report; apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## stakeholder_relations_inspection\nEvaluate a company's relationships with stakeholders.\n- Must cover: employee relations, customer satisfaction, community engagement\n- How to answer: Review the annual report, ESG report, and other relevant documents to assess stakeholder relations; identify specific initiatives aimed at improving these relationships.\n- Retrieval focus: Access annual reports, ESG reports, and other relevant documents; utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported stakeholder data.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support; offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# NEW INSTRUCTION\n## Inputs\n### question\nWhat are the key sustainability initiatives implemented by the company, and how do they align with the company's overall strategy?\n\n### context\n- The company has implemented a comprehensive sustainability strategy that includes initiatives in energy efficiency, waste reduction, and community engagement.\n- The strategy is aligned with the company's long-term vision of becoming a leader in sustainable business practices.\n- The company has achieved significant milestones in reducing its carbon footprint and has been recognized for its efforts in sustainability by various industry awards.\n- The sustainability initiatives are integrated into the company's operational processes and are supported by a dedicated sustainability team.\n\n## Generated Outputs\n### reasoning\nThe question asks for the key sustainability initiatives implemented by the company and how they align with the company's overall strategy. The context provided outlines the company's sustainability strategy, the milestones achieved, and the integration of these initiatives into operational processes. The reasoning involves identifying the specific initiatives and their alignment with the company's strategy.\n\n### answer\nThe key sustainability initiatives implemented by the company include energy efficiency, waste reduction, and community engagement. These initiatives align with the company's overall strategy of becoming a leader in sustainable business practices, as evidenced by the integration into operational processes and the support of a dedicated sustainability team. The company has achieved significant milestones in reducing its carbon footprint and has been recognized for its sustainability efforts.\n\n## Feedback\nThis trajectory got a score of 2.123456789012345.",
+          "# ROLE\nYou are a specialized assistant with expertise in analyzing and interpreting financial reports, particularly those related to ESG (Environmental, Social, and Governance) initiatives. Your role is to extract and synthesize information from provided financial statements and reports to answer specific questions about a company's performance, governance, and ESG initiatives.\n\n# CONTEXT\n- Financial statements (Income Statement, Balance Sheet, Cash Flow Statement)\n- ESG reports\n- Annual reports\n- Governance reports\n\n# DOMAIN KNOWLEDGE\n\nVocabulary: ESG reporting framework (materiality assessment, key performance indicators), financial ratios (profitability ratios, liquidity ratios), governance mechanisms (board composition, audit committee), stakeholder engagement (employee relations, customer satisfaction), sustainability metrics (carbon footprint, water usage), regulatory compliance (environmental regulations, labor laws)\n\nQuantities you'll see: revenue, expenses, net income, assets, liabilities, equity, return on assets, return on equity, employee headcount, customer growth rate, carbon emissions, water usage, regulatory citations\n\nWhere answers live: financial statements, ESG reports, annual reports, governance reports\n\n# ANSWER POLICY\n- Cite the specific section and page number of the document for every factual claim.\n- Use only the provided context. Do not rely on outside or prior knowledge.\n- If the context does not contain the answer, say so explicitly.\n- A partial answer is acceptable; clearly mark what is and isn't supported.\n- Never invent values, dates, names, or citations.\n- verify financial data accuracy\n- consider risk factors in governance\n- validate sustainability claims\n- ensure compliance with regulations\n\n# QUERY-TYPE PLAYBOOK\nIdentify the question's type, then follow the matching guidance:\n\n## financial_statement_analysis\nAnalyze financial statements to determine a company's financial health and performance.\n- Must cover: financial ratios, key performance indicators, financial trends\n- How to answer: Extract data from the financial statements and calculate relevant ratios; interpret the results in the context of the company's industry and historical performance.\n- Retrieval focus: Focus on the Income Statement, Balance Sheet, and Cash Flow Statement sections; use reasoning patterns such as data extraction and ratio analysis.\n- Watch out for: Be cautious of accounting changes that may affect the comparability of financial data.\n\n## esg_performance_evaluation\nEvaluate a company's ESG performance and initiatives.\n- Must cover: ESG metrics, sustainability goals, stakeholder engagement\n- How to answer: Review the ESG report and annual report to identify ESG metrics and goals; assess the effectiveness of sustainability initiatives and stakeholder engagement efforts.\n- Retrieval focus: Focus on the ESG report and relevant sections of the annual report; use reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential greenwashing in ESG reporting.\n\n## governance_structure_analysis\nAssess the structure and effectiveness of a company's corporate governance.\n- Must cover: board of directors, audit committee, governance policies\n- How to answer: Examine the governance report and annual report to understand the governance structure; evaluate the effectiveness of governance practices and board composition.\n- Retrieval focus: Retrieve governance reports and relevant sections of the annual report; apply reasoning patterns such as policy interpretation and metric analysis.\n- Watch out for: Be aware of potential conflicts of interest within the board of directors.\n\n## stakeholder_relations_inspection\nEvaluate a company's relationships with stakeholders.\n- Must cover: employee relations, customer satisfaction, community engagement\n- How to answer: Review the annual report, ESG report, and other relevant documents to assess stakeholder relations; identify specific initiatives aimed at improving these relationships.\n- Retrieval focus: Access annual reports, ESG reports, and other relevant documents; utilize reasoning patterns such as extraction and comparison.\n- Watch out for: Consider the potential for bias in self-reported stakeholder data.\n\n## insufficient_evidence\nQuestions the corpus cannot answer or only partially supports.\n- Must cover: what is present; what is missing\n- How to answer: State clearly what the documents do and do not support; offer the partial answer if any.\n- Retrieval focus: Confirm absence by checking the most likely sections.\n- Watch out for: Do not fabricate an answer to seem helpful.\n\n# NEW INSTRUCTION\n## Inputs\n### question\nWhat are the key sustainability goals and initiatives of ASMPT, and how do they align with industry standards and best practices?\n\n### context\nASMPT Limited Environmental, Social and Governance Report 2023\n- The report outlines ASMPT's sustainability goals and initiatives, including a commitment to reducing carbon emissions, improving energy efficiency, and promoting responsible sourcing.\n- The report also discusses ASMPT's alignment with industry standards and best practices, such as ISO 14001 for environmental management and ISO 26000 for social responsibility.\n- The report highlights specific projects and achievements, such as the implementation of a new energy-efficient production line and the establishment of a sustainability committee.\n\n## Generated Outputs\n### reasoning\nThe question asks for the key sustainability goals and initiatives of ASMPT, as well as how they align with industry standards and best practices. The context provided in the ESG report outlines ASMPT's sustainability goals and initiatives, including specific projects and achievements. It also mentions the alignment with recognized industry standards and best practices. The reasoning involves identifying the key goals and initiatives, as well as the alignment with industry standards.\n\n### answer\nASMPT's key sustainability goals and initiatives include a commitment to reducing carbon emissions, improving energy efficiency, and promoting responsible sourcing. These goals align with industry standards and best practices, as evidenced by ASMPT's implementation of ISO 14001 for environmental management and ISO 26000 for social responsibility. Specific projects and achievements include the implementation of a new energy-efficient production line and the establishment of a sustainability committee.\n\n## Feedback\nEnsure that the assistant's response includes the following:\n- A clear identification of ASMPT's key sustainability goals and initiatives.\n- A discussion of how these goals and initiatives align with industry standards and best practices.\n- Citing specific examples from the provided context to support the answer."
         ]
       },
       "trial_log": [
@@ -509,33 +509,39 @@
         },
         {
           "trial": 1,
-          "score": 6.36858069313277,
+          "score": 6.331744489389845,
           "kind": "subsample (accepted)",
-          "params": "Iter 1: proposed score 6.37 vs prior best 6.32"
+          "params": "Iter 1: proposed score 6.33 vs prior best 6.32"
         },
         {
           "trial": 1,
-          "score": 2.122967445511702,
+          "score": 2.1105814964632814,
           "kind": "full valset eval (accepted)",
           "params": "Iter 1: added as program 1"
         },
         {
           "trial": 2,
-          "score": 6.351523865682809,
+          "score": 5.956569500471609,
           "kind": "subsample (rejected)",
-          "params": "Iter 2: proposed score 6.35 vs prior best 6.37"
+          "params": "Iter 2: proposed score 5.96 vs prior best 6.33"
         },
         {
           "trial": 3,
-          "score": 6.351523865682809,
+          "score": 6.315242685413435,
           "kind": "subsample (rejected)",
-          "params": "Iter 3: proposed score 6.35 vs prior best 6.37"
+          "params": "Iter 3: proposed score 6.32 vs prior best 6.33"
         },
         {
           "trial": 4,
-          "score": 6.351523865682809,
-          "kind": "subsample (rejected)",
-          "params": "Iter 4: proposed score 6.35 vs prior best 6.37"
+          "score": 6.349159277873836,
+          "kind": "subsample (accepted)",
+          "params": "Iter 4: proposed score 6.35 vs prior best 6.32"
+        },
+        {
+          "trial": 4,
+          "score": 2.116556337950232,
+          "kind": "full valset eval (accepted)",
+          "params": "Iter 4: added as program 2"
         }
       ],
       "gt_mode": "no_gt",
@@ -545,415 +551,14 @@
         "hallucination": 0.0,
         "bias": 0.0,
         "toxicity": 0.0,
-        "g_eval": 0.9667
+        "g_eval": 0.9333
       }
     }
   },
   "diagnosis": {
     "no_gt": {
       "baseline": {
-        "summary": "Weakest layer: generation (0.89). Layer scores: retrieval=1.00, generation=0.89. Primary bottleneck: generator is not grounding sufficiently on retrieved evidence. 1 diagnosis hypotheses were generated. Lead causal node: corpus_chunking_defect with posterior 0.96.",
-        "expected_thresholds": {
-          "context_precision": 0.8,
-          "context_recall": 0.8,
-          "context_entities_recall": 0.75,
-          "hit_rate_at_k": 0.85,
-          "faithfulness": 0.9,
-          "response_relevancy": 0.85,
-          "context_utilization": 0.75,
-          "noise_sensitivity": 0.2,
-          "hallucination": 0.1,
-          "answer_correctness": 0.85,
-          "answer_accuracy": 0.85,
-          "citation_accuracy": 0.85,
-          "user_success_rate": 0.85
-        },
-        "metric_gaps": {
-          "faithfulness": 0.0111
-        },
-        "hypotheses": [
-          {
-            "component": "generation",
-            "root_cause": "generator is not grounding sufficiently on retrieved evidence",
-            "severity": "high",
-            "confidence": 0.83,
-            "evidence": [
-              "faithfulness=0.89 is below target 0.90",
-              "context_recall=1.00 indicates at least some relevant evidence is available",
-              "context_utilization=1.00 suggests evidence may not be used effectively"
-            ],
-            "recommended_actions": [
-              "Optimize the synthesis prompt to require evidence-backed answers.",
-              "Use structured answer templates with citation requirements.",
-              "Add answer compression or a claim-verification stage."
-            ]
-          }
-        ],
-        "optimization_candidates": [
-          "dspy_prompt_optimization"
-        ],
-        "priority_actions": [
-          "Tune generator behavior after retrieval quality is acceptable.",
-          "Run parser and chunking search before retriever tuning."
-        ],
-        "causal_signals": [
-          {
-            "node": "corpus_chunking_defect",
-            "component": "retrieval",
-            "posterior": 0.9595,
-            "prior": 0.95,
-            "evidence": [
-              "Traces show a small number of retrieved chunks per query."
-            ],
-            "recommended_experiment": "Run parser and chunking search before retriever tuning."
-          },
-          {
-            "node": "retrieval_recall_defect",
-            "component": "retrieval",
-            "posterior": 0.9581,
-            "prior": 0.95,
-            "evidence": [
-              "Precision is acceptable, so evidence miss is more likely than noise."
-            ],
-            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
-          },
-          {
-            "node": "retrieval_precision_defect",
-            "component": "retrieval",
-            "posterior": 0.9545,
-            "prior": 0.95,
-            "evidence": [
-              "Sparse rerank spans suggest weak post-retrieval filtering."
-            ],
-            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-          },
-          {
-            "node": "grounding_defect",
-            "component": "generation",
-            "posterior": 0.953,
-            "prior": 0.95,
-            "evidence": [
-              "Verification spans are sparse.",
-              "faithfulness=0.89 is below target."
-            ],
-            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
-          },
-          {
-            "node": "citation_binding_defect",
-            "component": "e2e",
-            "posterior": 0.9278,
-            "prior": 0.9277,
-            "evidence": [],
-            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
-          },
-          {
-            "node": "context_packing_defect",
-            "component": "generation",
-            "posterior": 0.7498,
-            "prior": 0.7493,
-            "evidence": [],
-            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
-          },
-          {
-            "node": "distribution_shift",
-            "component": "e2e",
-            "posterior": 0.4907,
-            "prior": 0.4907,
-            "evidence": [],
-            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-          },
-          {
-            "node": "judge_or_metric_instability",
-            "component": "e2e",
-            "posterior": 0.3075,
-            "prior": 0.3075,
-            "evidence": [],
-            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
-          }
-        ],
-        "causal_graph": {
-          "nodes": [
-            {
-              "node": "corpus_chunking_defect",
-              "component": "retrieval",
-              "posterior": 0.9595,
-              "prior": 0.95,
-              "evidence": [
-                "Traces show a small number of retrieved chunks per query."
-              ],
-              "recommended_experiment": "Run parser and chunking search before retriever tuning."
-            },
-            {
-              "node": "retrieval_recall_defect",
-              "component": "retrieval",
-              "posterior": 0.9581,
-              "prior": 0.95,
-              "evidence": [
-                "Precision is acceptable, so evidence miss is more likely than noise."
-              ],
-              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
-            },
-            {
-              "node": "retrieval_precision_defect",
-              "component": "retrieval",
-              "posterior": 0.9545,
-              "prior": 0.95,
-              "evidence": [
-                "Sparse rerank spans suggest weak post-retrieval filtering."
-              ],
-              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-            },
-            {
-              "node": "grounding_defect",
-              "component": "generation",
-              "posterior": 0.953,
-              "prior": 0.95,
-              "evidence": [
-                "Verification spans are sparse.",
-                "faithfulness=0.89 is below target."
-              ],
-              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
-            },
-            {
-              "node": "citation_binding_defect",
-              "component": "e2e",
-              "posterior": 0.9278,
-              "prior": 0.9277,
-              "evidence": [],
-              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
-            },
-            {
-              "node": "context_packing_defect",
-              "component": "generation",
-              "posterior": 0.7498,
-              "prior": 0.7493,
-              "evidence": [],
-              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
-            },
-            {
-              "node": "distribution_shift",
-              "component": "e2e",
-              "posterior": 0.4907,
-              "prior": 0.4907,
-              "evidence": [],
-              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-            },
-            {
-              "node": "judge_or_metric_instability",
-              "component": "e2e",
-              "posterior": 0.3075,
-              "prior": 0.3075,
-              "evidence": [],
-              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
-            }
-          ],
-          "edges": [
-            {
-              "source": "corpus_chunking_defect",
-              "target": "retrieval_recall_defect",
-              "weight": 0.55,
-              "rationale": "Poor parsing and chunk boundaries directly suppress recall."
-            },
-            {
-              "source": "retrieval_recall_defect",
-              "target": "context_packing_defect",
-              "weight": 0.22,
-              "rationale": "Weak recall increases packing pressure on partial evidence."
-            },
-            {
-              "source": "retrieval_precision_defect",
-              "target": "context_packing_defect",
-              "weight": 0.18,
-              "rationale": "Noisy retrieval degrades packed context quality."
-            },
-            {
-              "source": "retrieval_precision_defect",
-              "target": "grounding_defect",
-              "weight": 0.45,
-              "rationale": "Noisy retrieval raises unsupported reasoning risk."
-            },
-            {
-              "source": "context_packing_defect",
-              "target": "grounding_defect",
-              "weight": 0.4,
-              "rationale": "Poor packing directly weakens grounding."
-            },
-            {
-              "source": "grounding_defect",
-              "target": "citation_binding_defect",
-              "weight": 0.3,
-              "rationale": "Unsupported claims often come with weak citation mapping."
-            },
-            {
-              "source": "judge_or_metric_instability",
-              "target": "distribution_shift",
-              "weight": 0.1,
-              "rationale": "Evaluator disagreement can indicate shift or judge mismatch."
-            },
-            {
-              "source": "distribution_shift",
-              "target": "retrieval_recall_defect",
-              "weight": 0.3,
-              "rationale": "Shifted traffic often first breaks evidence coverage."
-            },
-            {
-              "source": "distribution_shift",
-              "target": "grounding_defect",
-              "weight": 0.18,
-              "rationale": "Shifted domains also weaken grounding reliability."
-            }
-          ]
-        },
-        "evaluator_agreement": {},
-        "diagnosis_confidence": 0.83,
-        "disambiguation_actions": [
-          "Compare the same retrieved context under a citation-first prompt and a claim-then-evidence prompt."
-        ],
-        "layer_scores": {
-          "retrieval": {
-            "score": 1.0,
-            "metrics": {
-              "context_precision": 1.0
-            },
-            "raw": {
-              "context_precision": 0.9999999999
-            },
-            "n": 1
-          },
-          "generation": {
-            "score": 0.8889,
-            "metrics": {
-              "faithfulness": 0.8889
-            },
-            "raw": {
-              "faithfulness": 0.8888888888888888
-            },
-            "n": 1
-          },
-          "e2e": {
-            "score": null,
-            "metrics": {},
-            "raw": {},
-            "n": 0
-          }
-        },
-        "rule_based": {
-          "source": "rule",
-          "summary": "Weakest layer: generation (0.89). Layer scores: retrieval=1.00, generation=0.89. Primary bottleneck: generator is not grounding sufficiently on retrieved evidence. 1 diagnosis hypotheses were generated. Lead causal node: corpus_chunking_defect with posterior 0.96.",
-          "hypotheses": [
-            {
-              "component": "generation",
-              "root_cause": "generator is not grounding sufficiently on retrieved evidence",
-              "severity": "high",
-              "confidence": 0.83,
-              "evidence": [
-                "faithfulness=0.89 is below target 0.90",
-                "context_recall=1.00 indicates at least some relevant evidence is available",
-                "context_utilization=1.00 suggests evidence may not be used effectively"
-              ],
-              "recommended_actions": [
-                "Optimize the synthesis prompt to require evidence-backed answers.",
-                "Use structured answer templates with citation requirements.",
-                "Add answer compression or a claim-verification stage."
-              ]
-            }
-          ],
-          "causal_signals": [
-            {
-              "node": "corpus_chunking_defect",
-              "component": "retrieval",
-              "posterior": 0.9595,
-              "prior": 0.95,
-              "evidence": [
-                "Traces show a small number of retrieved chunks per query."
-              ],
-              "recommended_experiment": "Run parser and chunking search before retriever tuning."
-            },
-            {
-              "node": "retrieval_recall_defect",
-              "component": "retrieval",
-              "posterior": 0.9581,
-              "prior": 0.95,
-              "evidence": [
-                "Precision is acceptable, so evidence miss is more likely than noise."
-              ],
-              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
-            },
-            {
-              "node": "retrieval_precision_defect",
-              "component": "retrieval",
-              "posterior": 0.9545,
-              "prior": 0.95,
-              "evidence": [
-                "Sparse rerank spans suggest weak post-retrieval filtering."
-              ],
-              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
-            },
-            {
-              "node": "grounding_defect",
-              "component": "generation",
-              "posterior": 0.953,
-              "prior": 0.95,
-              "evidence": [
-                "Verification spans are sparse.",
-                "faithfulness=0.89 is below target."
-              ],
-              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
-            },
-            {
-              "node": "citation_binding_defect",
-              "component": "e2e",
-              "posterior": 0.9278,
-              "prior": 0.9277,
-              "evidence": [],
-              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
-            },
-            {
-              "node": "context_packing_defect",
-              "component": "generation",
-              "posterior": 0.7498,
-              "prior": 0.7493,
-              "evidence": [],
-              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
-            },
-            {
-              "node": "distribution_shift",
-              "component": "e2e",
-              "posterior": 0.4907,
-              "prior": 0.4907,
-              "evidence": [],
-              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
-            },
-            {
-              "node": "judge_or_metric_instability",
-              "component": "e2e",
-              "posterior": 0.3075,
-              "prior": 0.3075,
-              "evidence": [],
-              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
-            }
-          ],
-          "metric_gaps": {
-            "faithfulness": 0.0111
-          },
-          "optimization_candidates": [
-            "dspy_prompt_optimization"
-          ],
-          "priority_actions": [
-            "Tune generator behavior after retrieval quality is acceptable.",
-            "Run parser and chunking search before retriever tuning."
-          ],
-          "disambiguation_actions": [
-            "Compare the same retrieved context under a citation-first prompt and a claim-then-evidence prompt."
-          ],
-          "diagnosis_confidence": 0.83
-        },
-        "llm_based": null,
-        "synthesis": null,
-        "active_source": "rule"
-      },
-      "optimized": {
-        "summary": "Weakest layer: e2e (0.97). Layer scores: retrieval=1.00, generation=1.00, e2e=0.97. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+        "summary": "Weakest layer: generation (0.93). Layer scores: retrieval=1.00, generation=0.93. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
         "expected_thresholds": {
           "context_precision": 0.8,
           "context_recall": 0.8,
@@ -1019,32 +624,32 @@
           {
             "node": "citation_binding_defect",
             "component": "e2e",
-            "posterior": 0.9277,
-            "prior": 0.9277,
+            "posterior": 0.95,
+            "prior": 0.95,
             "evidence": [],
             "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
           },
           {
             "node": "context_packing_defect",
             "component": "generation",
-            "posterior": 0.7499,
-            "prior": 0.7494,
+            "posterior": 0.8759,
+            "prior": 0.8756,
             "evidence": [],
             "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
           },
           {
             "node": "distribution_shift",
             "component": "e2e",
-            "posterior": 0.4907,
-            "prior": 0.4907,
+            "posterior": 0.5059,
+            "prior": 0.5059,
             "evidence": [],
             "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
           },
           {
             "node": "judge_or_metric_instability",
             "component": "e2e",
-            "posterior": 0.3075,
-            "prior": 0.3075,
+            "posterior": 0.3704,
+            "prior": 0.3704,
             "evidence": [],
             "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
           }
@@ -1094,32 +699,32 @@
             {
               "node": "citation_binding_defect",
               "component": "e2e",
-              "posterior": 0.9277,
-              "prior": 0.9277,
+              "posterior": 0.95,
+              "prior": 0.95,
               "evidence": [],
               "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
             },
             {
               "node": "context_packing_defect",
               "component": "generation",
-              "posterior": 0.7499,
-              "prior": 0.7494,
+              "posterior": 0.8759,
+              "prior": 0.8756,
               "evidence": [],
               "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
             },
             {
               "node": "distribution_shift",
               "component": "e2e",
-              "posterior": 0.4907,
-              "prior": 0.4907,
+              "posterior": 0.5059,
+              "prior": 0.5059,
               "evidence": [],
               "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
             },
             {
               "node": "judge_or_metric_instability",
               "component": "e2e",
-              "posterior": 0.3075,
-              "prior": 0.3075,
+              "posterior": 0.3704,
+              "prior": 0.3704,
               "evidence": [],
               "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
             }
@@ -1196,35 +801,25 @@
             "n": 1
           },
           "generation": {
-            "score": 1.0,
+            "score": 0.9259,
             "metrics": {
-              "faithfulness": 1.0,
-              "hallucination": 1.0,
-              "bias": 1.0,
-              "toxicity": 1.0
+              "faithfulness": 0.9259
             },
             "raw": {
-              "faithfulness": 1.0,
-              "hallucination": 0.0,
-              "bias": 0.0,
-              "toxicity": 0.0
-            },
-            "n": 4
-          },
-          "e2e": {
-            "score": 0.9667,
-            "metrics": {
-              "g_eval": 0.9667
-            },
-            "raw": {
-              "g_eval": 0.9667
+              "faithfulness": 0.9259259259259259
             },
             "n": 1
+          },
+          "e2e": {
+            "score": null,
+            "metrics": {},
+            "raw": {},
+            "n": 0
           }
         },
         "rule_based": {
           "source": "rule",
-          "summary": "Weakest layer: e2e (0.97). Layer scores: retrieval=1.00, generation=1.00, e2e=0.97. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+          "summary": "Weakest layer: generation (0.93). Layer scores: retrieval=1.00, generation=0.93. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
           "hypotheses": [],
           "causal_signals": [
             {
@@ -1270,32 +865,392 @@
             {
               "node": "citation_binding_defect",
               "component": "e2e",
-              "posterior": 0.9277,
-              "prior": 0.9277,
+              "posterior": 0.95,
+              "prior": 0.95,
               "evidence": [],
               "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
             },
             {
               "node": "context_packing_defect",
               "component": "generation",
-              "posterior": 0.7499,
-              "prior": 0.7494,
+              "posterior": 0.8759,
+              "prior": 0.8756,
               "evidence": [],
               "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
             },
             {
               "node": "distribution_shift",
               "component": "e2e",
-              "posterior": 0.4907,
-              "prior": 0.4907,
+              "posterior": 0.5059,
+              "prior": 0.5059,
               "evidence": [],
               "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
             },
             {
               "node": "judge_or_metric_instability",
               "component": "e2e",
-              "posterior": 0.3075,
-              "prior": 0.3075,
+              "posterior": 0.3704,
+              "prior": 0.3704,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "metric_gaps": {},
+          "optimization_candidates": [],
+          "priority_actions": [
+            "Run parser and chunking search before retriever tuning."
+          ],
+          "disambiguation_actions": [],
+          "diagnosis_confidence": 0.75
+        },
+        "llm_based": null,
+        "synthesis": null,
+        "active_source": "rule"
+      },
+      "optimized": {
+        "summary": "Weakest layer: e2e (0.93). Layer scores: retrieval=1.00, generation=0.99, e2e=0.93. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+        "expected_thresholds": {
+          "context_precision": 0.8,
+          "context_recall": 0.8,
+          "context_entities_recall": 0.75,
+          "hit_rate_at_k": 0.85,
+          "faithfulness": 0.9,
+          "response_relevancy": 0.85,
+          "context_utilization": 0.75,
+          "noise_sensitivity": 0.2,
+          "hallucination": 0.1,
+          "answer_correctness": 0.85,
+          "answer_accuracy": 0.85,
+          "citation_accuracy": 0.85,
+          "user_success_rate": 0.85
+        },
+        "metric_gaps": {},
+        "hypotheses": [],
+        "optimization_candidates": [],
+        "priority_actions": [
+          "Run parser and chunking search before retriever tuning."
+        ],
+        "causal_signals": [
+          {
+            "node": "corpus_chunking_defect",
+            "component": "retrieval",
+            "posterior": 0.9595,
+            "prior": 0.95,
+            "evidence": [
+              "Traces show a small number of retrieved chunks per query."
+            ],
+            "recommended_experiment": "Run parser and chunking search before retriever tuning."
+          },
+          {
+            "node": "retrieval_recall_defect",
+            "component": "retrieval",
+            "posterior": 0.9581,
+            "prior": 0.95,
+            "evidence": [
+              "Precision is acceptable, so evidence miss is more likely than noise."
+            ],
+            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+          },
+          {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9545,
+            "prior": 0.95,
+            "evidence": [
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.9524,
+            "prior": 0.95,
+            "evidence": [
+              "Verification spans are sparse."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
+            "node": "citation_binding_defect",
+            "component": "e2e",
+            "posterior": 0.95,
+            "prior": 0.95,
+            "evidence": [],
+            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+          },
+          {
+            "node": "context_packing_defect",
+            "component": "generation",
+            "posterior": 0.8759,
+            "prior": 0.8756,
+            "evidence": [],
+            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+          },
+          {
+            "node": "distribution_shift",
+            "component": "e2e",
+            "posterior": 0.5059,
+            "prior": 0.5059,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
+            "node": "judge_or_metric_instability",
+            "component": "e2e",
+            "posterior": 0.3704,
+            "prior": 0.3704,
+            "evidence": [],
+            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+          }
+        ],
+        "causal_graph": {
+          "nodes": [
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.9595,
+              "prior": 0.95,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.9581,
+              "prior": 0.95,
+              "evidence": [
+                "Precision is acceptable, so evidence miss is more likely than noise."
+              ],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.9545,
+              "prior": 0.95,
+              "evidence": [
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.9524,
+              "prior": 0.95,
+              "evidence": [
+                "Verification spans are sparse."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.95,
+              "prior": 0.95,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.8759,
+              "prior": 0.8756,
+              "evidence": [],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "e2e",
+              "posterior": 0.5059,
+              "prior": 0.5059,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "e2e",
+              "posterior": 0.3704,
+              "prior": 0.3704,
+              "evidence": [],
+              "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+            }
+          ],
+          "edges": [
+            {
+              "source": "corpus_chunking_defect",
+              "target": "retrieval_recall_defect",
+              "weight": 0.55,
+              "rationale": "Poor parsing and chunk boundaries directly suppress recall."
+            },
+            {
+              "source": "retrieval_recall_defect",
+              "target": "context_packing_defect",
+              "weight": 0.22,
+              "rationale": "Weak recall increases packing pressure on partial evidence."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "context_packing_defect",
+              "weight": 0.18,
+              "rationale": "Noisy retrieval degrades packed context quality."
+            },
+            {
+              "source": "retrieval_precision_defect",
+              "target": "grounding_defect",
+              "weight": 0.45,
+              "rationale": "Noisy retrieval raises unsupported reasoning risk."
+            },
+            {
+              "source": "context_packing_defect",
+              "target": "grounding_defect",
+              "weight": 0.4,
+              "rationale": "Poor packing directly weakens grounding."
+            },
+            {
+              "source": "grounding_defect",
+              "target": "citation_binding_defect",
+              "weight": 0.3,
+              "rationale": "Unsupported claims often come with weak citation mapping."
+            },
+            {
+              "source": "judge_or_metric_instability",
+              "target": "distribution_shift",
+              "weight": 0.1,
+              "rationale": "Evaluator disagreement can indicate shift or judge mismatch."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "retrieval_recall_defect",
+              "weight": 0.3,
+              "rationale": "Shifted traffic often first breaks evidence coverage."
+            },
+            {
+              "source": "distribution_shift",
+              "target": "grounding_defect",
+              "weight": 0.18,
+              "rationale": "Shifted domains also weaken grounding reliability."
+            }
+          ]
+        },
+        "evaluator_agreement": {},
+        "diagnosis_confidence": 0.75,
+        "disambiguation_actions": [],
+        "layer_scores": {
+          "retrieval": {
+            "score": 1.0,
+            "metrics": {
+              "context_precision": 1.0
+            },
+            "raw": {
+              "context_precision": 0.9999999999
+            },
+            "n": 1
+          },
+          "generation": {
+            "score": 0.9896,
+            "metrics": {
+              "faithfulness": 0.9583,
+              "hallucination": 1.0,
+              "bias": 1.0,
+              "toxicity": 1.0
+            },
+            "raw": {
+              "faithfulness": 0.9583333333333334,
+              "hallucination": 0.0,
+              "bias": 0.0,
+              "toxicity": 0.0
+            },
+            "n": 4
+          },
+          "e2e": {
+            "score": 0.9333,
+            "metrics": {
+              "g_eval": 0.9333
+            },
+            "raw": {
+              "g_eval": 0.9333
+            },
+            "n": 1
+          }
+        },
+        "rule_based": {
+          "source": "rule",
+          "summary": "Weakest layer: e2e (0.93). Layer scores: retrieval=1.00, generation=0.99, e2e=0.93. Metrics are close to the configured thresholds. No dominant bottleneck is detected. Lead causal node: corpus_chunking_defect with posterior 0.96.",
+          "hypotheses": [],
+          "causal_signals": [
+            {
+              "node": "corpus_chunking_defect",
+              "component": "retrieval",
+              "posterior": 0.9595,
+              "prior": 0.95,
+              "evidence": [
+                "Traces show a small number of retrieved chunks per query."
+              ],
+              "recommended_experiment": "Run parser and chunking search before retriever tuning."
+            },
+            {
+              "node": "retrieval_recall_defect",
+              "component": "retrieval",
+              "posterior": 0.9581,
+              "prior": 0.95,
+              "evidence": [
+                "Precision is acceptable, so evidence miss is more likely than noise."
+              ],
+              "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+            },
+            {
+              "node": "retrieval_precision_defect",
+              "component": "retrieval",
+              "posterior": 0.9545,
+              "prior": 0.95,
+              "evidence": [
+                "Sparse rerank spans suggest weak post-retrieval filtering."
+              ],
+              "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+            },
+            {
+              "node": "grounding_defect",
+              "component": "generation",
+              "posterior": 0.9524,
+              "prior": 0.95,
+              "evidence": [
+                "Verification spans are sparse."
+              ],
+              "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+            },
+            {
+              "node": "citation_binding_defect",
+              "component": "e2e",
+              "posterior": 0.95,
+              "prior": 0.95,
+              "evidence": [],
+              "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+            },
+            {
+              "node": "context_packing_defect",
+              "component": "generation",
+              "posterior": 0.8759,
+              "prior": 0.8756,
+              "evidence": [],
+              "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+            },
+            {
+              "node": "distribution_shift",
+              "component": "e2e",
+              "posterior": 0.5059,
+              "prior": 0.5059,
+              "evidence": [],
+              "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+            },
+            {
+              "node": "judge_or_metric_instability",
+              "component": "e2e",
+              "posterior": 0.3704,
+              "prior": 0.3704,
               "evidence": [],
               "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
             }
@@ -1313,24 +1268,7 @@
         "active_source": "rule"
       },
       "comparison": {
-        "resolved_hypotheses": [
-          {
-            "component": "generation",
-            "root_cause": "generator is not grounding sufficiently on retrieved evidence",
-            "severity": "high",
-            "confidence": 0.83,
-            "evidence": [
-              "faithfulness=0.89 is below target 0.90",
-              "context_recall=1.00 indicates at least some relevant evidence is available",
-              "context_utilization=1.00 suggests evidence may not be used effectively"
-            ],
-            "recommended_actions": [
-              "Optimize the synthesis prompt to require evidence-backed answers.",
-              "Use structured answer templates with citation requirements.",
-              "Add answer compression or a claim-verification stage."
-            ]
-          }
-        ],
+        "resolved_hypotheses": [],
         "persisted_hypotheses": [],
         "emerged_hypotheses": [],
         "posterior_shifts": [],
@@ -1338,7 +1276,7 @@
         "top_regression": null,
         "metric_deltas": {
           "context_precision": 0.0,
-          "faithfulness": 0.1111
+          "faithfulness": 0.0324
         },
         "lower_is_better_metrics": [
           "bias",
@@ -1349,7 +1287,7 @@
           "retrieval_latency_ms",
           "toxicity"
         ],
-        "summary": "resolved 1 baseline hypothesis(es)"
+        "summary": "no measurable diagnosis change."
       }
     }
   },
