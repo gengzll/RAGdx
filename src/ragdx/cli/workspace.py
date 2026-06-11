@@ -777,9 +777,14 @@ def _delegate_to_tune(
             eng.diagnose(_synth_eval_result(_b_scores, mode=mode_label)).model_dump()
             if _b_scores else None
         )
+        # Always emit the post-optimization diagnosis when scores exist
+        # -- even when identical to the baseline (e.g. BO's winner IS
+        # the first trial). Suppressing it made the report look broken
+        # ("where did the optimized diagnosis go?"); an honest
+        # "no change" comparison is more useful.
         o_rep = (
             eng.diagnose(_synth_eval_result(_o_scores, mode=mode_label)).model_dump()
-            if _o_scores and _o_scores != _b_scores else None
+            if _o_scores else None
         )
         if b_rep or o_rep:
             entry: dict = {"baseline": b_rep, "optimized": o_rep}

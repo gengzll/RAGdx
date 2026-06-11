@@ -720,11 +720,11 @@ def tune(
                 return None
 
         _baseline_rep = _diag(_baseline_diag_scores, "baseline")
-        _optimized_rep = (
-            _diag(_optimized_diag_scores, "optimized")
-            if _optimized_diag_scores != _baseline_diag_scores
-            else None
-        )
+        # Always emit the post-optimization diagnosis when scores
+        # exist -- even when identical to the baseline (e.g. BO's
+        # winner IS the first trial). A "no change" comparison beats
+        # a silently missing section.
+        _optimized_rep = _diag(_optimized_diag_scores, "optimized")
         if _baseline_rep or _optimized_rep:
             _entry: dict[str, Any] = {
                 "baseline": _baseline_rep,

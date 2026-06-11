@@ -461,14 +461,29 @@ class GenerationOptimizer(StageOptimizer):
                 }
                 _mipro_auto = getattr(ctx, "mipro_auto", "light")
                 _dspy_opt_str = "GEPA"
+                # reflection_lm: the LM GEPA uses to WRITE new
+                # instructions from execution traces. The shared
+                # student LM is capped at the generator's max_tokens
+                # (e.g. 600 ≈ 2100 chars), which silently truncated
+                # every GEPA proposal mid-sentence -- observed
+                # 2026-06-11: all proposed candidates were exactly
+                # ~2112 chars, cut inside a word, and the truncated
+                # text became the winning instruction. Proposals must
+                # be able to exceed the seed prompt's length (the demo
+                # seed alone is ~5000 chars), so give the reflection
+                # copy generous headroom.
+                _reflection_lm = runtime.dspy_lm
+                try:
+                    _reflection_lm = runtime.dspy_lm.copy(max_tokens=4000)
+                except Exception:  # pragma: no cover - older dspy
+                    logger.warning(
+                        "[DSPy/%s] dspy.LM.copy unavailable; GEPA "
+                        "proposals may truncate at the student LM's "
+                        "max_tokens", ctx.label,
+                    )
                 _dspy_opt_kwargs = {
                     "max_metric_calls": _gepa_budget_map.get(_mipro_auto, 30),
-                    # reflection_lm: the (typically stronger) LM that
-                    # GEPA uses to propose new instructions from
-                    # execution traces. We share the student LM by
-                    # default; for production use a stronger model
-                    # via a dedicated factory hook later.
-                    "reflection_lm": runtime.dspy_lm,
+                    "reflection_lm": _reflection_lm,
                     "num_threads": runtime.llm_max_concurrent,
                     "track_stats": True,
                     # Our ragas composite tops out at ~2.8 (weighted

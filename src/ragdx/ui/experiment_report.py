@@ -830,11 +830,22 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
     if svg:
         parts.append(svg)
     if signals:
+        from ragdx.core.metrics import CAUSAL_NODE_GLOSSARY
+
         parts.append('<h4>Causal signals (top 8 by posterior)</h4>')
+        parts.append(
+            '<p class="caption">Each row is a hypothesized defect. '
+            '<strong>prior</strong> = how likely this defect was before '
+            'looking at the metrics (learned from this experiment\'s '
+            'history); <strong>posterior</strong> = how likely it is '
+            'after weighing the metrics, traces, and causal propagation. '
+            'Lower is healthier; the top row is the prime suspect.</p>'
+        )
         # Phase 4d: anchor per node so evidence can link back.
         sig_head = (
-            '<tr><th>node</th><th>component</th><th>prior</th>'
-            '<th>posterior</th><th>recommended experiment</th></tr>'
+            '<tr><th>node</th><th>layer</th><th>prior</th>'
+            '<th>posterior</th><th>what it means</th>'
+            '<th>recommended experiment</th></tr>'
         )
         sig_rows_html: list[str] = []
         for s in signals[:8]:
@@ -843,12 +854,14 @@ def _render_diagnosis_body(report: dict | None, *, mode: str) -> str:
             post_val = s.get("posterior", 0.0)
             prior_str = f"{prior_val:.2f}" if isinstance(prior_val, (int, float)) else str(prior_val)
             post_str = f"{post_val:.2f}" if isinstance(post_val, (int, float)) else str(post_val)
+            meaning = (CAUSAL_NODE_GLOSSARY.get(node) or {}).get("desc", "")
             sig_rows_html.append(
                 f'<tr id="signal-{_esc(node)}">'
-                f'<td>{_esc(node)}</td>'
+                f'<td><code>{_esc(node)}</code></td>'
                 f'<td>{_esc(s.get("component", ""))}</td>'
                 f'<td>{_esc(prior_str)}</td>'
                 f'<td>{_esc(post_str)}</td>'
+                f'<td class="subtle">{_esc(meaning)}</td>'
                 f'<td>{_esc(s.get("recommended_experiment", ""))}</td>'
                 '</tr>'
             )

@@ -1384,50 +1384,68 @@ def _compare_diagnoses(
 
 
 def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
-    """Run :class:`RAGDiagnosisEngine` (rule-based) on the FINAL system.
+    """Diagnose the system BEFORE and AFTER the prompt optimization.
 
-    ``ragdx experiment`` is the one-shot "optimize everything" path:
-    BO -> DSPy -> diagnose. The diagnosis is computed at the END, from
-    the fully-optimized system -- there is no upfront baseline-and-
-    diagnose step, so this returns a *single* diagnosis per mode (the
-    final/optimized state), not a baseline/optimized/comparison triple.
+    ``ragdx experiment`` is the one-shot path: BO -> DSPy -> diagnose
+    at the end. There is no upfront diagnose ceremony, but the final
+    report still needs both sides of the optimization story, so per
+    mode this emits the ``{baseline, optimized, comparison}`` triple:
 
-    (The diagnose-first workspace loop -- ``ragdx workspace diagnose``
-    -> ``tune`` -> re-diagnose -- is where the baseline-vs-optimized
-    comparison lives; that's a different, deliberate workflow.)
+    * ``baseline``   -- the system at the BO winner config with the
+       seed prompt (``dspy_a_b.baseline_scores``), i.e. *before*
+       prompt tuning.
+    * ``optimized``  -- the final system after prompt tuning,
+       including the deepeval supplements merged into
+       ``optimized_scores``. Always emitted when scores exist, even
+       if identical to the baseline -- an honest "no change" beats a
+       silently missing section.
+    * ``comparison`` -- resolved / persisted / emerged hypotheses,
+       posterior shifts, metric deltas.
 
-    Returns ``{mode: <DiagnosisReport dump>}``. The HTML renderer treats
-    a flat per-mode report as the final diagnosis. Failures are caught
-    and logged -- a missing diagnosis section is preferable to a failed
-    bundle write.
+    Failures are caught and logged -- a missing diagnosis section is
+    preferable to a failed bundle write.
     """
     from ragdx.core.diagnosis import RAGDiagnosisEngine
 
     engine = RAGDiagnosisEngine()
     out: dict[str, dict] = {}
     for mode, payload in results_by_mode.items():
-        # The final system = the optimized (DSPy winner) scores when the
-        # generation stage ran, else the BO winner. ``_winner_scores``
-        # already resolves the best trial; ``_baseline_scores_for_mode``
-        # gives the DSPy-optimized scores when present.
-        dspy_opt = (
-            (payload.get("dspy_a_b") or {}).get("optimized_scores")
-        )
-        final_scores = (
-            dict(dspy_opt) if dspy_opt
-            else _winner_scores(payload.get("bayes_search") or {})
-        )
-        if not final_scores:
+        dspy_ab = payload.get("dspy_a_b") or {}
+        baseline_scores = dict(dspy_ab.get("baseline_scores") or {})
+        optimized_scores = dict(dspy_ab.get("optimized_scores") or {})
+        if not baseline_scores and not optimized_scores:
+            # No DSPy stage ran -- fall back to the BO winner as the
+            # single post-optimization snapshot.
+            optimized_scores = _winner_scores(
+                payload.get("bayes_search") or {}
+            )
+
+        def _diag(scores: dict, phase: str, _mode: str = mode) -> dict | None:
+            if not scores:
+                return None
+            try:
+                res = _synth_eval_result(
+                    scores, mode=_mode, extra_metadata={"phase": phase},
+                )
+                return engine.diagnose(res).model_dump()
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "%s diagnosis for mode=%s failed: %s", phase, _mode, exc,
+                )
+                return None
+
+        b_rep = _diag(baseline_scores, "baseline")
+        o_rep = _diag(optimized_scores, "optimized")
+        if not (b_rep or o_rep):
             continue
-        try:
-            res = _synth_eval_result(
-                final_scores, mode=mode, extra_metadata={"phase": "final"},
+        entry: dict = {"baseline": b_rep, "optimized": o_rep}
+        if b_rep and o_rep:
+            entry["comparison"] = _compare_diagnoses(
+                b_rep, o_rep,
+                baseline_scores=baseline_scores,
+                optimized_scores=optimized_scores,
             )
-            out[mode] = engine.diagnose(res).model_dump()
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning(
-                "diagnosis for mode=%s failed (omitting): %s", mode, exc,
-            )
+        out[mode] = entry
     return out
 
 
