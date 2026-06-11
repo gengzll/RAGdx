@@ -40,17 +40,6 @@ from ragdx.schemas.rag_config import RAGConfig
 logger = logging.getLogger(__name__)
 
 
-# Per-stage metric routing. Mirrors
-# ``ragdx.experiments._build_ragas_metrics_for_mode`` so the two
-# evaluation paths produce comparable scores.
-_RETRIEVAL_METRICS = {"context_precision", "context_recall", "context_entity_recall"}
-_GENERATION_METRICS = {"faithfulness", "answer_relevancy", "response_relevancy"}
-_E2E_METRICS = {
-    "answer_correctness", "answer_accuracy", "citation_accuracy", "claim_recall",
-    "hallucination", "noise_sensitivity",
-}
-
-
 def _select_metrics(records: list[DatasetRecord]) -> list:
     """Return ragas metric instances appropriate for the records' GT mode.
 
@@ -76,28 +65,39 @@ def _scores_to_evaluation_result(
     *,
     metadata: dict[str, Any] | None = None,
 ) -> EvaluationResult:
-    """Partition a flat ragas scores dict into the EvaluationResult's
-    retrieval / generation / e2e sections."""
-    retrieval: dict[str, float] = {}
-    generation: dict[str, float] = {}
-    e2e: dict[str, float] = {}
+    """Partition a flat scores dict into the EvaluationResult's
+    retrieval / generation / e2e sections.
+
+    Routing uses the canonical ``LAYER_OF`` map from
+    :mod:`ragdx.core.metrics` (the same map the three-layer overview
+    and the layer aggregates use), so every computed metric — including
+    the deepeval supplements (``bias`` / ``toxicity`` / ``g_eval``) —
+    lands in its proper bucket instead of falling into
+    ``metadata["unmapped_scores"]``. Genuinely unknown names still go
+    to ``unmapped_scores`` for debuggability.
+    """
+    from ragdx.core.metrics import LAYER_OF
+
+    buckets: dict[str, dict[str, float]] = {
+        "retrieval": {}, "generation": {}, "e2e": {},
+    }
     other: dict[str, float] = {}
     for k, v in scores.items():
         if not isinstance(v, (int, float)):
             continue
-        if k in _RETRIEVAL_METRICS:
-            retrieval[k] = float(v)
-        elif k in _GENERATION_METRICS:
-            generation[k] = float(v)
-        elif k in _E2E_METRICS:
-            e2e[k] = float(v)
+        layer = LAYER_OF.get(k)
+        if layer in buckets:
+            buckets[layer][k] = float(v)
         else:
             other[k] = float(v)
     md = dict(metadata or {})
     if other:
         md.setdefault("unmapped_scores", other)
     return EvaluationResult(
-        retrieval=retrieval, generation=generation, e2e=e2e, metadata=md,
+        retrieval=buckets["retrieval"],
+        generation=buckets["generation"],
+        e2e=buckets["e2e"],
+        metadata=md,
     )
 
 

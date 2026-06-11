@@ -1190,25 +1190,6 @@ def _winner_scores(bayes_bundle: dict) -> dict[str, float]:
     return dict((best or {}).get("scores") or {})
 
 
-# Metric -> EvaluationResult bucket. Mirrors the buckets used in
-# ``ragdx.workflows.evaluate``; keep in sync if new metrics are added.
-_RETRIEVAL_METRICS = {
-    "context_precision",
-    "context_recall",
-    "context_entities_recall",
-    "context_utilization",
-    "noise_sensitivity",
-}
-_GENERATION_METRICS = {
-    "faithfulness",
-    "answer_relevancy",
-    "response_relevancy",
-    "hallucination",
-    "citation_accuracy",
-}
-_E2E_METRICS = {"answer_correctness", "answer_accuracy", "answer_similarity"}
-
-
 def _synth_eval_result(
     scores: dict[str, float],
     *,
@@ -1219,26 +1200,29 @@ def _synth_eval_result(
     dict so we can run :class:`RAGDiagnosisEngine` against the BO
     winner config without a second evaluator pass.
 
-    Bucketed by metric name; unknown metrics land in ``e2e`` so they
-    aren't silently dropped.
+    Bucketed via the canonical ``LAYER_OF`` map (same routing as the
+    three-layer overview and ``workflows.evaluate``), so deepeval
+    supplements (``bias`` / ``toxicity`` / ``g_eval``) land in their
+    proper layers. Unknown metrics land in ``e2e`` so they aren't
+    silently dropped.
     """
+    from ragdx.core.metrics import LAYER_OF
     from ragdx.schemas.models import EvaluationResult
 
-    retrieval, generation, e2e = {}, {}, {}
+    buckets: dict[str, dict[str, float]] = {
+        "retrieval": {}, "generation": {}, "e2e": {},
+    }
     for k, v in scores.items():
-        if k in _RETRIEVAL_METRICS:
-            retrieval[k] = v
-        elif k in _GENERATION_METRICS:
-            generation[k] = v
-        elif k in _E2E_METRICS:
-            e2e[k] = v
-        else:
-            e2e[k] = v
+        layer = LAYER_OF.get(k)
+        buckets[layer if layer in buckets else "e2e"][k] = v
     md = {"synthesized_from": "bo_winner", "gt_mode": mode}
     if extra_metadata:
         md.update(extra_metadata)
     return EvaluationResult(
-        retrieval=retrieval, generation=generation, e2e=e2e, metadata=md
+        retrieval=buckets["retrieval"],
+        generation=buckets["generation"],
+        e2e=buckets["e2e"],
+        metadata=md,
     )
 
 

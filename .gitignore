@@ -146,6 +146,10 @@ e2e_test/
 # new_demo3/README.md and document the live run output).
 !new_demo3/*.log
 .ruff_cache/
+# deepeval's local telemetry / cache dir (created on import)
+.deepeval/
+# Windows Explorer shortcut artifacts
+*.lnk
 .claude/
 result/
 examples/*.json

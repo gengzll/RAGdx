@@ -115,8 +115,13 @@ def test_scores_to_evaluation_result_partitions_correctly():
     }
     er = _scores_to_evaluation_result(scores)
     assert er.retrieval == {"context_precision": 0.8, "context_recall": 0.9}
-    assert er.generation == {"faithfulness": 0.7, "answer_relevancy": 0.6}
-    assert er.e2e == {"answer_correctness": 0.85, "hallucination": 0.05}
+    # Routing follows the canonical LAYER_OF map (core/metrics.py):
+    # hallucination is a generation-quality metric there (matching the
+    # thresholds table + the three-layer overview), not e2e.
+    assert er.generation == {
+        "faithfulness": 0.7, "answer_relevancy": 0.6, "hallucination": 0.05,
+    }
+    assert er.e2e == {"answer_correctness": 0.85}
 
 
 def test_scores_to_evaluation_result_unmapped_scores_go_to_metadata():
