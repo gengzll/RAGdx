@@ -646,7 +646,22 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
         handler.setLevel(logging.INFO)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s", "%H:%M:%S"))
         root = logging.getLogger()
+        # The ragdx logger has propagate=False (it owns a console
+        # handler), so a root-attached handler never sees its records —
+        # attach directly to it as well.
+        ragdx_logger = logging.getLogger("ragdx")
+        # Root defaults to WARNING, which drops third-party INFO records
+        # (ragas / datasets / dspy sub-loggers) at the source. Open it to
+        # INFO for the run, but pin the per-HTTP-call chatterboxes to
+        # WARNING so the feed stays readable.
+        noisy = ["httpx", "httpcore", "urllib3", "LiteLLM", "LiteLLM Router", "openai", "filelock"]
+        prior_root_level = root.level
+        prior_noisy = {n: logging.getLogger(n).level for n in noisy}
         root.addHandler(handler)
+        ragdx_logger.addHandler(handler)
+        root.setLevel(logging.INFO)
+        for n in noisy:
+            logging.getLogger(n).setLevel(logging.WARNING)
         try:
             result = run_experiment(
                 corpus=corpus,
@@ -670,6 +685,10 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
             q.put(("error", f"{type(exc).__name__}: {exc}"))
         finally:
             root.removeHandler(handler)
+            ragdx_logger.removeHandler(handler)
+            root.setLevel(prior_root_level)
+            for n, lvl in prior_noisy.items():
+                logging.getLogger(n).setLevel(lvl)
 
     t = threading.Thread(target=_worker, daemon=True)
     t.start()
