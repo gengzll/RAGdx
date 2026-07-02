@@ -17,14 +17,17 @@ src/ragdx/ui/app.py``).
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import queue
+import re
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +39,52 @@ _STAGE_CHECKLIST: list[tuple[str, str]] = [
     ("dspy_done", "Prompt optimization (DSPy)"),
     ("bundle_written", "Evaluate & build report"),
 ]
+
+# Persistent per-experiment storage. Each named run lives in
+# ``.ragdx_ui_runs/<name>/`` with its uploaded inputs, the engine's
+# output dir, and a small meta.json — enough to re-view the report
+# later and to resume an interrupted run from its checkpoints.
+_RUNS_ROOT = Path(".ragdx_ui_runs")
+
+
+def _slugify(name: str) -> str:
+    """Filesystem- and checkpoint-group-safe experiment name."""
+    slug = re.sub(r"[^\w\-.]+", "-", name.strip()).strip("-")
+    return slug[:80] or "exp"
+
+
+def _run_meta_path(run_dir: Path) -> Path:
+    return run_dir / "meta.json"
+
+
+def _save_run_meta(run_dir: Path, meta: dict) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _run_meta_path(run_dir).write_text(
+        json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def _load_run_meta(run_dir: Path) -> dict | None:
+    p = _run_meta_path(run_dir)
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _list_runs() -> list[dict]:
+    """All saved experiments, newest first."""
+    if not _RUNS_ROOT.exists():
+        return []
+    metas = []
+    for d in _RUNS_ROOT.iterdir():
+        if d.is_dir():
+            m = _load_run_meta(d)
+            if m and m.get("name"):
+                metas.append(m)
+    return sorted(metas, key=lambda m: m.get("created_at", ""), reverse=True)
 
 
 # =====================================================================
@@ -89,7 +138,12 @@ def _run_app() -> None:
     with st.sidebar:
         st.header("Connection")
         st.caption("LLM endpoint used for generation, judging, and prompt tuning.")
-        model = st.text_input("Model", value="openai/glm-4-flash")
+        model = st.text_input(
+            "Model", value="openai/glm-4-flash",
+            help="LiteLLM id at the endpoint below. Faster Zhipu options: "
+            "openai/glm-4-flashx, openai/glm-4-airx, openai/glm-4.5-flash. "
+            "Any OpenAI-compatible endpoint works (e.g. gpt-4o-mini).",
+        )
         api_base = st.text_input("API base URL", value="https://open.bigmodel.cn/api/paas/v4")
         api_key = st.text_input(
             "API key",
@@ -97,8 +151,40 @@ def _run_app() -> None:
             type="password",
             help="Falls back to ZHIPU_API_KEY / OPENAI_API_KEY if left blank.",
         )
+        llm_concurrency = st.number_input(
+            "Max concurrent LLM calls", 1, 16, 2,
+            help="Biggest speed lever after the model itself. Default 2 "
+            "suits strict rate-limited endpoints (free-tier GLM-4-Flash); "
+            "raise to 8-16 on paid endpoints (OpenAI / Anthropic / paid "
+            "GLM) for a near-linear evaluation speedup.",
+        )
+
+        st.header("Experiments")
+        saved_runs = _list_runs()
+        _NEW = "🆕 New experiment"
+        selected_run = st.selectbox(
+            "View / resume",
+            [_NEW, *[m["name"] for m in saved_runs]],
+            index=0,
+            help="Pick a saved experiment to view its configuration and "
+            "report, or to resume it if it was interrupted.",
+        )
 
     running = ss.phase == "running"
+
+    # =============================================================
+    # Viewer mode: a saved experiment is selected in the sidebar.
+    # =============================================================
+    if selected_run != _NEW:
+        _render_run_viewer(
+            ss=ss,
+            st=st,
+            name=selected_run,
+            render_report=render_report,
+            run_experiment=run_experiment,
+            api_key=api_key or None,
+        )
+        return
 
     # =============================================================
     # 1 · Upload documents & questions
@@ -341,27 +427,45 @@ def _run_app() -> None:
         "estimates — judge retries can add a few percent."
     )
 
+    ss.setdefault("default_run_name", f"exp-{datetime.now():%Y%m%d-%H%M%S}")
+    run_name_raw = st.text_input(
+        "Experiment name",
+        value=ss.default_run_name,
+        key="run_name_input",
+        disabled=running,
+        help="The run is saved under this name — pick it later in the "
+        "sidebar to view the report or resume after an interruption.",
+    )
+    run_name = _slugify(run_name_raw)
+    name_taken = (_RUNS_ROOT / run_name).exists()
+    if name_taken:
+        st.warning(f"Experiment `{run_name}` already exists — pick another name "
+                   "(or select it in the sidebar to view / resume it).")
+
     can_run = (
-        bool(pdf_files) and gt_ready and ss.confirm_upload and ss.confirm_settings and not running
+        bool(pdf_files) and gt_ready and ss.confirm_upload and ss.confirm_settings
+        and not running and not name_taken
     )
     if not (ss.confirm_upload and ss.confirm_settings):
         st.caption("Confirm sections 1 and 2 above to enable the run.")
     if st.button("▶ Run experiment", type="primary", disabled=not can_run):
         _start_run(
             ss=ss,
+            run_name=run_name,
             pdf_files=pdf_files,
             gt_records=gt_records,
             custom_questions=custom_questions,
             write_questions_jsonl=write_questions_jsonl,
             run_experiment=run_experiment,
+            api_key=api_key or None,
             settings=dict(
                 model=model,
                 api_base=api_base,
-                api_key=api_key or None,
                 n_questions=int(n_questions),
                 n_bo_trials=int(n_bo_trials),
                 n_bo_init=int(n_bo_init),
                 seed=int(seed),
+                llm_max_concurrent=int(llm_concurrency),
                 system_instruction=system_instruction or None,
                 dspy_optimizer=dspy_optimizer,
                 mipro_auto=mipro_auto,
@@ -382,7 +486,10 @@ def _run_app() -> None:
     # --------------------------------------------------------- report view
     if ss.phase == "done" and ss.bundle is not None:
         st.subheader("4 · Report")
-        _render_report_and_downloads(ss, st, render_report)
+        _render_report_and_downloads(
+            st, render_report, ss.bundle,
+            Path(ss.output_dir) if ss.output_dir else None,
+        )
 
 
 # --------------------------------------------------------------- helpers
@@ -446,46 +553,92 @@ def _estimate_workload(
 
 
 def _start_run(
-    *, ss, pdf_files, gt_records, custom_questions, write_questions_jsonl, run_experiment, settings
+    *, ss, run_name, pdf_files, gt_records, custom_questions,
+    write_questions_jsonl, run_experiment, api_key, settings,
 ) -> None:
-    """Persist uploads to a temp workdir and launch the run in a thread.
-
-    Everything the worker thread needs is captured as a local *before*
-    the thread starts — Streamlit's ``st.session_state`` is not
-    accessible from spawned threads, so the worker must never touch it.
-    """
+    """Persist uploads into the named run dir and launch the experiment."""
     from ragdx.schemas.models import DatasetRecord
 
-    workdir = Path(tempfile.mkdtemp(prefix="ragdx_run_"))
+    run_dir = _RUNS_ROOT / run_name
+    inputs_dir = run_dir / "inputs"
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+
     pdf_paths: list[str] = []
     for f in pdf_files:
-        p = workdir / f.name
+        p = inputs_dir / f.name
         p.write_bytes(f.getvalue())
         pdf_paths.append(str(p))
 
     has_gt = gt_records is not None
     questions_path = None
     if has_gt:
-        questions_path = str(write_questions_jsonl(gt_records, workdir / "questions.jsonl"))
+        questions_path = str(write_questions_jsonl(gt_records, inputs_dir / "questions.jsonl"))
     elif custom_questions:
         records = [DatasetRecord(question=q, ground_truth=None, contexts=[]) for q in custom_questions]
-        questions_path = str(write_questions_jsonl(records, workdir / "questions.jsonl"))
+        questions_path = str(write_questions_jsonl(records, inputs_dir / "questions.jsonl"))
 
-    output_dir = str(workdir / "out")
+    # meta.json makes the run re-viewable and resumable later. The API
+    # key deliberately never lands on disk — resume takes the current
+    # sidebar value instead.
+    meta = {
+        "name": run_name,
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "status": "running",
+        "corpus": pdf_paths,
+        "questions_path": questions_path,
+        "has_gt": has_gt,
+        "mode": "with_gt" if has_gt else "no_gt",
+        "settings": settings,
+    }
+    _save_run_meta(run_dir, meta)
 
+    _launch_worker(
+        ss=ss,
+        run_experiment=run_experiment,
+        run_dir=run_dir,
+        meta=meta,
+        api_key=api_key,
+        resume="",
+    )
+
+
+def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> None:
+    """Start (or resume) the engine in a daemon thread.
+
+    Everything the worker needs is captured as a local before the thread
+    starts — Streamlit's session_state is not accessible from spawned
+    threads. The worker also keeps ``meta.json`` up to date so the run
+    can be found, viewed, and resumed across app restarts.
+    """
     ss.events = []
     ss.logs = []
     ss.bundle = None
     ss.error = None
-    ss.output_dir = output_dir
+    ss.output_dir = str(run_dir / "out")
+    ss.run_name = meta["name"]
     ss.phase = "running"
     ss.queue = queue.Queue()
 
     q = ss.queue
-    corpus = pdf_paths if len(pdf_paths) > 1 else pdf_paths[0]
+    corpus_list = list(meta["corpus"])
+    corpus = corpus_list if len(corpus_list) > 1 else corpus_list[0]
+    questions_path = meta.get("questions_path")
+    has_gt = bool(meta.get("has_gt"))
+    mode = meta.get("mode") or ("with_gt" if has_gt else "no_gt")
+    settings = dict(meta.get("settings") or {})
+    output_dir = str(run_dir / "out")
+    run_name = meta["name"]
+    meta_snapshot = dict(meta)
 
     def _progress(event: dict[str, Any]) -> None:
         q.put(("event", event))
+
+    def _update_meta(**fields) -> None:
+        meta_snapshot.update(fields)
+        try:
+            _save_run_meta(run_dir, meta_snapshot)
+        except Exception:  # pragma: no cover - meta is best-effort
+            pass
 
     def _worker() -> None:
         handler = _QueueLogHandler(q)
@@ -497,14 +650,22 @@ def _start_run(
             result = run_experiment(
                 corpus=corpus,
                 has_gt=has_gt,
-                mode="with_gt" if has_gt else "no_gt",
+                mode=mode,
                 questions_path=questions_path,
                 output_dir=output_dir,
                 progress_callback=_progress,
+                api_key=api_key,
+                resume=resume,
+                experiment_group=run_name,
                 **settings,
+            )
+            _update_meta(
+                status="done",
+                finished_at=datetime.now().isoformat(timespec="seconds"),
             )
             q.put(("done", result.bundle))
         except Exception as exc:
+            _update_meta(status="error", error=f"{type(exc).__name__}: {exc}")
             q.put(("error", f"{type(exc).__name__}: {exc}"))
         finally:
             root.removeHandler(handler)
@@ -602,18 +763,81 @@ def _drain_and_render_progress(ss, st) -> None:
     st.rerun()
 
 
-def _render_report_and_downloads(ss, st, render_report) -> None:
+def _render_run_viewer(*, ss, st, name, render_report, run_experiment, api_key) -> None:
+    """Sidebar-selected saved experiment: config, report, and resume."""
+    run_dir = _RUNS_ROOT / name
+    meta = _load_run_meta(run_dir)
+    st.subheader(f"Experiment · {name}")
+    if meta is None:
+        st.error("This experiment's meta.json is missing or unreadable.")
+        return
+
+    status = meta.get("status", "?")
+    badge = {"done": "✅ done", "running": "⏸ interrupted / running", "error": "❌ error"}.get(status, status)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Status", badge)
+    c2.metric("Created", meta.get("created_at", "—"))
+    c3.metric("Finished", meta.get("finished_at", "—"))
+    if meta.get("error"):
+        st.error(meta["error"])
+
+    with st.expander("Configuration", expanded=(status != "done")):
+        st.json({
+            "mode": meta.get("mode"),
+            "corpus": meta.get("corpus"),
+            "questions_path": meta.get("questions_path"),
+            **(meta.get("settings") or {}),
+        })
+
+    # Live progress for the run currently executing in this session.
+    if ss.phase == "running":
+        if ss.get("run_name") == name:
+            _drain_and_render_progress(ss, st)
+        else:
+            st.info(f"Another experiment (`{ss.get('run_name')}`) is running — "
+                    "wait for it to finish before resuming this one.")
+        return
+
+    result_json = run_dir / "out" / "result.json"
+    if result_json.exists():
+        try:
+            bundle = json.loads(result_json.read_text(encoding="utf-8"))
+        except Exception as exc:
+            st.error(f"Could not read result.json: {exc}")
+            bundle = None
+        if bundle is not None:
+            st.subheader("Report")
+            _render_report_and_downloads(st, render_report, bundle, run_dir / "out")
+
+    # Resume: anything not marked done can pick up from its checkpoints.
+    if status != "done":
+        st.divider()
+        st.markdown(
+            "**Resume** — completed stages replay from checkpoints without "
+            "LLM calls; the interrupted stage continues from its last saved "
+            "trial/phase."
+        )
+        if st.button("⟳ Resume this experiment", type="primary"):
+            _launch_worker(
+                ss=ss,
+                run_experiment=run_experiment,
+                run_dir=run_dir,
+                meta={**meta, "status": "running"},
+                api_key=api_key,
+                resume=name,
+            )
+            st.rerun()
+
+
+def _render_report_and_downloads(st, render_report, bundle, out_dir: Path | None) -> None:
     """Render the HTML report inline and offer download buttons."""
     import streamlit.components.v1 as components
 
-    bundle = ss.bundle
     try:
         html = render_report(bundle)
     except Exception as exc:
         st.error(f"Could not render report: {exc}")
         html = None
-
-    out_dir = Path(ss.output_dir) if ss.output_dir else None
 
     cols = st.columns(3)
     if html is not None:

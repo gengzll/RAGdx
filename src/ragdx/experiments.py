@@ -1858,7 +1858,7 @@ def _write_final_deliverables(
 class _ExperimentCheckpoints:
     """Per-(mode, stage) checkpoint registry for one experiment run."""
 
-    def __init__(self, resume: str = "", enabled: bool = True) -> None:
+    def __init__(self, resume: str = "", enabled: bool = True, group_id: str = "") -> None:
         self.enabled = enabled
         self.store = None
         self.group_id = ""
@@ -1915,7 +1915,9 @@ class _ExperimentCheckpoints:
                 ", ".join(f"{m}/{s}" for m, s in self._by_key),
             )
         else:
-            self.group_id = "exp_" + uuid4().hex[:8]
+            # Caller-supplied group ids (e.g. the studio's experiment
+            # name) make later ``resume=<that id>`` calls trivial.
+            self.group_id = group_id or ("exp_" + uuid4().hex[:8])
 
     def get(self, mode: str, stage: str, *, name: str = "") -> Any:
         """Fetch (resume) or create the checkpoint for ``(mode, stage)``."""
@@ -1977,6 +1979,7 @@ def run_experiment(
     save: bool = True,
     resume: str = "",
     no_checkpoint: bool = False,
+    experiment_group: str = "",
     progress_callback: ProgressCallback | None = None,
 ) -> ExperimentResult:
     """Run the complete demo pipeline once and return the bundle.
@@ -2097,7 +2100,9 @@ def run_experiment(
     # experiment id. ``resume="auto"`` (or a group id) picks the run
     # back up -- completed stages replay without LLM calls, the
     # interrupted stage continues from its last saved trial / phase.
-    ckpts = _ExperimentCheckpoints(resume=resume, enabled=not no_checkpoint)
+    ckpts = _ExperimentCheckpoints(
+        resume=resume, enabled=not no_checkpoint, group_id=experiment_group,
+    )
     if ckpts.enabled and not resume:
         logger.info(
             "Experiment checkpoints enabled (group %s). Resume an "
