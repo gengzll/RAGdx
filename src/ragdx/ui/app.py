@@ -102,9 +102,16 @@ def _run_app() -> None:
     st.subheader("1 · Upload")
     col_pdf, col_gt = st.columns(2)
     with col_pdf:
-        pdf_file = st.file_uploader(
-            "Document (PDF, required)", type=["pdf"], disabled=running
+        pdf_files = st.file_uploader(
+            "Documents (PDF, required)",
+            type=["pdf"],
+            disabled=running,
+            accept_multiple_files=True,
+            help="Upload one or more PDFs. Multiple files are pooled into a "
+            "single corpus for the experiment.",
         )
+        if pdf_files:
+            st.caption(f"{len(pdf_files)} PDF(s) selected: " + ", ".join(f.name for f in pdf_files))
     with col_gt:
         gt_file = st.file_uploader(
             "Ground truth (Excel/CSV, optional)",
@@ -172,11 +179,11 @@ def _run_app() -> None:
 
     # -------------------------------------------------------------- run
     st.subheader("3 · Run")
-    can_run = (pdf_file is not None) and gt_ready and not running
+    can_run = bool(pdf_files) and gt_ready and not running
     if st.button("▶ Run experiment", type="primary", disabled=not can_run):
         _start_run(
             ss=ss,
-            pdf_file=pdf_file,
+            pdf_files=pdf_files,
             gt_records=gt_records,
             run_experiment=run_experiment,
             write_questions_jsonl=write_questions_jsonl,
@@ -207,26 +214,40 @@ def _run_app() -> None:
 
 
 # --------------------------------------------------------------- helpers
-def _start_run(*, ss, pdf_file, gt_records, run_experiment, write_questions_jsonl, settings) -> None:
-    """Persist uploads to a temp workdir and launch the run in a thread."""
+def _start_run(*, ss, pdf_files, gt_records, run_experiment, write_questions_jsonl, settings) -> None:
+    """Persist uploads to a temp workdir and launch the run in a thread.
+
+    Everything the worker thread needs is captured as a local *before*
+    the thread starts — Streamlit's ``st.session_state`` is not
+    accessible from spawned threads, so the worker must never touch it.
+    """
     workdir = Path(tempfile.mkdtemp(prefix="ragdx_run_"))
-    pdf_path = workdir / pdf_file.name
-    pdf_path.write_bytes(pdf_file.getvalue())
+    # Multiple PDFs are pooled into a single corpus by the engine, which
+    # accepts a list of paths. A single file is passed as a 1-item list.
+    pdf_paths: list[str] = []
+    for f in pdf_files:
+        p = workdir / f.name
+        p.write_bytes(f.getvalue())
+        pdf_paths.append(str(p))
 
     has_gt = gt_records is not None
     questions_path = None
     if has_gt:
-        questions_path = write_questions_jsonl(gt_records, workdir / "questions.jsonl")
+        questions_path = str(write_questions_jsonl(gt_records, workdir / "questions.jsonl"))
+
+    output_dir = str(workdir / "out")
 
     ss.events = []
     ss.logs = []
     ss.bundle = None
     ss.error = None
-    ss.output_dir = str(workdir / "out")
+    ss.output_dir = output_dir
     ss.phase = "running"
     ss.queue = queue.Queue()
 
+    # Locals captured by the closure — no session_state access in the thread.
     q = ss.queue
+    corpus = pdf_paths if len(pdf_paths) > 1 else pdf_paths[0]
 
     def _progress(event: dict[str, Any]) -> None:
         q.put(("event", event))
@@ -238,11 +259,11 @@ def _start_run(*, ss, pdf_file, gt_records, run_experiment, write_questions_json
         ragdx_logger.addHandler(handler)
         try:
             result = run_experiment(
-                corpus=str(pdf_path),
+                corpus=corpus,
                 has_gt=has_gt,
                 mode="with_gt" if has_gt else "no_gt",
-                questions_path=str(questions_path) if questions_path else None,
-                output_dir=ss.output_dir,
+                questions_path=questions_path,
+                output_dir=output_dir,
                 progress_callback=_progress,
                 **settings,
             )
