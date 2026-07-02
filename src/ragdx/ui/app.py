@@ -883,6 +883,7 @@ def _drain_and_render_progress(ss, st) -> None:
     checklist, and detailed log feed until the worker thread finishes."""
     bar = st.progress(0.0, text="Starting…")
     status = st.empty()
+    heartbeat = st.empty()
     checklist = st.container()
     checklist_slot = checklist.empty()
     log_box = st.expander("Detailed log", expanded=True)
@@ -890,6 +891,9 @@ def _drain_and_render_progress(ss, st) -> None:
 
     q = ss.queue
     pct = 0.0
+    run_started = time.time()
+    last_event_at = time.time()
+    last_hb = 0.0
     while True:
         drained = False
         try:
@@ -902,6 +906,7 @@ def _drain_and_render_progress(ss, st) -> None:
                     mode = payload.get("mode")
                     label = f"[{mode}] {detail}" if mode else detail
                     ss.events.append(payload)
+                    last_event_at = time.time()
                     bar.progress(min(1.0, pct), text=label)
                     if payload.get("stage") in {m for m, _ in _STAGE_CHECKLIST}:
                         status.success(f"✓ {label}  ·  {int(pct * 100)}%")
@@ -909,6 +914,7 @@ def _drain_and_render_progress(ss, st) -> None:
                         status.markdown(f"**{label}**  ·  {int(pct * 100)}%")
                 elif kind == "log":
                     ss.logs.append(payload)
+                    last_event_at = time.time()
                 elif kind == "done":
                     ss.bundle = payload
                     ss.phase = "done"
@@ -918,6 +924,24 @@ def _drain_and_render_progress(ss, st) -> None:
                     ss.phase = "error"
         except queue.Empty:
             pass
+
+        # Heartbeat: long evaluation batches (ragas judging a trial's
+        # answers) emit neither events nor log records — show elapsed
+        # time so a quiet stretch doesn't read as a hang.
+        now = time.time()
+        if now - last_hb >= 1.0:
+            last_hb = now
+            total_m, total_s = divmod(int(now - run_started), 60)
+            quiet = int(now - last_event_at)
+            quiet_txt = ""
+            if quiet >= 30:
+                q_m, q_s = divmod(quiet, 60)
+                quiet_txt = (
+                    f" · current step running {q_m} min {q_s:02d} s "
+                    "(evaluation batches log nothing until they finish — "
+                    "still working)"
+                )
+            heartbeat.caption(f"⏱ elapsed {total_m} min {total_s:02d} s{quiet_txt}")
 
         _render_stage_checklist(ss, checklist_slot)
         if ss.logs:
