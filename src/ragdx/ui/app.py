@@ -2,12 +2,15 @@
 
 A single-page studio around :func:`ragdx.experiments.run_experiment`:
 
-1. Upload a PDF (required) and, optionally, an Excel/CSV ground-truth
-   file. A GT file switches the run into **with-GT** mode; without one
-   the questions are synthesized from the PDF (**no-GT** mode).
-2. Map the GT columns to ``question`` / ``ground_truth`` / ``contexts``
-   (auto-detected, with a manual fallback).
-3. Run the end-to-end experiment with a live progress bar + log feed.
+1. Upload one or more PDFs (required, pooled into one corpus) and,
+   optionally, an Excel/CSV ground-truth file. A GT file switches the
+   run into **with-GT** mode; without one it runs in **no-GT** mode,
+   where you either synthesize questions from the documents or type
+   your own.
+2. For with-GT, map the GT columns to ``question`` / ``ground_truth`` /
+   ``contexts`` (auto-detected, with a manual fallback).
+3. Tune the experiment settings, then run with a live progress bar,
+   per-stage status, and a detailed log feed.
 4. View the rendered report inline and download the HTML report, the
    raw ``result.json`` bundle, and the ship-ready ``final/`` artifacts.
 
@@ -27,6 +30,15 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+
+# Ordered milestones shown as a per-stage checklist during a run. Each
+# entry is (event-stage-name-that-marks-it-complete, human label).
+_STAGE_CHECKLIST: list[tuple[str, str]] = [
+    ("corpus_loaded", "Load & chunk documents"),
+    ("bo_done", "Bayesian config search"),
+    ("dspy_done", "Prompt optimization (DSPy)"),
+    ("bundle_written", "Evaluate & build report"),
+]
 
 
 # =====================================================================
@@ -62,7 +74,7 @@ def _run_app() -> None:
     st.set_page_config(page_title="ragdx studio", page_icon="🔬", layout="wide")
     st.title("🔬 ragdx studio")
     st.caption(
-        "Upload a document, optionally add ground truth, and run the "
+        "Upload documents, optionally add ground truth, and run the "
         "end-to-end RAG optimization experiment — then view and download the report."
     )
 
@@ -74,9 +86,10 @@ def _run_app() -> None:
     ss.setdefault("output_dir", None)
     ss.setdefault("error", None)
 
-    # ---------------------------------------------------------- sidebar
+    # ------------------------------------------------- sidebar: connection
     with st.sidebar:
-        st.header("Run settings")
+        st.header("Connection")
+        st.caption("LLM endpoint used for generation, judging, and prompt tuning.")
         model = st.text_input("Model", value="openai/glm-4-flash")
         api_base = st.text_input("API base URL", value="https://open.bigmodel.cn/api/paas/v4")
         api_key = st.text_input(
@@ -85,21 +98,11 @@ def _run_app() -> None:
             type="password",
             help="Falls back to ZHIPU_API_KEY / OPENAI_API_KEY if left blank.",
         )
-        n_questions = st.number_input("Questions", 1, 100, 5)
-        n_bo_trials = st.number_input("Bayesian search trials", 2, 64, 8)
-        n_bo_init = st.number_input("Bayesian init rounds", 1, 16, 3)
-        seed = st.number_input("Seed", 0, 10_000, 7)
-        system_instruction = st.text_area(
-            "System instruction (optional)",
-            value="",
-            help="RAG system prompt shared by the BO generation path and the DSPy baseline. "
-            "Leave blank for the generic default.",
-        )
 
     running = ss.phase == "running"
 
-    # ------------------------------------------------------------ upload
-    st.subheader("1 · Upload")
+    # ------------------------------------------------------- 1 · upload
+    st.subheader("1 · Upload documents")
     col_pdf, col_gt = st.columns(2)
     with col_pdf:
         pdf_files = st.file_uploader(
@@ -111,20 +114,21 @@ def _run_app() -> None:
             "single corpus for the experiment.",
         )
         if pdf_files:
-            st.caption(f"{len(pdf_files)} PDF(s) selected: " + ", ".join(f.name for f in pdf_files))
+            st.caption(f"{len(pdf_files)} PDF(s): " + ", ".join(f.name for f in pdf_files))
     with col_gt:
         gt_file = st.file_uploader(
             "Ground truth (Excel/CSV, optional)",
             type=["csv", "tsv", "xlsx", "xls"],
             disabled=running,
-            help="Provide to run in with-GT mode. Without it, questions are "
-            "synthesized from the document (no-GT mode).",
+            help="Provide to run in with-GT mode. Without it, the run uses "
+            "no-GT mode (synthesized or hand-entered questions).",
         )
 
-    # ------------------------------------------- GT preview + col mapping
-    mapping: dict[str, str | None] | None = None
+    # ------------------------------ 2 · GT mapping OR no-GT question source
     gt_records = None
     gt_ready = True
+    custom_questions: list[str] | None = None
+
     if gt_file is not None:
         st.subheader("2 · Map ground-truth columns")
         try:
@@ -144,12 +148,7 @@ def _run_app() -> None:
             def _select(field: str, optional: bool) -> str | None:
                 options = ([none_label, *cols]) if optional else cols
                 default = auto.get(field)
-                if default in options:
-                    idx = options.index(default)
-                elif optional:
-                    idx = 0
-                else:
-                    idx = 0
+                idx = options.index(default) if default in options else 0
                 choice = st.selectbox(
                     f"`{field}` column" + (" (optional)" if optional else ""),
                     options,
@@ -175,18 +174,87 @@ def _run_app() -> None:
                 gt_ready = False
                 st.warning(f"Finish the mapping to enable the run: {exc}")
     else:
-        st.info("No ground-truth file — the run will use **no-GT** mode (synthesized questions).")
+        st.subheader("2 · Questions (no-GT mode)")
+        source = st.radio(
+            "Where should the evaluation questions come from?",
+            ["Synthesize from the documents", "Enter my own questions"],
+            disabled=running,
+            horizontal=True,
+        )
+        if source == "Enter my own questions":
+            raw = st.text_area(
+                "Questions — one per line",
+                height=150,
+                disabled=running,
+                placeholder="What is the company's net-zero target?\nWhat certifications are mentioned?",
+                help="These exact questions are used (no synthesis). "
+                "No reference answers are needed in no-GT mode.",
+            )
+            custom_questions = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+            if custom_questions:
+                st.success(f"{len(custom_questions)} question(s) entered.")
+            else:
+                gt_ready = False
+                st.warning("Enter at least one question, or switch to synthesize.")
+        else:
+            st.info("Questions will be synthesized from the uploaded documents.")
 
-    # -------------------------------------------------------------- run
-    st.subheader("3 · Run")
+    # --------------------------------------------- 3 · experiment settings
+    st.subheader("3 · Experiment settings")
+    synth_mode = gt_file is None and not custom_questions
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        n_questions = st.number_input(
+            "Questions to synthesize",
+            1, 100, 5,
+            disabled=running or not synth_mode,
+            help="How many questions to synthesize from the documents. "
+            "Only used in no-GT mode when you don't supply your own "
+            "questions (ignored otherwise).",
+        )
+    with c2:
+        n_bo_trials = st.number_input(
+            "Bayesian search trials",
+            2, 64, 8,
+            disabled=running,
+            help="Total number of RAG configurations the Bayesian optimizer "
+            "evaluates. Each trial builds the pipeline with a candidate "
+            "(chunk size, overlap, top-k) and scores it. More trials search "
+            "more thoroughly but cost more time and LLM calls.",
+        )
+    with c3:
+        n_bo_init = st.number_input(
+            "Bayesian init rounds",
+            1, 16, 3,
+            disabled=running,
+            help="Number of initial configurations sampled at random before "
+            "the Bayesian model starts steering the search. These seed the "
+            "surrogate model; keep it <= trials (typically 2-3).",
+        )
+    with c4:
+        seed = st.number_input(
+            "Seed", 0, 10_000, 7, disabled=running,
+            help="Deterministic seed for the search and question synthesis.",
+        )
+    system_instruction = st.text_area(
+        "System instruction (optional)",
+        value="",
+        disabled=running,
+        help="RAG system prompt shared by the generation path and the DSPy "
+        "baseline. Leave blank for the generic default; DSPy may evolve it further.",
+    )
+
+    # -------------------------------------------------------------- 4 · run
+    st.subheader("4 · Run")
     can_run = bool(pdf_files) and gt_ready and not running
     if st.button("▶ Run experiment", type="primary", disabled=not can_run):
         _start_run(
             ss=ss,
             pdf_files=pdf_files,
             gt_records=gt_records,
-            run_experiment=run_experiment,
+            custom_questions=custom_questions,
             write_questions_jsonl=write_questions_jsonl,
+            run_experiment=run_experiment,
             settings=dict(
                 model=model,
                 api_base=api_base,
@@ -209,18 +277,22 @@ def _run_app() -> None:
 
     # --------------------------------------------------------- report view
     if ss.phase == "done" and ss.bundle is not None:
-        st.subheader("4 · Report")
+        st.subheader("5 · Report")
         _render_report_and_downloads(ss, st, render_report)
 
 
 # --------------------------------------------------------------- helpers
-def _start_run(*, ss, pdf_files, gt_records, run_experiment, write_questions_jsonl, settings) -> None:
+def _start_run(
+    *, ss, pdf_files, gt_records, custom_questions, write_questions_jsonl, run_experiment, settings
+) -> None:
     """Persist uploads to a temp workdir and launch the run in a thread.
 
     Everything the worker thread needs is captured as a local *before*
     the thread starts — Streamlit's ``st.session_state`` is not
     accessible from spawned threads, so the worker must never touch it.
     """
+    from ragdx.schemas.models import DatasetRecord
+
     workdir = Path(tempfile.mkdtemp(prefix="ragdx_run_"))
     # Multiple PDFs are pooled into a single corpus by the engine, which
     # accepts a list of paths. A single file is passed as a 1-item list.
@@ -233,7 +305,12 @@ def _start_run(*, ss, pdf_files, gt_records, run_experiment, write_questions_jso
     has_gt = gt_records is not None
     questions_path = None
     if has_gt:
+        # with-GT: reference answers drive answer-correctness metrics.
         questions_path = str(write_questions_jsonl(gt_records, workdir / "questions.jsonl"))
+    elif custom_questions:
+        # no-GT with user-supplied questions: same JSONL shape, GT = null.
+        records = [DatasetRecord(question=q, ground_truth=None, contexts=[]) for q in custom_questions]
+        questions_path = str(write_questions_jsonl(records, workdir / "questions.jsonl"))
 
     output_dir = str(workdir / "out")
 
@@ -253,10 +330,14 @@ def _start_run(*, ss, pdf_files, gt_records, run_experiment, write_questions_jso
         q.put(("event", event))
 
     def _worker() -> None:
+        # Attach to the ROOT logger so the feed captures ragdx *and* the
+        # library internals (dspy / ragas / langchain) at INFO — the
+        # "detailed log" the user sees during a run.
         handler = _QueueLogHandler(q)
         handler.setLevel(logging.INFO)
-        ragdx_logger = logging.getLogger("ragdx")
-        ragdx_logger.addHandler(handler)
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s", "%H:%M:%S"))
+        root = logging.getLogger()
+        root.addHandler(handler)
         try:
             result = run_experiment(
                 corpus=corpus,
@@ -271,7 +352,7 @@ def _start_run(*, ss, pdf_files, gt_records, run_experiment, write_questions_jso
         except Exception as exc:
             q.put(("error", f"{type(exc).__name__}: {exc}"))
         finally:
-            ragdx_logger.removeHandler(handler)
+            root.removeHandler(handler)
 
     t = threading.Thread(target=_worker, daemon=True)
     t.start()
@@ -279,7 +360,7 @@ def _start_run(*, ss, pdf_files, gt_records, run_experiment, write_questions_jso
 
 
 class _QueueLogHandler(logging.Handler):
-    """Push formatted ``ragdx`` log records into the progress queue."""
+    """Push formatted log records into the progress queue."""
 
     def __init__(self, q: queue.Queue) -> None:
         super().__init__()
@@ -292,12 +373,30 @@ class _QueueLogHandler(logging.Handler):
             pass
 
 
+def _render_stage_checklist(ss, container) -> None:
+    """Render the per-stage checklist (✅ done / 🔄 running / ⬜ pending)."""
+    seen = {e.get("stage") for e in ss.events}
+    done_flags = [marker in seen for marker, _ in _STAGE_CHECKLIST]
+    lines = []
+    for i, (_marker, label) in enumerate(_STAGE_CHECKLIST):
+        if done_flags[i]:
+            icon = "✅"
+        elif i == 0 or done_flags[i - 1]:
+            icon = "🔄" if ss.phase == "running" else "⬜"
+        else:
+            icon = "⬜"
+        lines.append(f"{icon} {label}")
+    container.markdown("\n\n".join(lines))
+
+
 def _drain_and_render_progress(ss, st) -> None:
-    """Block this script run, live-updating a progress bar + log feed
-    until the worker thread finishes."""
+    """Block this script run, live-updating a progress bar, per-stage
+    checklist, and detailed log feed until the worker thread finishes."""
     bar = st.progress(0.0, text="Starting…")
     status = st.empty()
-    log_box = st.expander("Live log", expanded=True)
+    checklist = st.container()
+    checklist_slot = checklist.empty()
+    log_box = st.expander("Detailed log", expanded=True)
     log_area = log_box.empty()
 
     q = ss.queue
@@ -315,7 +414,11 @@ def _drain_and_render_progress(ss, st) -> None:
                     label = f"[{mode}] {detail}" if mode else detail
                     ss.events.append(payload)
                     bar.progress(min(1.0, pct), text=label)
-                    status.markdown(f"**{label}**  ·  {int(pct * 100)}%")
+                    # Announce each completed milestone.
+                    if payload.get("stage") in {m for m, _ in _STAGE_CHECKLIST}:
+                        status.success(f"✓ {label}  ·  {int(pct * 100)}%")
+                    else:
+                        status.markdown(f"**{label}**  ·  {int(pct * 100)}%")
                 elif kind == "log":
                     ss.logs.append(payload)
                 elif kind == "done":
@@ -328,15 +431,15 @@ def _drain_and_render_progress(ss, st) -> None:
         except queue.Empty:
             pass
 
+        _render_stage_checklist(ss, checklist_slot)
         if ss.logs:
-            log_area.code("\n".join(ss.logs[-200:]), language="log")
+            log_area.code("\n".join(ss.logs[-300:]), language="log")
 
         if ss.phase in ("done", "error"):
             break
 
         thread = ss.get("thread")
         if thread is not None and not thread.is_alive() and not drained and q.empty():
-            # Thread died without a terminal message — surface it.
             ss.error = "Experiment thread exited unexpectedly."
             ss.phase = "error"
             break
@@ -358,7 +461,6 @@ def _render_report_and_downloads(ss, st, render_report) -> None:
 
     out_dir = Path(ss.output_dir) if ss.output_dir else None
 
-    # Download buttons row.
     cols = st.columns(3)
     if html is not None:
         cols[0].download_button(
@@ -372,7 +474,6 @@ def _render_report_and_downloads(ss, st, render_report) -> None:
             file_name="result.json",
             mime="application/json",
         )
-    # Bundle the final/ deliverables (optimized config + prompt) as a zip.
     final_dir = out_dir / "final" if out_dir else None
     if final_dir and final_dir.exists() and any(final_dir.iterdir()):
         import io
