@@ -617,6 +617,7 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
     ss.output_dir = str(run_dir / "out")
     ss.run_name = meta["name"]
     ss.phase = "running"
+    ss._checklist_state = None
     ss.queue = queue.Queue()
 
     q = ss.queue
@@ -689,20 +690,45 @@ class _QueueLogHandler(logging.Handler):
             pass
 
 
+_CHECKLIST_CSS = """<style>
+@keyframes ragdx-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.ragdx-stage { margin: 4px 0; font-size: 15px; }
+.ragdx-stage.done { color: #15803d; }
+.ragdx-stage.pending { color: #9ca3af; }
+.ragdx-stage.running { color: #1a73e8; font-weight: 600; }
+.ragdx-spinner { display: inline-block; width: 13px; height: 13px;
+  border: 2px solid #1a73e8; border-top-color: transparent;
+  border-radius: 50%; animation: ragdx-spin 0.8s linear infinite;
+  vertical-align: -2px; margin-right: 7px; }
+</style>"""
+
+
 def _render_stage_checklist(ss, container) -> None:
-    """Render the per-stage checklist (done / running / pending)."""
+    """Per-stage checklist: done / running (animated spinner) / pending.
+
+    Only re-renders when the stage state actually changes — the drain
+    loop ticks every 0.4 s, and replacing the HTML each tick would
+    restart the CSS spin animation, making it stutter.
+    """
     seen = {e.get("stage") for e in ss.events}
-    done_flags = [marker in seen for marker, _ in _STAGE_CHECKLIST]
-    lines = []
+    done_flags = tuple(marker in seen for marker, _ in _STAGE_CHECKLIST)
+    state_key = (done_flags, ss.phase)
+    if ss.get("_checklist_state") == state_key:
+        return
+    ss._checklist_state = state_key
+
+    items = []
     for i, (_marker, label) in enumerate(_STAGE_CHECKLIST):
         if done_flags[i]:
-            icon = "✅"
-        elif i == 0 or done_flags[i - 1]:
-            icon = "🔄" if ss.phase == "running" else "⬜"
+            items.append(f'<div class="ragdx-stage done">✅ {label}</div>')
+        elif (i == 0 or done_flags[i - 1]) and ss.phase == "running":
+            items.append(
+                '<div class="ragdx-stage running">'
+                f'<span class="ragdx-spinner"></span>{label}…</div>'
+            )
         else:
-            icon = "⬜"
-        lines.append(f"{icon} {label}")
-    container.markdown("\n\n".join(lines))
+            items.append(f'<div class="ragdx-stage pending">⬜ {label}</div>')
+    container.markdown(_CHECKLIST_CSS + "".join(items), unsafe_allow_html=True)
 
 
 def _drain_and_render_progress(ss, st) -> None:
