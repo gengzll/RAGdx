@@ -172,7 +172,7 @@ class ExperimentConfig:
     output_dir: str | Path = ".ragdx_experiment"
     api_key: str | None = None
     api_base: str = "https://open.bigmodel.cn/api/paas/v4"
-    model: str = "openai/glm-4-flash"
+    model: str = "openai/glm-4-airx"
     seed: int = 7
     # --- LLM endpoint call management (applies to every LLM-talking
     # subsystem in the pipeline -- ragas judge, DSPy MIPROv2, BO
@@ -2089,7 +2089,7 @@ def run_experiment(
     output_dir: str | Path = ".ragdx_experiment",
     api_key: str | None = None,
     api_base: str = "https://open.bigmodel.cn/api/paas/v4",
-    model: str = "openai/glm-4-flash",
+    model: str = "openai/glm-4-airx",
     seed: int = 7,
     llm_max_concurrent: int = 2,
     llm_max_retries: int = 5,

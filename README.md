@@ -29,8 +29,9 @@ pip install -e ".[experiment]"     # recommended: everything for a run + the UI
 
 API keys are read from the environment in this fallback order:
 `ZHIPU_API_KEY` → `OPENAI_API_KEY`. The defaults target Zhipu GLM
-(`openai/glm-4-flash`); override the model / base URL in the UI or via
-CLI flags for OpenAI, Anthropic, etc.
+(`openai/glm-4-airx`, Zhipu's fast-inference model; `openai/glm-4-flash`
+is the free-tier alternative); override the model / base URL in the UI
+or via CLI flags for OpenAI, Anthropic, etc.
 
 ## Quickstart — the studio (recommended)
 

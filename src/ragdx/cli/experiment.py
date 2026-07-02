@@ -70,7 +70,7 @@ def experiment(
         help="OpenAI-compatible base URL (default: Zhipu).",
     ),
     model: str = typer.Option(
-        "openai/glm-4-flash", "--model",
+        "openai/glm-4-airx", "--model",
         help="LiteLLM model identifier.",
     ),
     seed: int = typer.Option(7, "--seed"),

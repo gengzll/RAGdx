@@ -121,7 +121,7 @@ CATALOG: dict[str, ProviderSpec] = {
         label="Zhipu GLM",
         api_base="https://open.bigmodel.cn/api/paas/v4",
         model_prefix="openai/",
-        sample_model="openai/glm-4-flash",
+        sample_model="openai/glm-4-airx",
         env_vars=("ZHIPU_API_KEY", "OPENAI_API_KEY"),
         notes=(
             "GLM-4-Flash is rate-limited (~2 RPS); keep "
