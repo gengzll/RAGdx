@@ -1,18 +1,15 @@
-"""ragdx studio — upload → run → report Streamlit app.
+"""ragdx studio — upload → configure → run → report Streamlit app.
 
-A single-page studio around :func:`ragdx.experiments.run_experiment`:
+Layout:
 
-1. Upload one or more PDFs (required, pooled into one corpus) and,
-   optionally, an Excel/CSV ground-truth file. A GT file switches the
-   run into **with-GT** mode; without one it runs in **no-GT** mode,
-   where you either synthesize questions from the documents or type
-   your own.
-2. For with-GT, map the GT columns to ``question`` / ``ground_truth`` /
-   ``contexts`` (auto-detected, with a manual fallback).
-3. Tune the experiment settings, then run with a live progress bar,
-   per-stage status, and a detailed log feed.
-4. View the rendered report inline and download the HTML report, the
-   raw ``result.json`` bundle, and the ship-ready ``final/`` artifacts.
+* Sidebar — connection only (model / API base / key).
+* 1 · Upload documents & questions — PDFs (pooled), optional Excel/CSV
+  ground truth, and a **Questions** subsection (GT column mapping, or in
+  no-GT mode: synthesize N questions / type your own). Confirm to lock in.
+* 2 · Experiment settings — three groups: RAG optimization parameters,
+  prompt optimization parameters, and the baseline system prompt (with
+  its default shown). Confirm to lock in.
+* 3 · Run — enabled once 1 and 2 are confirmed; live progress + report.
 
 Launch it with ``ragdx ui`` (or ``ragdx-ui`` / ``streamlit run
 src/ragdx/ui/app.py``).
@@ -62,7 +59,7 @@ def main() -> None:
 def _run_app() -> None:
     import streamlit as st
 
-    from ragdx.experiments import run_experiment
+    from ragdx.experiments import DEFAULT_SYSTEM_INSTRUCTION, run_experiment
     from ragdx.loaders.tabular import (
         detect_mapping,
         load_gt_table,
@@ -74,8 +71,8 @@ def _run_app() -> None:
     st.set_page_config(page_title="ragdx studio", page_icon="🔬", layout="wide")
     st.title("🔬 ragdx studio")
     st.caption(
-        "Upload documents, optionally add ground truth, and run the "
-        "end-to-end RAG optimization experiment — then view and download the report."
+        "Upload documents, configure the experiment, and run the end-to-end "
+        "RAG optimization — then view and download the report."
     )
 
     ss = st.session_state
@@ -85,6 +82,8 @@ def _run_app() -> None:
     ss.setdefault("bundle", None)
     ss.setdefault("output_dir", None)
     ss.setdefault("error", None)
+    ss.setdefault("confirm_upload", False)
+    ss.setdefault("confirm_settings", False)
 
     # ------------------------------------------------- sidebar: connection
     with st.sidebar:
@@ -101,8 +100,10 @@ def _run_app() -> None:
 
     running = ss.phase == "running"
 
-    # ------------------------------------------------------- 1 · upload
-    st.subheader("1 · Upload documents")
+    # =============================================================
+    # 1 · Upload documents & questions
+    # =============================================================
+    st.subheader("1 · Upload documents & questions")
     col_pdf, col_gt = st.columns(2)
     with col_pdf:
         pdf_files = st.file_uploader(
@@ -124,13 +125,14 @@ def _run_app() -> None:
             "no-GT mode (synthesized or hand-entered questions).",
         )
 
-    # ------------------------------ 2 · GT mapping OR no-GT question source
+    st.markdown("#### Questions")
     gt_records = None
     gt_ready = True
     custom_questions: list[str] | None = None
+    n_questions = 5  # only used when synthesizing in no-GT mode
 
     if gt_file is not None:
-        st.subheader("2 · Map ground-truth columns")
+        st.caption("With-GT mode — map your columns to `question` / `ground_truth` / `contexts`.")
         try:
             tmp_gt = Path(tempfile.gettempdir()) / f"ragdx_gt_{gt_file.name}"
             tmp_gt.write_bytes(gt_file.getvalue())
@@ -174,7 +176,7 @@ def _run_app() -> None:
                 gt_ready = False
                 st.warning(f"Finish the mapping to enable the run: {exc}")
     else:
-        st.subheader("2 · Questions (no-GT mode)")
+        st.caption("No-GT mode — no reference answers.")
         source = st.radio(
             "Where should the evaluation questions come from?",
             ["Synthesize from the documents", "Enter my own questions"],
@@ -197,77 +199,95 @@ def _run_app() -> None:
                 gt_ready = False
                 st.warning("Enter at least one question, or switch to synthesize.")
         else:
+            n_questions = st.number_input(
+                "Questions to synthesize",
+                1, 100, 5,
+                disabled=running,
+                help="How many questions to synthesize from the documents.",
+            )
             st.info("Questions will be synthesized from the uploaded documents.")
 
-    # --------------------------------------------- 3 · experiment settings
-    st.subheader("3 · Experiment settings")
-    synth_mode = gt_file is None and not custom_questions
-    c1, c2, c3, c4 = st.columns(4)
+    if st.button("✓ Confirm documents & questions", disabled=running):
+        if not pdf_files:
+            st.warning("Upload at least one PDF first.")
+        elif not gt_ready:
+            st.warning("Finish the questions setup first.")
+        else:
+            ss.confirm_upload = True
+    if ss.confirm_upload:
+        st.success("Documents & questions confirmed.")
+
+    # =============================================================
+    # 2 · Experiment settings
+    # =============================================================
+    st.subheader("2 · Experiment settings")
+
+    st.markdown("#### RAG optimization parameters")
+    st.caption("Bayesian search over the RAG config (chunk size / overlap / top-k).")
+    c1, c2, c3 = st.columns(3)
     with c1:
-        n_questions = st.number_input(
-            "Questions to synthesize",
-            1, 100, 5,
-            disabled=running or not synth_mode,
-            help="How many questions to synthesize from the documents. "
-            "Only used in no-GT mode when you don't supply your own "
-            "questions (ignored otherwise).",
+        n_bo_trials = st.number_input(
+            "Bayesian search trials", 2, 64, 8, disabled=running,
+            help="Total RAG configurations the optimizer evaluates. Each "
+            "trial builds and scores a candidate (chunk size, overlap, "
+            "top-k). More = more thorough, more LLM calls.",
         )
     with c2:
-        n_bo_trials = st.number_input(
-            "Bayesian search trials",
-            2, 64, 8,
-            disabled=running,
-            help="Total number of RAG configurations the Bayesian optimizer "
-            "evaluates. Each trial builds the pipeline with a candidate "
-            "(chunk size, overlap, top-k) and scores it. More trials search "
-            "more thoroughly but cost more time and LLM calls.",
+        n_bo_init = st.number_input(
+            "Bayesian init rounds", 1, 16, 3, disabled=running,
+            help="Random configurations sampled before the Bayesian model "
+            "starts steering. Seeds the surrogate; keep <= trials (2-3).",
         )
     with c3:
-        n_bo_init = st.number_input(
-            "Bayesian init rounds",
-            1, 16, 3,
-            disabled=running,
-            help="Number of initial configurations sampled at random before "
-            "the Bayesian model starts steering the search. These seed the "
-            "surrogate model; keep it <= trials (typically 2-3).",
-        )
-    with c4:
         seed = st.number_input(
             "Seed", 0, 10_000, 7, disabled=running,
             help="Deterministic seed for the search and question synthesis.",
         )
+
+    st.markdown("#### Prompt optimization parameters")
+    st.caption("DSPy tuning of the generator prompt at the winning RAG config.")
     o1, o2 = st.columns(2)
     with o1:
         dspy_optimizer = st.selectbox(
-            "Prompt optimizer (DSPy)",
-            ["gepa", "mipro", "copro"],
-            index=0,
-            disabled=running,
-            help="Algorithm that optimizes the generator prompt: "
-            "'gepa' (reflective evolution, default), 'mipro' (Bayesian "
-            "instruction+demo search), or 'copro' (iterative rewrite).",
+            "Prompt optimizer (DSPy)", ["gepa", "mipro", "copro"], index=0, disabled=running,
+            help="'gepa' (reflective evolution, default), 'mipro' (Bayesian "
+            "instruction+demo search), or 'copro' (iterative rewrite). "
+            "Note: 'mipro' needs at least 2 questions.",
         )
     with o2:
         mipro_auto = st.selectbox(
-            "Optimizer budget",
-            ["light", "medium", "heavy"],
-            index=0,
-            disabled=running,
-            help="How hard the prompt optimizer searches. GEPA: ~30 / 100 / "
-            "300 LLM calls; bigger = better but slower. Use 'light' for a "
-            "quick run.",
+            "Optimizer budget", ["light", "medium", "heavy"], index=0, disabled=running,
+            help="How hard the optimizer searches. GEPA: ~30 / 100 / 300 LLM "
+            "calls. Use 'light' for a quick run.",
         )
+
+    st.markdown("#### Baseline system prompt")
+    st.caption("The RAG system prompt used by the baseline (DSPy may evolve it further).")
     system_instruction = st.text_area(
         "System instruction (optional)",
         value="",
         disabled=running,
-        help="RAG system prompt shared by the generation path and the DSPy "
-        "baseline. Leave blank for the generic default; DSPy may evolve it further.",
+        help="Inject domain guidance (e.g. 'You are an ESG analyst; answer "
+        "only from the context; cite figures precisely'). Leave blank to "
+        "use the default shown below.",
     )
+    st.caption("Default used when left blank:")
+    st.code(DEFAULT_SYSTEM_INSTRUCTION, language="text")
 
-    # -------------------------------------------------------------- 4 · run
-    st.subheader("4 · Run")
-    can_run = bool(pdf_files) and gt_ready and not running
+    if st.button("✓ Confirm experiment settings", disabled=running):
+        ss.confirm_settings = True
+    if ss.confirm_settings:
+        st.success("Experiment settings confirmed.")
+
+    # =============================================================
+    # 3 · Run
+    # =============================================================
+    st.subheader("3 · Run")
+    can_run = (
+        bool(pdf_files) and gt_ready and ss.confirm_upload and ss.confirm_settings and not running
+    )
+    if not (ss.confirm_upload and ss.confirm_settings):
+        st.caption("Confirm sections 1 and 2 above to enable the run.")
     if st.button("▶ Run experiment", type="primary", disabled=not can_run):
         _start_run(
             ss=ss,
@@ -300,7 +320,7 @@ def _run_app() -> None:
 
     # --------------------------------------------------------- report view
     if ss.phase == "done" and ss.bundle is not None:
-        st.subheader("5 · Report")
+        st.subheader("4 · Report")
         _render_report_and_downloads(ss, st, render_report)
 
 
@@ -317,8 +337,6 @@ def _start_run(
     from ragdx.schemas.models import DatasetRecord
 
     workdir = Path(tempfile.mkdtemp(prefix="ragdx_run_"))
-    # Multiple PDFs are pooled into a single corpus by the engine, which
-    # accepts a list of paths. A single file is passed as a 1-item list.
     pdf_paths: list[str] = []
     for f in pdf_files:
         p = workdir / f.name
@@ -328,10 +346,8 @@ def _start_run(
     has_gt = gt_records is not None
     questions_path = None
     if has_gt:
-        # with-GT: reference answers drive answer-correctness metrics.
         questions_path = str(write_questions_jsonl(gt_records, workdir / "questions.jsonl"))
     elif custom_questions:
-        # no-GT with user-supplied questions: same JSONL shape, GT = null.
         records = [DatasetRecord(question=q, ground_truth=None, contexts=[]) for q in custom_questions]
         questions_path = str(write_questions_jsonl(records, workdir / "questions.jsonl"))
 
@@ -345,7 +361,6 @@ def _start_run(
     ss.phase = "running"
     ss.queue = queue.Queue()
 
-    # Locals captured by the closure — no session_state access in the thread.
     q = ss.queue
     corpus = pdf_paths if len(pdf_paths) > 1 else pdf_paths[0]
 
@@ -353,9 +368,6 @@ def _start_run(
         q.put(("event", event))
 
     def _worker() -> None:
-        # Attach to the ROOT logger so the feed captures ragdx *and* the
-        # library internals (dspy / ragas / langchain) at INFO — the
-        # "detailed log" the user sees during a run.
         handler = _QueueLogHandler(q)
         handler.setLevel(logging.INFO)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s", "%H:%M:%S"))
@@ -397,7 +409,7 @@ class _QueueLogHandler(logging.Handler):
 
 
 def _render_stage_checklist(ss, container) -> None:
-    """Render the per-stage checklist (✅ done / 🔄 running / ⬜ pending)."""
+    """Render the per-stage checklist (done / running / pending)."""
     seen = {e.get("stage") for e in ss.events}
     done_flags = [marker in seen for marker, _ in _STAGE_CHECKLIST]
     lines = []
@@ -437,7 +449,6 @@ def _drain_and_render_progress(ss, st) -> None:
                     label = f"[{mode}] {detail}" if mode else detail
                     ss.events.append(payload)
                     bar.progress(min(1.0, pct), text=label)
-                    # Announce each completed milestone.
                     if payload.get("stage") in {m for m, _ in _STAGE_CHECKLIST}:
                         status.success(f"✓ {label}  ·  {int(pct * 100)}%")
                     else:
