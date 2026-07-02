@@ -330,37 +330,56 @@ def _run_app() -> None:
             help="Deterministic seed for the search and question synthesis.",
         )
 
-    st.markdown("**Search space** — the candidate values the Bayesian optimizer explores:")
+    st.markdown(
+        "**Search space** — the candidate values the Bayesian optimizer "
+        "explores. Comma-separated; enter any values within the ranges."
+    )
     s1, s2, s3 = st.columns(3)
     with s1:
-        chunk_sizes = st.multiselect(
-            "Chunk sizes (chars)",
-            [128, 256, 512, 1024, 2048],
-            default=[256, 512, 1024],
+        cs_raw = st.text_input(
+            "Chunk sizes (chars, 64-8192)",
+            value="256, 512, 1024",
             disabled=running,
             help="Candidate chunk sizes for splitting the documents. "
             "Smaller = more precise retrieval, less context per chunk.",
         )
+        chunk_sizes, cs_err = _parse_int_list(cs_raw, 64, 8192)
     with s2:
-        chunk_overlaps = st.multiselect(
-            "Chunk overlaps (chars)",
-            [0, 50, 100, 200],
-            default=[0, 50, 100],
+        co_raw = st.text_input(
+            "Chunk overlaps (chars, 0-1024)",
+            value="0, 50, 100",
             disabled=running,
             help="Candidate overlap between adjacent chunks. Overlap "
-            "avoids cutting facts in half at chunk boundaries.",
+            "avoids cutting facts in half at chunk boundaries. Must stay "
+            "smaller than the smallest chunk size.",
         )
+        chunk_overlaps, co_err = _parse_int_list(co_raw, 0, 1024)
     with s3:
-        top_ks = st.multiselect(
-            "Top-k values",
-            [1, 3, 5, 7, 10],
-            default=[1, 3, 5, 7],
+        tk_raw = st.text_input(
+            "Top-k values (1-50)",
+            value="1, 3, 5, 7",
             disabled=running,
             help="Candidate numbers of chunks retrieved per question.",
         )
-    search_space_ok = bool(chunk_sizes) and bool(chunk_overlaps) and bool(top_ks)
-    if not search_space_ok:
-        st.warning("Each search-space axis needs at least one value.")
+        top_ks, tk_err = _parse_int_list(tk_raw, 1, 50)
+
+    ss_errors = [
+        f"{label}: {err}"
+        for label, err in (
+            ("Chunk sizes", cs_err), ("Chunk overlaps", co_err), ("Top-k", tk_err),
+        )
+        if err
+    ]
+    # Cross-axis constraint: the text splitter requires overlap < chunk
+    # size for every (size, overlap) combination the search may try.
+    if not ss_errors and chunk_sizes and chunk_overlaps and max(chunk_overlaps) >= min(chunk_sizes):
+        ss_errors.append(
+            f"largest overlap ({max(chunk_overlaps)}) must be smaller than "
+            f"the smallest chunk size ({min(chunk_sizes)})"
+        )
+    search_space_ok = not ss_errors
+    if ss_errors:
+        st.warning("Fix the search space: " + "; ".join(ss_errors))
 
     st.markdown("#### Prompt optimization parameters")
     st.caption("DSPy tuning of the generator prompt at the winning RAG config.")
@@ -493,6 +512,29 @@ def _run_app() -> None:
 
 
 # --------------------------------------------------------------- helpers
+def _parse_int_list(raw: str, lo: int, hi: int) -> tuple[list[int], str]:
+    """Parse a comma/space-separated list of ints within ``[lo, hi]``.
+
+    Returns ``(sorted unique values, error_message)`` — error is ""
+    when the input is valid. Tolerates Chinese/Western commas, spaces,
+    and semicolons as separators.
+    """
+    vals: list[int] = []
+    for tok in re.split(r"[,;\s，、；]+", raw.strip()):  # noqa: RUF001 — fullwidth separators are intentional
+        if not tok:
+            continue
+        try:
+            v = int(tok)
+        except ValueError:
+            return [], f"'{tok}' is not a whole number"
+        if not (lo <= v <= hi):
+            return [], f"{v} is outside the allowed range [{lo}, {hi}]"
+        vals.append(v)
+    if not vals:
+        return [], "enter at least one value"
+    return sorted(set(vals)), ""
+
+
 def _fmt_minutes(calls: int, sec_per_call: float = 10.0, concurrency: int = 2) -> str:
     """Rough wall-time range for ``calls`` LLM calls (±~40%)."""
     mid = calls * sec_per_call / concurrency
