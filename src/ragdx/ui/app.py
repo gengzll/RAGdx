@@ -115,6 +115,7 @@ def _run_app() -> None:
         records_from_table,
         write_questions_jsonl,
     )
+    from ragdx.optim.objectives import default_objective
     from ragdx.ui.experiment_report import render_report
 
     st.set_page_config(page_title="ragdx studio", page_icon="🔬", layout="wide")
@@ -308,95 +309,154 @@ def _run_app() -> None:
     # =============================================================
     st.subheader("2 · Experiment settings")
 
-    st.markdown("#### RAG optimization parameters")
-    st.caption("Bayesian search over the RAG config (chunk size / overlap / top-k).")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        n_bo_trials = st.number_input(
-            "Bayesian search trials", 2, 64, 8, disabled=running,
-            help="Total RAG configurations the optimizer evaluates. Each "
-            "trial builds and scores a candidate (chunk size, overlap, "
-            "top-k). More = more thorough, more LLM calls.",
-        )
-    with c2:
-        n_bo_init = st.number_input(
-            "Bayesian init rounds", 1, 16, 3, disabled=running,
-            help="Random configurations sampled before the Bayesian model "
-            "starts steering. Seeds the surrogate; keep <= trials (2-3).",
-        )
-    with c3:
-        seed = st.number_input(
-            "Seed", 0, 10_000, 7, disabled=running,
-            help="Deterministic seed for the search and question synthesis.",
-        )
-
-    st.markdown(
-        "**Search space** — the candidate values the Bayesian optimizer "
-        "explores. Comma-separated; enter any values within the ranges."
+    scope_label = st.radio(
+        "Experiment scope",
+        ["Full (RAG + prompt)", "RAG optimization only", "Prompt optimization only"],
+        disabled=running,
+        horizontal=True,
+        help="Full runs the Bayesian RAG-config search, then prompt "
+        "optimization at the winner. RAG-only stops after the config "
+        "search. Prompt-only skips the search — you fix the RAG config "
+        "and only the prompt is optimized.",
     )
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        cs_raw = st.text_input(
-            "Chunk sizes (chars, 64-8192)",
-            value="256, 512, 1024",
-            disabled=running,
-            help="Candidate chunk sizes for splitting the documents. "
-            "Smaller = more precise retrieval, less context per chunk.",
-        )
-        chunk_sizes, cs_err = _parse_int_list(cs_raw, 64, 8192)
-    with s2:
-        co_raw = st.text_input(
-            "Chunk overlaps (chars, 0-1024)",
-            value="0, 50, 100",
-            disabled=running,
-            help="Candidate overlap between adjacent chunks. Overlap "
-            "avoids cutting facts in half at chunk boundaries. Must stay "
-            "smaller than the smallest chunk size.",
-        )
-        chunk_overlaps, co_err = _parse_int_list(co_raw, 0, 1024)
-    with s3:
-        tk_raw = st.text_input(
-            "Top-k values (1-50)",
-            value="1, 3, 5, 7",
-            disabled=running,
-            help="Candidate numbers of chunks retrieved per question.",
-        )
-        top_ks, tk_err = _parse_int_list(tk_raw, 1, 50)
+    stages = {
+        "Full (RAG + prompt)": "all",
+        "RAG optimization only": "rag",
+        "Prompt optimization only": "prompt",
+    }[scope_label]
 
-    ss_errors = [
-        f"{label}: {err}"
-        for label, err in (
-            ("Chunk sizes", cs_err), ("Chunk overlaps", co_err), ("Top-k", tk_err),
-        )
-        if err
-    ]
-    # Cross-axis constraint: the text splitter requires overlap < chunk
-    # size for every (size, overlap) combination the search may try.
-    if not ss_errors and chunk_sizes and chunk_overlaps and max(chunk_overlaps) >= min(chunk_sizes):
-        ss_errors.append(
-            f"largest overlap ({max(chunk_overlaps)}) must be smaller than "
-            f"the smallest chunk size ({min(chunk_sizes)})"
-        )
-    search_space_ok = not ss_errors
-    if ss_errors:
-        st.warning("Fix the search space: " + "; ".join(ss_errors))
+    seed = st.number_input(
+        "Seed", 0, 10_000, 7, disabled=running,
+        help="Deterministic seed for the search and question synthesis.",
+    )
 
-    st.markdown("#### Prompt optimization parameters")
-    st.caption("DSPy tuning of the generator prompt at the winning RAG config.")
-    o1, o2 = st.columns(2)
-    with o1:
-        dspy_optimizer = st.selectbox(
-            "Prompt optimizer (DSPy)", ["gepa", "mipro", "copro"], index=0, disabled=running,
-            help="'gepa' (reflective evolution, default), 'mipro' (Bayesian "
-            "instruction+demo search), or 'copro' (iterative rewrite). "
-            "Note: 'mipro' needs at least 2 questions.",
+    # Defaults that apply when a sub-section is hidden by the scope.
+    n_bo_trials, n_bo_init = 8, 3
+    dspy_optimizer, mipro_auto = "gepa", "light"
+    search_space_ok = True
+
+    if stages in ("all", "rag"):
+        st.markdown("#### RAG optimization parameters")
+        st.caption("Bayesian search over the RAG config (chunk size / overlap / top-k).")
+        c1, c2 = st.columns(2)
+        with c1:
+            n_bo_trials = st.number_input(
+                "Bayesian search trials", 2, 64, 8, disabled=running,
+                help="Total RAG configurations the optimizer evaluates. Each "
+                "trial builds and scores a candidate (chunk size, overlap, "
+                "top-k). More = more thorough, more LLM calls.",
+            )
+        with c2:
+            n_bo_init = st.number_input(
+                "Bayesian init rounds", 1, 16, 3, disabled=running,
+                help="Random configurations sampled before the Bayesian model "
+                "starts steering. Seeds the surrogate; keep <= trials (2-3).",
+            )
+
+        st.markdown(
+            "**Search space** — the candidate values the Bayesian optimizer "
+            "explores. Comma-separated; enter any values within the ranges."
         )
-    with o2:
-        mipro_auto = st.selectbox(
-            "Optimizer budget", ["light", "medium", "heavy"], index=0, disabled=running,
-            help="How hard the optimizer searches. GEPA: ~30 / 100 / 300 LLM "
-            "calls. Use 'light' for a quick run.",
-        )
+        s1, s2, s3 = st.columns(3)
+        with s1:
+            cs_raw = st.text_input(
+                "Chunk sizes (chars, 64-8192)",
+                value="256, 512, 1024",
+                disabled=running,
+                help="Candidate chunk sizes for splitting the documents. "
+                "Smaller = more precise retrieval, less context per chunk.",
+            )
+            chunk_sizes, cs_err = _parse_int_list(cs_raw, 64, 8192)
+        with s2:
+            co_raw = st.text_input(
+                "Chunk overlaps (chars, 0-1024)",
+                value="0, 50, 100",
+                disabled=running,
+                help="Candidate overlap between adjacent chunks. Overlap "
+                "avoids cutting facts in half at chunk boundaries. Must stay "
+                "smaller than the smallest chunk size.",
+            )
+            chunk_overlaps, co_err = _parse_int_list(co_raw, 0, 1024)
+        with s3:
+            tk_raw = st.text_input(
+                "Top-k values (1-50)",
+                value="1, 3, 5, 7",
+                disabled=running,
+                help="Candidate numbers of chunks retrieved per question.",
+            )
+            top_ks, tk_err = _parse_int_list(tk_raw, 1, 50)
+
+        ss_errors = [
+            f"{label}: {err}"
+            for label, err in (
+                ("Chunk sizes", cs_err), ("Chunk overlaps", co_err), ("Top-k", tk_err),
+            )
+            if err
+        ]
+        # Cross-axis constraint: the text splitter requires overlap < chunk
+        # size for every (size, overlap) combination the search may try.
+        if not ss_errors and chunk_sizes and chunk_overlaps and max(chunk_overlaps) >= min(chunk_sizes):
+            ss_errors.append(
+                f"largest overlap ({max(chunk_overlaps)}) must be smaller than "
+                f"the smallest chunk size ({min(chunk_sizes)})"
+            )
+        search_space_ok = not ss_errors
+        if ss_errors:
+            st.warning("Fix the search space: " + "; ".join(ss_errors))
+    else:
+        st.markdown("#### Fixed RAG configuration")
+        st.caption("Prompt-only scope: set the RAG config the prompt is optimized at.")
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            fixed_cs = st.number_input("Chunk size (chars)", 64, 8192, 512, disabled=running)
+        with f2:
+            fixed_co = st.number_input("Chunk overlap (chars)", 0, 1024, 50, disabled=running)
+        with f3:
+            fixed_tk = st.number_input("Top-k", 1, 50, 5, disabled=running)
+        chunk_sizes, chunk_overlaps, top_ks = [int(fixed_cs)], [int(fixed_co)], [int(fixed_tk)]
+        if fixed_co >= fixed_cs:
+            search_space_ok = False
+            st.warning("Chunk overlap must be smaller than the chunk size.")
+
+    if stages in ("all", "prompt"):
+        st.markdown("#### Prompt optimization parameters")
+        st.caption("DSPy tuning of the generator prompt at the winning RAG config.")
+        o1, o2 = st.columns(2)
+        with o1:
+            dspy_optimizer = st.selectbox(
+                "Prompt optimizer (DSPy)", ["gepa", "mipro", "copro"], index=0, disabled=running,
+                help="'gepa' (reflective evolution, default), 'mipro' (Bayesian "
+                "instruction+demo search), or 'copro' (iterative rewrite). "
+                "Note: 'mipro' needs at least 2 questions.",
+            )
+        with o2:
+            mipro_auto = st.selectbox(
+                "Optimizer budget", ["light", "medium", "heavy"], index=0, disabled=running,
+                help="How hard the optimizer searches. GEPA: ~30 / 100 / 300 LLM "
+                "calls. Use 'light' for a quick run.",
+            )
+
+    st.markdown("#### Composite objective weights")
+    st.caption(
+        "The weighted metrics the RAG Bayesian search optimizes (and the "
+        "report's headline comparison). Defaults follow groundedness > "
+        "correctness > retrieval quality > auxiliary judges; lower-is-better "
+        "metrics (hallucination/bias/toxicity) are auto-inverted."
+    )
+    _gt_mode_now = "with_gt" if gt_file is not None else "no_gt"
+    _default_weights = dict(default_objective(_gt_mode_now).metrics)
+    objective_weights: dict[str, float] = {}
+    with st.expander("Adjust metric weights", expanded=False):
+        wcols = st.columns(3)
+        for i, (metric, wdefault) in enumerate(_default_weights.items()):
+            with wcols[i % 3]:
+                objective_weights[metric] = st.number_input(
+                    metric, 0.0, 10.0, float(wdefault), step=0.1,
+                    disabled=running, key=f"w_{metric}",
+                )
+    weights_customized = objective_weights != _default_weights
+    if weights_customized:
+        st.info("Custom objective weights will be used for this run.")
 
     st.markdown("#### Baseline system prompt")
     st.caption("The RAG system prompt used by the baseline (DSPy may evolve it further).")
@@ -436,6 +496,7 @@ def _run_app() -> None:
         dspy_optimizer=dspy_optimizer,
         budget=mipro_auto,
         synthesize=gt_records is None and not custom_questions,
+        stages=stages,
     )
     st.markdown("**Estimated workload** (current settings)")
     st.table(est_rows)
@@ -488,9 +549,13 @@ def _run_app() -> None:
                 system_instruction=system_instruction or None,
                 dspy_optimizer=dspy_optimizer,
                 mipro_auto=mipro_auto,
+                stages=stages,
                 chunk_sizes=sorted(chunk_sizes),
                 chunk_overlaps=sorted(chunk_overlaps),
                 top_ks=sorted(top_ks),
+                # Stored as a plain dict (JSON-safe for meta.json); the
+                # worker converts it into objective_overrides.
+                objective_weights=objective_weights,
             ),
         )
         st.rerun()
@@ -546,7 +611,7 @@ def _fmt_minutes(calls: int, sec_per_call: float = 10.0, concurrency: int = 2) -
 
 def _estimate_workload(
     *, n_questions: int, n_bo_trials: int, dspy_optimizer: str,
-    budget: str, synthesize: bool,
+    budget: str, synthesize: bool, stages: str = "all",
 ) -> tuple[list[dict], int, str]:
     """Static per-stage LLM-call estimate for the current settings.
 
@@ -557,16 +622,20 @@ def _estimate_workload(
     """
     q = max(1, int(n_questions))
     per_q_eval = 5  # 1 generation + ~4 ragas judge calls
+    run_rag = stages in ("all", "rag")
+    run_prompt = stages in ("all", "prompt")
 
     synth_calls = q if synthesize else 0
-    bo_calls = int(n_bo_trials) * q * per_q_eval
+    bo_calls = int(n_bo_trials) * q * per_q_eval if run_rag else 0
     optimizer_body = {
         "gepa": {"light": 30, "medium": 100, "heavy": 300},
         "mipro": {"light": 30, "medium": 70, "heavy": 150},
         "copro": {"light": 30, "medium": 30, "heavy": 30},
     }.get(dspy_optimizer, {}).get(budget, 30)
-    dspy_calls = q * per_q_eval * 2 + optimizer_body  # baseline + re-eval + search
-    supplement_calls = 2 * q * 4  # deepeval: 4 metrics x both prompt variants
+    # baseline + re-eval + search; deepeval supplement only runs on the
+    # prompt stage's answers.
+    dspy_calls = (q * per_q_eval * 2 + optimizer_body) if run_prompt else 0
+    supplement_calls = 2 * q * 4 if run_prompt else 0
 
     rows = [
         {
@@ -574,22 +643,24 @@ def _estimate_workload(
             "LLM calls": f"~{synth_calls}" if synth_calls else "0",
             "Est. time": _fmt_minutes(synth_calls) if synth_calls else "< 1 min",
         },
-        {
+    ]
+    if run_rag:
+        rows.append({
             "Stage": f"Bayesian RAG search ({n_bo_trials} trials x {q} questions)",
             "LLM calls": f"~{bo_calls}",
             "Est. time": _fmt_minutes(bo_calls),
-        },
-        {
+        })
+    if run_prompt:
+        rows.append({
             "Stage": f"Prompt optimization ({dspy_optimizer}/{budget} + before/after eval)",
             "LLM calls": f"~{dspy_calls}",
             "Est. time": _fmt_minutes(dspy_calls),
-        },
-        {
+        })
+        rows.append({
             "Stage": "Final evaluation (deepeval supplement) & report",
             "LLM calls": f"~{supplement_calls}",
             "Est. time": _fmt_minutes(supplement_calls),
-        },
-    ]
+        })
     total = synth_calls + bo_calls + dspy_calls + supplement_calls
     return rows, total, _fmt_minutes(total)
 
@@ -673,6 +744,20 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
     run_name = meta["name"]
     meta_snapshot = dict(meta)
 
+    # Objective weights travel through meta.json as a plain dict; turn
+    # them into the engine's objective_overrides here (only when they
+    # differ from the defaults, so default runs keep default behavior).
+    weights = settings.pop("objective_weights", None)
+    objective_overrides = None
+    if weights:
+        from ragdx.optim.objectives import default_objective
+
+        base_obj = default_objective(mode if mode in ("with_gt", "no_gt") else "no_gt")
+        if dict(weights) != dict(base_obj.metrics):
+            objective_overrides = {
+                mode: base_obj.with_overrides(metrics={k: float(v) for k, v in weights.items()})
+            }
+
     def _progress(event: dict[str, Any]) -> None:
         q.put(("event", event))
 
@@ -715,6 +800,7 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
                 api_key=api_key,
                 resume=resume,
                 experiment_group=run_name,
+                objective_overrides=objective_overrides,
                 **settings,
             )
             _update_meta(

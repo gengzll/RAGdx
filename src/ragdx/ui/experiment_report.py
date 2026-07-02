@@ -104,49 +104,13 @@ def _esc(s: Any) -> str:
 
 
 _REPORT_JS = """
-// item 7: live-editable layer weights. Each .ovlayer recomputes its
-// aggregate from its own weight inputs (oriented values already account
-// for lower-is-better inversion server-side).
-function ragdxRecomputeLayer(layerEl){
-  var inputs = layerEl.querySelectorAll('input.lw');
-  var num=0, den=0, custom=false;
-  inputs.forEach(function(inp){
-    var w = parseFloat(inp.value); if(isNaN(w)||w<0) w=0;
-    if(Math.abs(w-1)>1e-9) custom=true;
-    var ov = parseFloat(inp.getAttribute('data-oriented'));
-    if(!isNaN(ov) && w>0){ num += ov*w; den += w; }
-  });
-  var fill = layerEl.querySelector('.ovbar-fill');
-  var st = layerEl.querySelector('.ovscore');
-  // "custom weights active" marker: when any weight deviates from 1,
-  // tag the score so the user can SEE the recompute fired even when
-  // the weighted mean happens to equal the default (e.g. all metric
-  // values identical -- any weighting gives the same mean).
-  var displayScore = function(s){
-    if(st){ st.textContent = s; st.title = custom ? 'custom weights applied' : '';
-      st.style.fontStyle = custom ? 'italic' : 'normal';
-      st.style.color = custom ? '#1a73e8' : ''; }
-  };
-  if(den<=0){ displayScore('-'); if(fill) fill.style.width='0%'; return; }
-  var score = num/den;
-  var pct = Math.round(score*100);
-  if(fill){ fill.style.width = pct+'%';
-    fill.style.background = score<0.6?'#dc2626':(score<0.8?'#d97706':'#16a34a'); }
-  displayScore(score.toFixed(2) + (custom ? '\\u2009\\u2696' : ''));
-}
-// item 6: per-trial visibility checkboxes toggle each trial block.
+// Per-trial visibility checkboxes toggle each trial block.
 document.addEventListener('change', function(e){
   var t = e.target;
   if(t && t.classList && t.classList.contains('trial-toggle')){
     var id = t.getAttribute('data-target');
     var el = document.getElementById(id);
     if(el) el.style.display = t.checked ? '' : 'none';
-  }
-});
-document.addEventListener('input', function(e){
-  if(e.target && e.target.classList && e.target.classList.contains('lw')){
-    var layerEl = e.target.closest('.ovlayer');
-    if(layerEl) ragdxRecomputeLayer(layerEl);
   }
 });
 """
@@ -215,6 +179,21 @@ def _render_meta(bundle: dict) -> str:
     parts.append(_metric("Model", meta.get("model", "?")))
     parts.append(_metric("Endpoint", meta.get("model_endpoint", "?")))
     parts.append('</div>')
+
+    emb = meta.get("embedding") or {}
+    if emb.get("model"):
+        parts.append('<div class="metric-row">')
+        parts.append(_metric("Chunk embedding model", emb["model"]))
+        if emb.get("max_seq_tokens"):
+            parts.append(_metric("Embedding max input", f"{emb['max_seq_tokens']} tokens"))
+        parts.append('</div>')
+        if emb.get("max_seq_tokens"):
+            parts.append(
+                '<p class="caption">Chunk text beyond the embedding '
+                'model\'s max input is silently truncated before '
+                'embedding — chunk sizes far above this limit stop '
+                'improving retrieval.</p>'
+            )
 
     rc = meta.get("run_config") or {}
     if rc:
@@ -697,12 +676,12 @@ def _render_layer_overview(layer_scores: dict) -> str:
 
     parts: list[str] = [
         '<h4>Three-layer score overview</h4>',
-        '<p class="caption">Aggregate score per layer (weighted mean of '
-        'the layer\'s <em>computed</em> metrics; lower-is-better metrics '
+        '<p class="caption">Aggregate score per layer (mean of the '
+        'layer\'s <em>computed</em> metrics; lower-is-better metrics '
         'like <code>hallucination</code> are inverted so higher = '
-        'healthier). Expand a layer to see every metric, its meaning, and '
-        'a <strong>weight box</strong> — edit the weights and the layer '
-        'score above recomputes live.</p>',
+        'healthier). Expand a layer to see every metric, its value, and '
+        'its meaning. Metric weighting is configured up-front in the '
+        'studio\'s experiment settings.</p>',
     ]
     for lyr in layers:
         d = layer_scores.get(lyr) or {}
@@ -731,7 +710,7 @@ def _render_layer_overview(layer_scores: dict) -> str:
         )
 
         # Full catalog detail: computed value OR requires-badge, each row
-        # carrying meaning + direction (item 2) + a weight input (item 7).
+        # carrying meaning + direction.
         entries = catalog.get(lyr) or []
         n_computed = sum(1 for e in entries if e["computed"])
         rows = []
@@ -753,39 +732,23 @@ def _render_layer_overview(layer_scores: dict) -> str:
                     val_cell = _esc(f"{rv:.3f}{inv}")
                 else:
                     val_cell = "—"
-                # Weight box drives the live recompute. data-oriented is
-                # the value the aggregate uses (already direction-fixed).
-                ov_attr = (
-                    f"{float(ov):.6f}" if isinstance(ov, (int, float)) else "0"
-                )
-                weight_cell = (
-                    f'<input class="lw" type="number" step="0.1" min="0" '
-                    f'value="1" data-oriented="{ov_attr}" '
-                    f'style="width:56px" aria-label="weight for {_esc(name)}">'
-                )
             else:
                 badge = e["requires_label"] or "not computed"
                 val_cell = (
                     f'<span class="tag" style="background:#f3f4f6;color:#6b7280">'
                     f'{_esc(badge)}</span>'
                 )
-                weight_cell = '<span class="subtle">—</span>'
             rows.append(
                 f'<tr><td><code>{_esc(name)}</code></td>'
                 f'<td>{val_cell}</td>'
-                f'<td>{weight_cell}</td>'
                 f'<td class="subtle">{_esc(arrow)}</td>'
                 f'<td class="subtle">{_esc(desc)}</td></tr>'
             )
         detail = (
             '<table><thead><tr><th>metric</th><th>value / status</th>'
-            '<th>weight</th><th>direction</th><th>what it measures</th></tr>'
+            '<th>direction</th><th>what it measures</th></tr>'
             f'</thead><tbody>{"".join(rows)}</tbody></table>'
-            '<p class="caption">Weights apply within this layer (weighted '
-            'mean of the computed metrics). Set a weight to 0 to drop a '
-            'metric; the bar above updates as you type.</p>'
         )
-        # Wrap in .ovlayer so the JS scopes the recompute to this layer.
         parts.append(
             f'<div class="ovlayer" data-layer="{_esc(lyr)}">'
             + bar
@@ -1232,11 +1195,14 @@ def _render_objectives(bundle: dict) -> str:
         return ""
     from ragdx.core.metrics import METRIC_GLOSSARY
 
-    parts = ['<h2>Composite objectives</h2>']
+    parts = ['<h2>Composite objective (RAG Bayesian search)</h2>']
     parts.append(
         '<p class="caption"><strong>Metric weights</strong> combine into '
-        'the composite score (<code>sum of weight_i * metric_i</code>) -- '
-        'what BO and DSPy optimize against. Weights follow the practical '
+        'the composite score (<code>sum of weight_i * metric_i</code>) '
+        'that the <strong>RAG-config Bayesian search</strong> optimizes '
+        'and that the report uses for headline comparisons. The prompt '
+        'optimizer (DSPy) selects its winner with its own inner-loop '
+        'metric. Weights follow the practical '
         'priority hierarchy <em>groundedness &gt; correctness &gt; '
         'retrieval quality &gt; auxiliary judges</em>. Lower-is-better '
         'metrics (hallucination / bias / toxicity) are inverted '
@@ -1359,6 +1325,7 @@ def _render_bayes_search(bundle: dict) -> str:
             fig = px.line(
                 progress, x="trial", y="score", color="series",
                 markers=True, title=f"BO progression — {mode}",
+                color_discrete_map={"composite": "#9aa0a6", "running best": "#1a73e8"},
             )
             fig.update_layout(height=360, margin=dict(t=60, b=40))
             parts.append(_fig_html(fig))
@@ -1455,10 +1422,9 @@ def _render_dspy_a_b(bundle: dict) -> str:
     parts.append(
         '<p class="caption">Both columns are evaluated with the same '
         'pipeline, questions, and metric set as the rest of this report. '
-        'The <strong>final system ships whichever prompt scored higher '
-        'on the composite objective</strong> — if the optimized prompt '
-        'did not beat the baseline, the final config keeps the baseline '
-        'prompt and the final scores below are the baseline column.</p>'
+        f'The final config ships <strong>the prompt {_esc(_algo_label)} '
+        'selected with its own inner-loop metric</strong>; the composite '
+        'scores below are shown for comparison.</p>'
     )
 
     for mode, payload in ab.items():
@@ -1469,24 +1435,25 @@ def _render_dspy_a_b(bundle: dict) -> str:
         os_ = payload.get("optimized_scores") or {}
         delta = payload.get("delta") or {}
         comp = payload.get("composite") or {}
-        winner = payload.get("winner") or comp.get("winner")
 
         if not bs and not os_:
             parts.append('<p class="subtle">No before/after scores recorded.</p>')
             continue
 
-        # Winner banner: which prompt the final config actually ships.
-        if winner == "baseline":
+        # When the optimizer's winner IS the seed prompt (every candidate
+        # rejected), say so — otherwise identical prompts with slightly
+        # different scores read as a contradiction (the difference is
+        # pure evaluation noise).
+        _base_instr = next(iter((payload.get("baseline_instructions") or {}).values()), None)
+        _win_instr = next(iter((payload.get("instructions") or {}).values()), None)
+        if _base_instr is not None and _base_instr == _win_instr:
             parts.append(
-                '<p class="callout warn"><strong>Winner: baseline prompt.</strong> '
-                'The optimized prompt scored lower on the composite objective, '
-                'so the final config keeps the baseline (seed) prompt. The '
-                '"optimized" column is shown for transparency only.</p>'
-            )
-        elif winner == "optimized":
-            parts.append(
-                '<p class="callout ok"><strong>Winner: optimized prompt.</strong> '
-                'The final config ships the DSPy-optimized prompt.</p>'
+                f'<p class="callout warn"><strong>{_esc(_algo_label)} kept the '
+                'seed prompt</strong> — none of its candidates beat the baseline '
+                'on its inner-loop metric, so both columns below evaluate the '
+                '<em>same</em> prompt text. Any score difference between them '
+                'is evaluation noise (LLM-judge nondeterminism), not a real '
+                'improvement or regression.</p>'
             )
 
         # Bar chart
@@ -1518,7 +1485,6 @@ def _render_dspy_a_b(bundle: dict) -> str:
             b = (comp.get("baseline") or {}).get("score")
             o = (comp.get("optimized") or {}).get("score")
             d = comp.get("delta")
-            final = b if winner == "baseline" else o
             parts.append('<div class="metric-row">')
             parts.append(_metric(
                 "Composite baseline",
@@ -1531,10 +1497,6 @@ def _render_dspy_a_b(bundle: dict) -> str:
             parts.append(_metric(
                 "Composite Δ",
                 f"{d:+.3f}" if isinstance(d, (int, float)) else "—",
-            ))
-            parts.append(_metric(
-                "Composite final (shipped)",
-                f"{final:.3f}" if isinstance(final, (int, float)) else "—",
             ))
             parts.append('</div>')
 
@@ -1565,7 +1527,7 @@ def _render_dspy_a_b(bundle: dict) -> str:
             })
         parts.append(_table(rows_d))
 
-        # MIPROv2 trial-scores progression
+        # Optimizer trial-scores progression
         trial_scores = payload.get("trial_scores") or []
         if trial_scores:
             rb = float("-inf")
@@ -1580,12 +1542,13 @@ def _render_dspy_a_b(bundle: dict) -> str:
             }).melt("trial", value_name="score", var_name="series")
             fig2 = px.line(
                 line_df, x="trial", y="score", color="series",
-                markers=True, title=f"MIPROv2 trial scores — {mode}",
+                markers=True, title=f"{_algo_label} trial scores — {mode}",
+                color_discrete_map={"per-trial": "#9aa0a6", "running best": "#1a73e8"},
             )
             fig2.update_layout(height=320, margin=dict(t=60, b=40))
             parts.append(_fig_html(fig2))
             parts.append(
-                '<p class="caption"><strong>per-trial</strong> = MIPROv2\'s '
+                f'<p class="caption"><strong>per-trial</strong> = {_esc(_algo_label)}\'s '
                 'inner-loop training-time score for that trial (token-F1 '
                 'with-GT, LLM-judge without-GT — <strong>NOT</strong> the '
                 'ragas composite). <strong>running best</strong> = highest '
@@ -1601,14 +1564,13 @@ def _render_dspy_a_b(bundle: dict) -> str:
         if proposed:
             parts.append(f'<h4>Candidate instructions {_esc(_algo_label)} proposed</h4>')
             parts.append(
-                '<p class="caption">MIPROv2 generates N candidate '
-                '<code>system_instruction</code>s (via its grounded '
-                'proposer) and evaluates each on the trainset. The '
-                'winner (highlighted) is what ends up in '
-                '<code>generator.system_instruction</code>. '
-                'A candidate count of 1 means MIPROv2 only tried the '
-                'seed — usually because the budget was too tight or '
-                'the trainset was too small for the proposer.</p>'
+                f'<p class="caption">{_esc(_algo_label)} generates candidate '
+                '<code>system_instruction</code>s and evaluates each with '
+                'its inner-loop metric. The winner (highlighted) is what '
+                'ends up in <code>generator.system_instruction</code>. '
+                f'A candidate count of 1 means {_esc(_algo_label)} only '
+                'tried the seed — usually because the budget was too tight '
+                'or the trainset was too small for the proposer.</p>'
             )
             for pname, cands in sorted(proposed.items()):
                 winner = (opt_instr or {}).get(pname)
@@ -1703,11 +1665,11 @@ def _render_dspy_a_b(bundle: dict) -> str:
         if trial_log:
             parts.append('<h4>Trial-by-trial decisions</h4>')
             parts.append(
-                '<p class="caption">Each row is one MIPROv2 trial. '
-                '<code>params</code> is the chosen <code>(instruction_idx, '
-                'demo_idx)</code> tuple from the candidate sets above. '
-                'Combine with the candidate list to see which prompt got '
-                'tried on which trial.</p>'
+                f'<p class="caption">Each row is one {_esc(_algo_label)} trial. '
+                '<code>params</code> describes what the optimizer tried on '
+                'that trial (candidate indices for MIPROv2, proposal-vs-prior '
+                'summaries for GEPA). Combine with the candidate list above '
+                'to see which prompt got tried on which trial.</p>'
             )
             rows_t = []
             for t in trial_log:
@@ -1733,10 +1695,10 @@ def _render_dspy_a_b(bundle: dict) -> str:
                 '<p class="caption"><strong>Baseline</strong> = the DSPy '
                 'signature\'s instruction at run start (your '
                 '<code>--system-instruction</code> if set, else ragdx '
-                'default). <strong>Optimized</strong> = what MIPROv2 picked '
-                'after its inner-loop search. Identical columns = MIPROv2 '
-                'found no improvement and kept the seed (the right default '
-                'when scores are tied).</p>'
+                f'default). <strong>Optimized</strong> = what {_esc(_algo_label)} '
+                f'picked after its inner-loop search. Identical columns = '
+                f'{_esc(_algo_label)} found no improvement and kept the seed '
+                '(the right default when scores are tied).</p>'
             )
             predictor_names = sorted(set(base_instr) | set(opt_instr))
             for name in predictor_names:

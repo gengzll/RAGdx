@@ -110,6 +110,13 @@ def experiment(
         "maps to max_metric_calls (30 / 100 / 300); for MIPROv2 the "
         "'auto' preset. Bigger = more thorough but more LLM calls.",
     ),
+    stages: str = typer.Option(
+        "all", "--stages",
+        help="Which optimization stages to run: 'all' (default), 'rag' "
+        "(Bayesian config search only), or 'prompt' (prompt optimization "
+        "only — the RAG config is fixed to the first value of each "
+        "search-space axis).",
+    ),
     save_run: bool = typer.Option(
         False, "--save-run",
         help="Also persist the experiment as a Run in the local RunStore "
@@ -200,6 +207,7 @@ def experiment(
             system_instruction=resolved_instruction,
             dspy_optimizer=dspy_optimizer,
             mipro_auto=mipro_auto,
+            stages=stages,
             save=not no_save,
             resume=resume,
             no_checkpoint=no_checkpoint,

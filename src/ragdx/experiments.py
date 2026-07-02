@@ -214,7 +214,17 @@ class ExperimentConfig:
     MIPROv2 it is the ``auto`` preset. Bigger budgets search harder but
     cost proportionally more LLM calls."""
 
+    stages: str = "all"
+    """Which optimization stages to run: ``"all"`` (default), ``"rag"``
+    (Bayesian config search only — the BO winner is the final system),
+    or ``"prompt"`` (prompt optimization only — the RAG config is fixed
+    to the first value of each search-space axis)."""
+
     def __post_init__(self) -> None:
+        if self.stages not in ("all", "rag", "prompt"):
+            raise ValueError(
+                f"stages must be 'all', 'rag', or 'prompt'; got {self.stages!r}"
+            )
         # mode validation -- can't request with-GT runs when no GT exists.
         if not self.has_gt and self.mode in ("with_gt", "both"):
             raise ValueError(
@@ -1181,39 +1191,71 @@ def _run_one_mode(
         elif phase == "re_eval":
             _emit("dspy_step", 0.86, "Prompt optimization — re-evaluating optimized prompt")
 
-    # --- Stage 1: Joint BO over (chunk_size, chunk_overlap, top_k) ----
-    ckpt_joint = ckpts.get(mode, "joint") if ckpts is not None else None
-    joint_ctx = StageContext(
-        base_config=base_rag_config,
-        chunks_master=chunks_master,
-        records=records,
-        objective=objective,
-        metrics=metrics,
-        runtime=runtime,
-        n_bo_trials=cfg.n_bo_trials,
-        n_bo_init=cfg.n_bo_init,
-        seed=cfg.seed,
-        re_chunk_fn=re_chunk_fn,
-        label=mode,
-        chunk_sizes=cfg.chunk_sizes,
-        chunk_overlaps=cfg.chunk_overlaps,
-        top_ks=cfg.top_ks,
-        checkpoint=ckpt_joint,
-        checkpoint_store=ckpt_store,
-        progress_cb=_bo_progress,
-    )
-    _emit("bo_start", 0.02, f"Bayesian RAG-config search ({cfg.n_bo_trials} trials)")
-    joint_result = JointOptimizer().optimize(joint_ctx)
-    if ckpts is not None:
-        ckpts.complete(ckpt_joint)
-    _emit("bo_done", 0.55, "Bayesian search complete")
+    run_rag = cfg.stages in ("all", "rag")
+    run_prompt = cfg.stages in ("all", "prompt")
 
-    # --- Build the BO winner's pipeline + pre-retrieve records --------
+    # --- Stage 1: Joint BO over (chunk_size, chunk_overlap, top_k) ----
+    if run_rag:
+        ckpt_joint = ckpts.get(mode, "joint") if ckpts is not None else None
+        joint_ctx = StageContext(
+            base_config=base_rag_config,
+            chunks_master=chunks_master,
+            records=records,
+            objective=objective,
+            metrics=metrics,
+            runtime=runtime,
+            n_bo_trials=cfg.n_bo_trials,
+            n_bo_init=cfg.n_bo_init,
+            seed=cfg.seed,
+            re_chunk_fn=re_chunk_fn,
+            label=mode,
+            chunk_sizes=cfg.chunk_sizes,
+            chunk_overlaps=cfg.chunk_overlaps,
+            top_ks=cfg.top_ks,
+            checkpoint=ckpt_joint,
+            checkpoint_store=ckpt_store,
+            progress_cb=_bo_progress,
+        )
+        _emit("bo_start", 0.02, f"Bayesian RAG-config search ({cfg.n_bo_trials} trials)")
+        joint_result = JointOptimizer().optimize(joint_ctx)
+        if ckpts is not None:
+            ckpts.complete(ckpt_joint)
+        _emit("bo_done", 0.55, "Bayesian search complete")
+        best_params = joint_result.best_params or {}
+        winner_config = joint_result.best_config or base_rag_config
+        bayes_bundle = joint_result.to_bayes_search_bundle()
+    else:
+        # Prompt-only: the RAG config is fixed by the user — first value
+        # of each axis (the UI sends single-value axes in this scope).
+        best_params = {
+            "chunk_size": cfg.chunk_sizes[0],
+            "chunk_overlap": cfg.chunk_overlaps[0],
+            "top_k": cfg.top_ks[0],
+        }
+        winner_config = JointOptimizer().build_trial_config(base_rag_config, best_params)
+        bayes_bundle = {
+            "skipped": True,
+            "fixed_params": dict(best_params),
+            "best_params": dict(best_params),
+        }
+        _emit("bo_done", 0.55, f"RAG stage skipped — fixed config {best_params}")
+
+    if not run_prompt:
+        # RAG-only: the BO winner IS the final system. dspy_a_b stays
+        # empty; downstream (diagnosis, report) falls back to the BO
+        # winner scores.
+        _emit("mode_done", 1.0, f"{mode} mode complete (RAG optimization only)")
+        return {
+            "bayes_search": bayes_bundle,
+            "dspy_a_b": {},
+            "objective_spec": objective.to_dict(),
+            "final_config": winner_config,
+        }
+
+    # --- Build the winner's pipeline + pre-retrieve records -----------
     # GenerationOptimizer operates on records that already carry
     # contexts (it only varies the prompt). Retrieve at the BO winner
     # exactly the way pre-PR3 ``_dspy_before_after`` did.
-    best_params = joint_result.best_params or {}
-    winner_config = joint_result.best_config or base_rag_config
     winner_chunks = (
         re_chunk_fn(winner_config.chunker) if re_chunk_fn else chunks_master
     )
@@ -1293,52 +1335,37 @@ def _run_one_mode(
     except Exception as exc:  # pragma: no cover - depends on judge LM
         logger.warning("deepeval supplement skipped: %s", exc)
 
-    # --- Best-of gate: recompute the composite on the SUPPLEMENTED
-    # score sets and only ship the DSPy prompt if it actually beats the
-    # baseline on the full objective. Prompt optimization can regress
-    # (small trainsets, noisy judge); when it does, the final config
-    # keeps the baseline (seed) prompt and every downstream consumer
-    # (final/ deliverables, diagnosis, report) follows the winner.
+    # Recompute the composite on the SUPPLEMENTED score sets so the
+    # report's headline numbers include the deepeval metrics. The
+    # prompt-stage OUTCOME is the optimizer's own decision (GEPA/MIPRO
+    # pick their winner with their inner-loop metric; that winner may
+    # legitimately be the seed prompt) — the composite here is
+    # display/diagnosis information, not a second gate.
     base_scores = dict(gen_result.extras.get("baseline_scores") or {})
     opt_scores = dict(gen_result.extras.get("optimized_scores") or {})
     comp_base = objective.evaluate(base_scores)
     comp_opt = objective.evaluate(opt_scores)
-    prompt_winner = "optimized" if comp_opt["score"] >= comp_base["score"] else "baseline"
     gen_result.extras["composite"] = {
         "objective_spec": objective.to_dict(),
         "baseline": comp_base,
         "optimized": comp_opt,
         "delta": comp_opt["score"] - comp_base["score"],
-        "winner": prompt_winner,
     }
-    gen_result.extras["winner"] = prompt_winner
-    gen_result.extras["final_scores"] = (
-        opt_scores if prompt_winner == "optimized" else base_scores
-    )
-    if prompt_winner == "baseline":
-        logger.info(
-            "[DSPy/%s] optimized prompt did not beat the baseline "
-            "(composite %.3f < %.3f); final config keeps the seed prompt.",
-            mode, comp_opt["score"], comp_base["score"],
-        )
+    gen_result.extras["final_scores"] = opt_scores
 
     _emit("mode_done", 1.0, f"{mode} mode complete")
     return {
-        "bayes_search": joint_result.to_bayes_search_bundle(),
+        "bayes_search": bayes_bundle,
         # GenerationOptimizer parks the dashboard-shaped payload in
         # ``extras`` (the StageResult.trials shape doesn't fit
         # MIPROv2's outputs cleanly). Same content as pre-PR3
         # ``_dspy_before_after``.
         "dspy_a_b": gen_result.extras,
         "objective_spec": objective.to_dict(),
-        # The fully-optimized RAGConfig (BO winner params + the winning
-        # prompt: DSPy's when it beat the baseline, the seed otherwise).
-        # In-memory object -- ``run_experiment`` pops it before the
-        # bundle is serialized and writes it to ``final/``.
-        "final_config": (
-            (gen_result.best_config if prompt_winner == "optimized" else winner_config)
-            or winner_config
-        ),
+        # The fully-optimized RAGConfig (BO winner params + the prompt
+        # the optimizer selected). In-memory object -- ``run_experiment``
+        # pops it before the bundle is serialized, writes it to ``final/``.
+        "final_config": gen_result.best_config or winner_config,
     }
 
 
@@ -1618,11 +1645,32 @@ def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
     return out
 
 
+def _embedding_info(runtime: _Runtime) -> dict:
+    """Describe the chunk-embedding model for the bundle meta.
+
+    ``max_seq_tokens`` is the sentence-transformers truncation limit:
+    chunk text beyond this many tokens is silently cut before embedding,
+    which is why very large chunk sizes can stop helping retrieval.
+    """
+    info: dict[str, Any] = {}
+    try:
+        emb = runtime.embeddings
+        info["model"] = getattr(emb, "model_name", None) or str(type(emb).__name__)
+        client = getattr(emb, "client", None)  # HuggingFaceEmbeddings -> SentenceTransformer
+        max_seq = getattr(client, "max_seq_length", None)
+        if isinstance(max_seq, int):
+            info["max_seq_tokens"] = max_seq
+    except Exception:  # pragma: no cover - descriptive only
+        pass
+    return info
+
+
 def _build_unified_bundle(
     cfg: ExperimentConfig,
     results_by_mode: dict[str, dict],
     source_meta: dict,
     base_records: list[DatasetRecord],
+    embedding_info: dict | None = None,
 ) -> dict:
     """Assemble the canonical ``schema_version: 1`` bundle.
 
@@ -1675,6 +1723,10 @@ def _build_unified_bundle(
             "has_gt": cfg.has_gt,
             "detected_gt_mode": detected,
             "source": source_clean,
+            # The model that embeds chunks for retrieval, and its input
+            # truncation limit (tokens) — chunk text beyond the limit is
+            # silently cut before embedding.
+            "embedding": embedding_info or {},
             # Reproducibility: persist the LLM endpoint call-management
             # knobs used for this run so the dashboard can display them
             # and ``ragdx experiment ... --llm-max-concurrent N`` can be
@@ -2044,6 +2096,7 @@ def run_experiment(
     system_instruction: str | None = None,
     dspy_optimizer: str = "gepa",
     mipro_auto: str = "light",
+    stages: str = "all",
     save: bool = True,
     resume: str = "",
     no_checkpoint: bool = False,
@@ -2152,6 +2205,7 @@ def run_experiment(
         system_instruction=system_instruction,
         dspy_optimizer=dspy_optimizer,
         mipro_auto=mipro_auto,
+        stages=stages,
     )
 
     modes_to_run = ["with_gt", "no_gt"] if cfg.mode == "both" else (
@@ -2244,7 +2298,10 @@ def run_experiment(
         for m, payload in results_by_mode.items()
     }
 
-    bundle = _build_unified_bundle(cfg, results_by_mode, source_meta, base_records)
+    bundle = _build_unified_bundle(
+        cfg, results_by_mode, source_meta, base_records,
+        embedding_info=_embedding_info(runtime),
+    )
 
     output_path = cfg.output_dir / "result.json"
     result = ExperimentResult(config=cfg, bundle=bundle, output_path=output_path)
