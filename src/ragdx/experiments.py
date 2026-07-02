@@ -2160,6 +2160,20 @@ def run_experiment(
     reporter = _ProgressReporter(progress_callback, modes_to_run)
     reporter.emit("start", pct=0.0, detail="Loading corpus")
 
+    # Resuming a no-GT run: reuse the questions the interrupted run
+    # synthesized (persisted next to the bundle). Question text comes
+    # from an LLM and is NOT deterministic across calls, so re-synthesis
+    # would silently change the eval set the checkpointed trial scores
+    # were computed on.
+    if resume and not cfg.questions_path and not cfg.has_gt:
+        prior_q = cfg.output_dir / "questions_synthesized.jsonl"
+        if prior_q.exists():
+            cfg.questions_path = prior_q
+            logger.info(
+                "resume: reusing synthesized questions from %s "
+                "(skipping re-synthesis)", prior_q,
+            )
+
     runtime = _build_runtime(cfg)
     chunks_master, base_records, source_meta = _load_corpus_and_records(cfg, runtime)
     reporter.emit("corpus_loaded", pct=0.05, detail=f"{len(chunks_master)} chunks loaded")
