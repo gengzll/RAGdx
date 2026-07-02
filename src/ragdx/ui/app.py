@@ -244,6 +244,38 @@ def _run_app() -> None:
             help="Deterministic seed for the search and question synthesis.",
         )
 
+    st.markdown("**Search space** — the candidate values the Bayesian optimizer explores:")
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        chunk_sizes = st.multiselect(
+            "Chunk sizes (chars)",
+            [128, 256, 512, 1024, 2048],
+            default=[256, 512, 1024],
+            disabled=running,
+            help="Candidate chunk sizes for splitting the documents. "
+            "Smaller = more precise retrieval, less context per chunk.",
+        )
+    with s2:
+        chunk_overlaps = st.multiselect(
+            "Chunk overlaps (chars)",
+            [0, 50, 100, 200],
+            default=[0, 50, 100],
+            disabled=running,
+            help="Candidate overlap between adjacent chunks. Overlap "
+            "avoids cutting facts in half at chunk boundaries.",
+        )
+    with s3:
+        top_ks = st.multiselect(
+            "Top-k values",
+            [1, 3, 5, 7, 10],
+            default=[1, 3, 5, 7],
+            disabled=running,
+            help="Candidate numbers of chunks retrieved per question.",
+        )
+    search_space_ok = bool(chunk_sizes) and bool(chunk_overlaps) and bool(top_ks)
+    if not search_space_ok:
+        st.warning("Each search-space axis needs at least one value.")
+
     st.markdown("#### Prompt optimization parameters")
     st.caption("DSPy tuning of the generator prompt at the winning RAG config.")
     o1, o2 = st.columns(2)
@@ -275,7 +307,10 @@ def _run_app() -> None:
     st.code(DEFAULT_SYSTEM_INSTRUCTION, language="text")
 
     if st.button("✓ Confirm experiment settings", disabled=running):
-        ss.confirm_settings = True
+        if not search_space_ok:
+            st.warning("Fix the search space first (every axis needs a value).")
+        else:
+            ss.confirm_settings = True
     if ss.confirm_settings:
         st.success("Experiment settings confirmed.")
 
@@ -283,6 +318,29 @@ def _run_app() -> None:
     # 3 · Run
     # =============================================================
     st.subheader("3 · Run")
+
+    # Workload estimate: LLM-call counts are derived from the pipeline's
+    # actual call structure; wall-time assumes ~10 s/call at concurrency 2
+    # (GLM-4-Flash-like). Faster endpoints finish sooner.
+    est_q = len(custom_questions) if custom_questions else (
+        len(gt_records) if gt_records is not None else int(n_questions)
+    )
+    est_rows, est_calls, est_time = _estimate_workload(
+        n_questions=est_q,
+        n_bo_trials=int(n_bo_trials),
+        dspy_optimizer=dspy_optimizer,
+        budget=mipro_auto,
+        synthesize=gt_records is None and not custom_questions,
+    )
+    st.markdown("**Estimated workload** (current settings)")
+    st.table(est_rows)
+    st.caption(
+        f"Total ≈ {est_calls} LLM calls, {est_time}. Assumes ~10 s/call at "
+        "concurrency 2 (typical for GLM-4-Flash); faster models/endpoints "
+        "cut this roughly proportionally. Call counts are structural "
+        "estimates — judge retries can add a few percent."
+    )
+
     can_run = (
         bool(pdf_files) and gt_ready and ss.confirm_upload and ss.confirm_settings and not running
     )
@@ -307,6 +365,9 @@ def _run_app() -> None:
                 system_instruction=system_instruction or None,
                 dspy_optimizer=dspy_optimizer,
                 mipro_auto=mipro_auto,
+                chunk_sizes=sorted(chunk_sizes),
+                chunk_overlaps=sorted(chunk_overlaps),
+                top_ks=sorted(top_ks),
             ),
         )
         st.rerun()
@@ -325,6 +386,65 @@ def _run_app() -> None:
 
 
 # --------------------------------------------------------------- helpers
+def _fmt_minutes(calls: int, sec_per_call: float = 10.0, concurrency: int = 2) -> str:
+    """Rough wall-time range for ``calls`` LLM calls (±~40%)."""
+    mid = calls * sec_per_call / concurrency
+    lo, hi = mid * 0.6, mid * 1.4
+    if hi < 90:
+        return "< 2 min"
+    return f"~{max(1, round(lo / 60))}-{max(2, round(hi / 60))} min"
+
+
+def _estimate_workload(
+    *, n_questions: int, n_bo_trials: int, dspy_optimizer: str,
+    budget: str, synthesize: bool,
+) -> tuple[list[dict], int, str]:
+    """Static per-stage LLM-call estimate for the current settings.
+
+    Counts mirror the pipeline's call structure: each evaluated answer
+    costs 1 generation + ~4 judge calls (ragas metrics); the prompt
+    optimizer's inner loop uses its budget preset; the deepeval
+    supplement scores both prompt variants on 4 extra metrics.
+    """
+    q = max(1, int(n_questions))
+    per_q_eval = 5  # 1 generation + ~4 ragas judge calls
+
+    synth_calls = q if synthesize else 0
+    bo_calls = int(n_bo_trials) * q * per_q_eval
+    optimizer_body = {
+        "gepa": {"light": 30, "medium": 100, "heavy": 300},
+        "mipro": {"light": 30, "medium": 70, "heavy": 150},
+        "copro": {"light": 30, "medium": 30, "heavy": 30},
+    }.get(dspy_optimizer, {}).get(budget, 30)
+    dspy_calls = q * per_q_eval * 2 + optimizer_body  # baseline + re-eval + search
+    supplement_calls = 2 * q * 4  # deepeval: 4 metrics x both prompt variants
+
+    rows = [
+        {
+            "Stage": "Load & chunk documents" + (" + synthesize questions" if synthesize else ""),
+            "LLM calls": f"~{synth_calls}" if synth_calls else "0",
+            "Est. time": _fmt_minutes(synth_calls) if synth_calls else "< 1 min",
+        },
+        {
+            "Stage": f"Bayesian RAG search ({n_bo_trials} trials x {q} questions)",
+            "LLM calls": f"~{bo_calls}",
+            "Est. time": _fmt_minutes(bo_calls),
+        },
+        {
+            "Stage": f"Prompt optimization ({dspy_optimizer}/{budget} + before/after eval)",
+            "LLM calls": f"~{dspy_calls}",
+            "Est. time": _fmt_minutes(dspy_calls),
+        },
+        {
+            "Stage": "Final evaluation (deepeval supplement) & report",
+            "LLM calls": f"~{supplement_calls}",
+            "Est. time": _fmt_minutes(supplement_calls),
+        },
+    ]
+    total = synth_calls + bo_calls + dspy_calls + supplement_calls
+    return rows, total, _fmt_minutes(total)
+
+
 def _start_run(
     *, ss, pdf_files, gt_records, custom_questions, write_questions_jsonl, run_experiment, settings
 ) -> None:
