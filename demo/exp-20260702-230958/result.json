@@ -1,0 +1,1723 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "model": "openai/glm-4-airx",
+    "model_endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "experiment_mode": "no_gt",
+    "modes_run": [
+      "no_gt"
+    ],
+    "has_gt": false,
+    "detected_gt_mode": "no_gt",
+    "source": {
+      "corpus": ".ragdx_ui_runs\\exp-20260702-230958\\inputs\\e0522-asmptesgreport.pdf",
+      "kind": "pdf",
+      "pdf_meta": {
+        "page_count": 114,
+        "chunks": 548,
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "raw_text_chars": 211339
+      },
+      "questions_path": ".ragdx_ui_runs\\exp-20260702-230958\\out\\questions_synthesized.jsonl"
+    },
+    "run_config": {
+      "llm_max_concurrent": 2,
+      "llm_max_retries": 5,
+      "n_bo_trials": 8,
+      "n_bo_init": 3,
+      "n_questions": 5,
+      "seed": 7,
+      "system_instruction": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+    }
+  },
+  "questions": [
+    {
+      "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+      "ground_truth": null
+    },
+    {
+      "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+      "ground_truth": null
+    },
+    {
+      "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+      "ground_truth": null
+    },
+    {
+      "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+      "ground_truth": null
+    },
+    {
+      "question": "What is the aim of the Working Group?",
+      "ground_truth": null
+    }
+  ],
+  "data_diagnostics": {
+    "no_gt": {
+      "has_ground_truth": false,
+      "gt_mode": "no_gt",
+      "record_count": 5
+    }
+  },
+  "objectives": {
+    "no_gt": {
+      "metrics": {
+        "faithfulness": 2.0,
+        "answer_relevancy": 1.5,
+        "context_precision": 1.0,
+        "g_eval": 0.5,
+        "hallucination": 0.5,
+        "bias": 0.1,
+        "toxicity": 0.1
+      },
+      "constraints": {
+        "faithfulness": [
+          "min",
+          0.85
+        ]
+      },
+      "mode": "weighted_sum"
+    }
+  },
+  "bayes_search": {
+    "no_gt": {
+      "search_space": {
+        "chunk_size": [
+          256,
+          512,
+          1024
+        ],
+        "chunk_overlap": [
+          0,
+          50,
+          100
+        ],
+        "top_k": [
+          1,
+          3,
+          5,
+          7
+        ]
+      },
+      "n_init": 3,
+      "max_trials": 8,
+      "objective_spec": {
+        "metrics": {
+          "faithfulness": 2.0,
+          "answer_relevancy": 1.5,
+          "context_precision": 1.0,
+          "g_eval": 0.5,
+          "hallucination": 0.5,
+          "bias": 0.1,
+          "toxicity": 0.1
+        },
+        "constraints": {
+          "faithfulness": [
+            "min",
+            0.85
+          ]
+        },
+        "mode": "weighted_sum"
+      },
+      "trials": [
+        {
+          "trial_index": 0,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 50,
+            "top_k": 7
+          },
+          "n_chunks": 278,
+          "scores": {
+            "context_precision": 0.073333333326,
+            "faithfulness": 0.8571428571428571
+          },
+          "composite_score": 1.7876190476117142,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "The standardised IPC-2591-CFX interface.",
+            "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Exceeding customers' expectations with products, processes, and services.\n2.  Enabling customers to achieve th",
+            "Anti-Corruption and ESG Governance Structure.",
+            "Over 500 colleagues.",
+            "The aim of the Working Group is to create a collaborative roadmap and execute it to reduce and eliminate its members’ Scope 2 emissions, impact the semiconductor value chain, and increase access to lo"
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". The result is an important impetus for digital transfor- mation that increases profitability and optimises the use of resources throughout electronics production. Big Data Processing Ensures Zero DPMO The target of ASMPT’s SMT Solutions Segment (SMT) is to help our customers to reach a future-proof intelli- gent SMT factory, in which yield, efficiency and produc- tivity are increased through big data processing, work- force is deployed effectively and the material flow is optimised throughout the factory. Intelligent, auto- mated process optimisation significantly reduces pro - duction times and avoids rejects. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+                ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees. The WORKS Software Suite’s powerful applica- tions for all workflows on the shop floor reduce op- erator workload and control and optimise produc - tion and material flow. WORKS Operations, for example, the application for smart working in the Intelligent Factory bundles, prioritises and distrib- utes tasks from production across lines and skill- based to operators with mobile devices. This intelli- gent guidance shortens response times and provides the most effective support for operators",
+                ". Additionally, our Customer Satisfaction Survey Re- view (CSSR) serves as an annual, consolidated channel for gathering customer feedback. This allows us to capture a holistic view of customer experiences and perceptions, driving our continuous efforts to provide high-quality services and products. “ASMPT’s software strategy aims to maximise our customers’ productivity. By implementing Industry 4.0, we help our customers to achieve significant resource savings, optimise employee support and have a positive impact on the ecological footprint of production.” Francisco Almada Lobo, CEO, Critical Manufacturing, An ASMPT Company",
+                ". ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient. This enables production processes to be optimised by controlling heat, electric- ity and compressed air using intelligent algorithms. The Intelligent Factory has ushered in an era of inten- sive and integrative data use. It offers unprecedented opportunities to make factories more productive, more resilient and more environmentally friendly. The key to an Intelligent Factory is to collect data holistical- ly, prepare it in a user-friendly way, and make it availa- ble in the right places. Holistic, Data-driven, Connected The Intelligent Factory leverages the potential of highly networked and largely automated SMT production by taking a holistic view of the “data lake” and analysing, integrating and optimising processes on all levels – from the machine to the line, the factory, and the enterprise",
+                ". Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data. In combination with the Process Lens from ASMPT or a third-party SPI system, the printing process can run completely autonomously without any opera - tor assistance. The system can also trigger an auto- mated offset correction, a cleaning cycle when needed or print parameter optimisation. One of ASMPT’s quality projects SIPLACE Placement DEK Printer & SPI PlacementPrinting AOI WORKS Optimisation Quality Viewer Process Expert Quality control along the complete SMT line DFM Health Check Process Expert Analyzer The application WORKS Optimisation ensures process optimisations throughout the SMT line in collaboration with SPI and AOI systems.",
+                ". It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory. ASMPT’s customers include leading semiconductor and electronics manufacturers across the world. We work closely with them to understand their needs and develop solutions to bring their creative product ideas to life. Key to these are ASMPT’s R&D capabilities. ASMPT continuously invests in R&D, enabling it to build a deep R&D talent pool and significant inhouse pro - cess and development capabilities and expertise. In 15 R&D centres across Asia, Europe, and the Ameri- cas, our dedicated engineers are working to create a product portfolio that sets new standards in areas such as technology, profitability, and environmental impact",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 59 5.4 Intelligent Factory – The Next Level of Digital Transformation Efficient Use of Resources Intelligent Factory means the best possible interac- tion between human, machine and data. The right net- working and strategic use of information is crucial for success. Significantly accelerated digitalisation will en- able CO 2 savings through more efficient processes and better use of resources. ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources. As systems and machines are con- nected to each other via a digital backbone and the significant data is read out in real time, the value chain in the factory can be transparent at all times"
+              ],
+              "answer": "The standardised IPC-2591-CFX interface.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.29318044677933836,
+                "context_precision": 0.16666666665
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions",
+                "; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit, and partner well both internally & externally ASMPT is a great place to work in all our locations around the world • Opportunities",
+                ". Minimising Environmental Impact Nurturing our Employees Creating Value through Innovation Supporting our Communities The Group’s sustainability framework has been built on this four pillars: “Minimising Environmental Im- pact”, “Creating Value through Innovation”, “Nurturing our Employees” and “Supporting our Communities”. They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.",
+                ". We strive for excellence – learning and continuously adding value. • We are enthusiastic contributors. We are determined to succeed and to consistently deliver on quality. • We work well together to provide innovative smart solutions. We see all challenges as opportunities. • We are willing to change and execute.",
+                ". Sustainability as an integral part of our business strategy based on quality, people and innovation Clear fields of actions and ambitions along our POWER values Driving growth towards a sustainable future, based on ASMPT’s sustainability framework with the four pillars, “Minimising Environmental Impact”, “Creating Value through Innovation”, “Nurturing our Employees” and “Supporting our Communities” The ASMPT Group strategy is focused on “Shaping a bright and sustainable future for shareholders, employees, customers and business partners and society”. ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers. 2 Sustainability Strategy",
+                ". The pro - gramme brings together leaders who just tran- sitioned to their new role or are about to do so. The programme is tailored around the compe - tencies needed for this new role such as leading themselves, their teams and to contributing to the business success. The ASMPT prerequisite: ONE ASMPT. The New Leaders’ Program 2023 prepares managers for their new role and their contribution to the company’s success. One of ASMPT’s people projects",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 11 2.1 The ASMPT Group Strategy Two key elements spur ASMPT’s global market leadership: • DIFFERENTIATION – ASMPT is truly distinct from the competition in key ways. • MARKETS – ASMPT is the leader in its businesses, in its technologies and as a partner. The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values"
+              ],
+              "answer": "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Exceeding customers' expectations with products, processes, and services.\n2.  Enabling customers to achieve the highest level of quality in their production.\n3.  Learning and continuously adding value.",
+              "scores": {
+                "faithfulness": 0.2857142857142857,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". Employment Overview P.71 2–9 Governance structure and composition ESG Governance Structure P.25 2–10 Nomination and selection of the highest governance body Corporate Governance Report in the Annual Report 2–11 Chair of the highest governance body Corporate Governance Report in the Annual Report 2–12 Role of the highest governance body in overseeing the management of impacts Corporate Governance Report in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses. ESG Governance Structure P.25",
+                ". HKEX Description Report Section/ Remark Page GRI 2: General Disclosures 2021 2–15 Conflicts of interest Corporate Governance Report in the Annual Report 2–16 Communication of critical concerns ESG Governance Structure P.25 2–17 Collective knowledge of the highest governance body Corporate Governance Report in the Annual Report 2–18 Evaluation of the performance of the highest governance body Corporate Governance Report in the Annual Report 2–19 Remuneration policies Employee Overview P.71 2–20 Process to determine remuneration Employee Overview P.71 2–22 Statement on sustaina- ble development strategy Governance Structure (ii) The board’s ESG management approach and strategy, including the process used to evaluate, prioritise and manage material ESG-related issues (including risks to the issuer’s businesses)",
+                ". Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality & Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG and Air Emissions • Net-zero Initiatives • Environmental Management Energy Management and Product Energy Efficiency • Net-zero Initiatives Water Resource Management • Conserving the Environment Waste Management • Conserving the Environment Environmental Compliance • Environmental Management",
+                ". The assessment identified nine “very high materiality” factors and ten “high materiality” factors that cut across the environmental, social and governance domains (“ESG Material Factors”), as shown in the figure below. All 19 ESG Material Factors are elaborated upon in this Report. Compared to 2022, the updated materiality matrix in- corporates four additional ESG Material Factors, includ- ing “Product sustainability & Innovation”, “Customer Relationship Management”, “Environmental Compli- ance”, and “Cybersecurity & IP Protection”. These factors have been identified based on the common expectations of key stakeholders, as well as recommendations from industry standards bodies and ESG ratings agencies. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 25 3.1 ESG Governance Structure The Group’s robust governance structure, which is embedded at all levels of the Group, is organised as follows: ASMPT’s Board of Directors consists of ten directors as at 31 December 2023. Among them, two are female, including the Chairman and an independent non-exec- utive director. The Board’s has six independent non-ex- ecutive directors, two non-executive directors, and two executive directors. Each member of the Board brings a wealth of experience and expertise in various fields such as finance, business, legal, technical, and industri- al sectors. The Executive Committee (EXCO) comprises the Group Chief Executive Officer and other senior man- agement members of the Group. The Strategic Risk Review Committee (SRRC) in- cludes senior executives from key functions across the organisation. They are responsible for identifying and analysing both external and internal strategic risks faced by the Group",
+                "Governance24 Ethics and integrity are the foundation of our sustainable business practices Zero tolerance for violations of applicable laws and internal policies and regulations A robust global risk-based compliance system is installed Climate-related risk is identified through the use of scenario analysis ASMPT believes that effective governance is built on a robust foundation of ethical behaviour and morals. We are committed to operating with the highest standards of integrity and accountability across all areas of our business. A collaborative approach with our stakeholders is essential in maintaining transparency and driving continu- ous improvement of our governance practices. Regular consultation with our key stakeholders such as shareholders, employees, customers and business partners is integral to enhancing our corporate responsibility and ensuring the quality that our customers have come to expect",
+                "Governance22 3.1 ESG Governance Structure 3.2 Climate Risk Management 3.3 Anti-Corruption 3.4 Product Responsibility 3.5 Supply Chain Management 3.6 Intellectual Property and Cybersecurity 1 About This Report 2 Sustainability Strategy 3 Governance 4 Minimising Environmental Impact 5 Creating Value through Innovation 6 Nurturing our Employees 7 Supporting our Communities 8 Appendix"
+              ],
+              "answer": "Anti-Corruption and ESG Governance Structure.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.6157890690408993,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated. In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                ". In alignment with our commitment to environ- mental responsibility, ASMPT Academy ac- knowledges the importance of minimising envi- ronmental impact. We recognise the sustainable aspect of our training programmes, as partici- pants can benefit from valuable learning experi- ences without the need for extensive travel. This not only reduces the carbon footprint asso- ciated with commuting but also aligns with our ecoconscious approach to professional devel - opment. Our Blended Learning offerings seam- lessly integrate e-learning with instructor-led training, providing an optimal combination of both methods, contributing to a comprehensive and effective learning experience tailored to in- dividual needs",
+                ". A dynamic, experiential learning environment for global leaders promotes personal and professional growth.",
+                ". eLearning Continuous education for specific target groups in their own work environment Virtual Reality Game-like and realistic knowledge acquisition with courses in 2D/3D virtual reality Instructor-led Practical exercises with experts on machines and in virtual software environments Blended Learning Combine the best of eLearning and instructor-led training environments One of ASMPT’s innovations “With ASMPT Academy, knowledge is at everyone´s fingertips, ASMPT employees, field service engineers, customers, partners .... We are proud to enable seamless education and skill development, promoting rapid learning with minimal environmental impact, ensuring consistent knowledge acquisition around the world.” Ken Richey, Training Manager Americas, ASMPT SMT Solutions",
+                ". Through these activities, we aim to shape a workplace culture that opens doors for everyone, regardless of their background. The DEI Team has successfully achieved the following ini- tiatives in 2023: 1. Set up Country Women’s chapters; 2. Trialled blind recruitment practices; and 3. Organised Science, Technology, Engineering, and Maths (STEM) events, such as Girls’ Day, STEM Careers and outreach programme. The DEI Ring Team’s central mission is to devise and implement a strategic framework that eradicates bias and promotes fairness, aligning with the seven dimen- sions of personality outlined by the Diversity Charter— age, ethnic origin and nationality, gender and gender identity, physical and mental abilities, religion and be - lief, sexual orientation, and social origin. By doing so, ASMPT is commited to creating not just a bias-free workplace, but an ecosystem where diversity is cele- brated, equity is the norm, and inclusion is the culture we live by daily.",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 81 UK Placement Students For the last 9 years the UK has developed a truly suc- cessful university placement scheme to attract future talent to ASMPT. Each year we attend strategically chosen university careers fairs to enable us to source talent to fill our future talent pipeline. The 13 month placement enables the students to fully experience the world of work by working on business projects some which are seen to completion during their time; to develop their business competence portfolio; complete their university projects; and, also to de - velop their behavioural competencies thus ensuring their careers are off to a great start. We also encour- age the cohort to get actively involved with corpo- rate social responsibility activities during their time with us. In 2023 we saw our first three graduates return to work at the UK site after successfully com- pleting their respective degrees, thus seeing return on our investment",
+                "Creating Value through Innovation 62 Efficient and Sustainable Training with ASMPT Academy ASMPT Academy provides a diverse range of courses thoughtfully designed for specific audi- ences, including customers, field service engi- neers, and employees. The training options span various formats, such as face-to-face ses - sions, e-learning modules, virtual reality experi- ences, and blended training programmes. These courses support the ongoing expansion of knowledge and ensure technical proficiency. Users can update and enhance their profession- al expertise effortlessly through our target group-specific e-learning courses. ASMPT’s Virtual Reality 2D/3D courses offer a dynamic learning experience, allowing for a comprehensive under- standing in an engaging yet authentic manner. Guidance from our qualified product experts and the refinement of skills through practical exercis- es on our machines and within virtual software environments contribute to a well-rounded learn- ing experience"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings. These measures are designed to align with and support the overarch- ing ASMPT strategy, ensuring that every member of the team is moving in unison towards common goals. Recognising the importance of digitisation a modern work landscape, ASMPT has made significant invest- ments in a global HR system, the Global People Sys- tem (GPS) that has been mentioned in the earlier parts of this report. The System aims to improve the em- ployee digital experience by streamlining transactions and fostering engagement",
+                ". The Group strives to create long-term shareholder value by generating optimum returns on investment through leading ESG practices, providing transparent and timely disclosures, and deliver sustainable and long-term growth. • Annual General Meetings • Annual and Interim Reports • Announcements and Circulars • Quarterly updates on financial results • Investor conference calls • Investor meetings and roadshows Employees A conducive environment where employees are treated with respect and dignity, supporting their personal development, and helping to achieve career growth and work-life balance. The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance. Employees can provide feedback to management through open communication platforms such as networking sessions and regular update sessions",
+                ". • Ass ess the effectiveness of the Group’s risk control and management systems.",
+                "Nurturing our Employees 70 The ASMPT POWER values set out the rights and obligations of all employees Diversity, Equity and Inclusion are main drivers Support for more than 11,000 employees globally through attractive employer benefits and offers At ASMPT, we recognise that at the heart of our success are our people. We have developed strong values with them. We call them POWER – Passion, Ownership, Win, Excellence, Respect. These POWER values motivate us, flank our corporate goals and set out the rights and obligations for all of us. They reinforce commitment, ethical and moral behaviour, in everything we do, daily and at all levels of the organisation. With a steadfast commitment to nurturing a thriving workplace, we focus on cultivat- ing an environment where every individual feels valued, safe, and inspired to grow",
+                ". At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally. SCC Scope 2 Emission Working Group Formed in April 2023, the SCC Scope 2 Emission Working Group (the “Working Group”) has the mis- sion to create a collaborative roadmap and execute it, to reduce and eliminate its members’ Scope 2 emissions as well as impact the entire semiconduc- tor value chain, and increase access and availability of low-carbon energy (LCE). ASMPT led many rounds of intense consultation and collaboration with the Working Group members, which resulted in five initial priority actions being identified as key drivers to achieving the mission: Five countries were also identified by the Working Group members as priority areas to focus our ef- forts on, due to their criticality within the supply chain and resulting emissions",
+                "Nurturing our Employees 72 Employee Profile for 2023: 76% 24% Gender Distribution Male | Female 19% 61% 20% Age Group Distribution Below 30 | 30-50 | Above 50 19% 4% 24% 53% Geographical Region Distribution Greater China | Europe, Middle East and Africa Rest of Asia | North and South America Employment Type Distribution Full time | Part time 2% 98% 0.00% 5.00% 10.00 15.00% 20.00% 25.00% 2023 2022 2021 Overall Employee Turnover Rate “For ASMPT, diversity is not just a checkbox exercise, but an unwavering commitment to fostering an environment where unique perspectives come together to spark creativity and lead to powerful solutions.” Katrin Damaschke, Head of HR, ASMPT SMT Solutions EMEA",
+                ". • Employee community involvement programmes • Social enterprises involvement programmes • Corporate sponsorships and donations • Special open house activities • Scholarships and internships Government Bodies, Regulators, Standards Bodies, and Ratings Agencies Ensure that the Group complies with local laws, regulations and policies, and addresses pertinent issues. The Group operates in accordance with the laws of the countries where it conducts business. The Group also establishes internal control policies and procedures to ensure compliance and promote sustainability. • Regular compliance reviews, policy development and performance reporting • Regular communication via meetings, calls and emails"
+              ],
+              "answer": "The aim of the Working Group is to create a collaborative roadmap and execute it to reduce and eliminate its members’ Scope 2 emissions, impact the semiconductor value chain, and increase access to low-carbon energy.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999999698,
+                "context_precision": 0.19999999998
+              }
+            }
+          ],
+          "elapsed_seconds": 112.15
+        },
+        {
+          "trial_index": 1,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 1
+          },
+          "n_chunks": 278,
+          "scores": {
+            "context_precision": 0.0,
+            "faithfulness": 1.0
+          },
+          "composite_score": 2.0,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "The context does not mention the WORKS Optimisation system.",
+            "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Products\n2.  Processes\n3.  Services",
+            "The context does not specify which two ESG factors were combined.",
+            "Over 500 colleagues.",
+            "The context does not mention a \"Working Group.\""
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". The result is an important impetus for digital transfor- mation that increases profitability and optimises the use of resources throughout electronics production. Big Data Processing Ensures Zero DPMO The target of ASMPT’s SMT Solutions Segment (SMT) is to help our customers to reach a future-proof intelli- gent SMT factory, in which yield, efficiency and produc- tivity are increased through big data processing, work- force is deployed effectively and the material flow is optimised throughout the factory. Intelligent, auto- mated process optimisation significantly reduces pro - duction times and avoids rejects. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly."
+              ],
+              "answer": "The context does not mention the WORKS Optimisation system.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions"
+              ],
+              "answer": "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Products\n2.  Processes\n3.  Services",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". Employment Overview P.71 2–9 Governance structure and composition ESG Governance Structure P.25 2–10 Nomination and selection of the highest governance body Corporate Governance Report in the Annual Report 2–11 Chair of the highest governance body Corporate Governance Report in the Annual Report 2–12 Role of the highest governance body in overseeing the management of impacts Corporate Governance Report in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses. ESG Governance Structure P.25"
+              ],
+              "answer": "The context does not specify which two ESG factors were combined.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated. In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings. These measures are designed to align with and support the overarch- ing ASMPT strategy, ensuring that every member of the team is moving in unison towards common goals. Recognising the importance of digitisation a modern work landscape, ASMPT has made significant invest- ments in a global HR system, the Global People Sys- tem (GPS) that has been mentioned in the earlier parts of this report. The System aims to improve the em- ployee digital experience by streamlining transactions and fostering engagement"
+              ],
+              "answer": "The context does not mention a \"Working Group.\"",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.7125943392789139,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 34.49
+        },
+        {
+          "trial_index": 2,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 5
+          },
+          "n_chunks": 1202,
+          "scores": {
+            "context_precision": 0.24999999998833333,
+            "faithfulness": 0.8
+          },
+          "composite_score": 1.8499999999883334,
+          "feasible": false,
+          "violations": [
+            "faithfulness=0.8000 < min 0.85"
+          ],
+          "answers_preview": [
+            "The context does not specify what WORKS Optimisation uses to integrate and visualize data.",
+            "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Exceeding customer expectations with products.\n2.  Exceeding customer expectations with processes.\n3.  Exceedi",
+            "\"Business Ethics\" and \"Corporate Governance\"",
+            "Over 500 colleagues.",
+            "The aim of the Working Group is to focus on education and best practice sharing for its members."
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
+                ". ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
+                ". This allows us to capture a holistic view of customer experiences and perceptions, driving our continuous efforts to provide high-quality services and products. “ASMPT’s software strategy aims to maximise our customers’ productivity",
+                ". Extension of Machine Life Another way to reduce our environmental impact is to extend the life of our products. To this end, ASMPT offers (refurbished) pre-owned equipment, is active in retrofitting existing systems (e.g"
+              ],
+              "answer": "The context does not specify what WORKS Optimisation uses to integrate and visualize data.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services",
+                ". They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.",
+                ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
+                ". We also set high standards for the quality of all our internal processes. This includes the way we work with our employees, whose health and safety is of the utmost priority.” Cheong Shuan Pei, Vice President Corporate Quality Management, ASMPT"
+              ],
+              "answer": "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Exceeding customer expectations with products.\n2.  Exceeding customer expectations with processes.\n3.  Exceeding customer expectations with services.",
+              "scores": {
+                "faithfulness": 0.0,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”",
+                ". Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics &",
+                "Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG and Air Emissions • Net-zero Initiatives •",
+                "Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+                "2–16 Communication of critical concerns ESG Governance Structure P.25 2–17 Collective knowledge of the highest governance body Corporate Governance Report in the Annual Report 2–18 Evaluation of the performance of the highest governance body Corporate"
+              ],
+              "answer": "\"Business Ethics\" and \"Corporate Governance\"",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.249999999975
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                ". ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                ". In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course. Girls’ Day 2023 We see it as a vital necessity to get girls interested in technology at an early age and to break down outdated stereotypes",
+                ". Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated",
+                ". To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education",
+                ". These courses support the ongoing expansion of knowledge and ensure technical proficiency. Users can update and enhance their profession- al expertise effortlessly through our target group-specific e-learning courses"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.9999999999666667
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent",
+                ". The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance",
+                ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members",
+                ". Our Commitment The Group is committed to attracting and retaining a diverse talent pool through equitable, competitive remuneration and a nurturing work culture",
+                ". Under the pillar of “Nurturing Our Employees”, we are dedicated to fostering a diverse, equal, and inclusive work environment globally"
+              ],
+              "answer": "The aim of the Working Group is to focus on education and best practice sharing for its members.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999999698,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 63.6
+        },
+        {
+          "trial_index": 3,
+          "params": {
+            "chunk_size": 1024,
+            "chunk_overlap": 0,
+            "top_k": 3
+          },
+          "n_chunks": 278,
+          "scores": {
+            "context_precision": 0.06666666666,
+            "faithfulness": 0.6666666666666666
+          },
+          "composite_score": 1.3999999999933332,
+          "feasible": false,
+          "violations": [
+            "faithfulness=0.6667 < min 0.85"
+          ],
+          "answers_preview": [
+            "The context does not specify what the WORKS Optimisation system uses to integrate and visualize data.",
+            "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n*   Exceeding customers' expectations with products, processes, and services.\n*   Enabling customers to achieve th",
+            "Anti-Corruption and ESG Governance Structure.",
+            "Over 500 colleagues.",
+            "The context does not mention a \"Working Group.\""
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". The result is an important impetus for digital transfor- mation that increases profitability and optimises the use of resources throughout electronics production. Big Data Processing Ensures Zero DPMO The target of ASMPT’s SMT Solutions Segment (SMT) is to help our customers to reach a future-proof intelli- gent SMT factory, in which yield, efficiency and produc- tivity are increased through big data processing, work- force is deployed effectively and the material flow is optimised throughout the factory. Intelligent, auto- mated process optimisation significantly reduces pro - duction times and avoids rejects. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+                ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees. The WORKS Software Suite’s powerful applica- tions for all workflows on the shop floor reduce op- erator workload and control and optimise produc - tion and material flow. WORKS Operations, for example, the application for smart working in the Intelligent Factory bundles, prioritises and distrib- utes tasks from production across lines and skill- based to operators with mobile devices. This intelli- gent guidance shortens response times and provides the most effective support for operators",
+                ". Additionally, our Customer Satisfaction Survey Re- view (CSSR) serves as an annual, consolidated channel for gathering customer feedback. This allows us to capture a holistic view of customer experiences and perceptions, driving our continuous efforts to provide high-quality services and products. “ASMPT’s software strategy aims to maximise our customers’ productivity. By implementing Industry 4.0, we help our customers to achieve significant resource savings, optimise employee support and have a positive impact on the ecological footprint of production.” Francisco Almada Lobo, CEO, Critical Manufacturing, An ASMPT Company"
+              ],
+              "answer": "The context does not specify what the WORKS Optimisation system uses to integrate and visualize data.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions",
+                "; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit, and partner well both internally & externally ASMPT is a great place to work in all our locations around the world • Opportunities",
+                ". Minimising Environmental Impact Nurturing our Employees Creating Value through Innovation Supporting our Communities The Group’s sustainability framework has been built on this four pillars: “Minimising Environmental Im- pact”, “Creating Value through Innovation”, “Nurturing our Employees” and “Supporting our Communities”. They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy."
+              ],
+              "answer": "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n*   Exceeding customers' expectations with products, processes, and services.\n*   Enabling customers to achieve the highest level of quality in their production.\n*   Embracing a high-performance behavioral model.",
+              "scores": {
+                "faithfulness": 0.3333333333333333,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". Employment Overview P.71 2–9 Governance structure and composition ESG Governance Structure P.25 2–10 Nomination and selection of the highest governance body Corporate Governance Report in the Annual Report 2–11 Chair of the highest governance body Corporate Governance Report in the Annual Report 2–12 Role of the highest governance body in overseeing the management of impacts Corporate Governance Report in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses. ESG Governance Structure P.25",
+                ". HKEX Description Report Section/ Remark Page GRI 2: General Disclosures 2021 2–15 Conflicts of interest Corporate Governance Report in the Annual Report 2–16 Communication of critical concerns ESG Governance Structure P.25 2–17 Collective knowledge of the highest governance body Corporate Governance Report in the Annual Report 2–18 Evaluation of the performance of the highest governance body Corporate Governance Report in the Annual Report 2–19 Remuneration policies Employee Overview P.71 2–20 Process to determine remuneration Employee Overview P.71 2–22 Statement on sustaina- ble development strategy Governance Structure (ii) The board’s ESG management approach and strategy, including the process used to evaluate, prioritise and manage material ESG-related issues (including risks to the issuer’s businesses)",
+                ". Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality & Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG and Air Emissions • Net-zero Initiatives • Environmental Management Energy Management and Product Energy Efficiency • Net-zero Initiatives Water Resource Management • Conserving the Environment Waste Management • Conserving the Environment Environmental Compliance • Environmental Management"
+              ],
+              "answer": "Anti-Corruption and ESG Governance Structure.",
+              "scores": {
+                "faithfulness": 0.0,
+                "answer_relevancy": 0.6157890690408993,
+                "context_precision": 0.3333333333
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated. In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                ". In alignment with our commitment to environ- mental responsibility, ASMPT Academy ac- knowledges the importance of minimising envi- ronmental impact. We recognise the sustainable aspect of our training programmes, as partici- pants can benefit from valuable learning experi- ences without the need for extensive travel. This not only reduces the carbon footprint asso- ciated with commuting but also aligns with our ecoconscious approach to professional devel - opment. Our Blended Learning offerings seam- lessly integrate e-learning with instructor-led training, providing an optimal combination of both methods, contributing to a comprehensive and effective learning experience tailored to in- dividual needs",
+                ". A dynamic, experiential learning environment for global leaders promotes personal and professional growth."
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings. These measures are designed to align with and support the overarch- ing ASMPT strategy, ensuring that every member of the team is moving in unison towards common goals. Recognising the importance of digitisation a modern work landscape, ASMPT has made significant invest- ments in a global HR system, the Global People Sys- tem (GPS) that has been mentioned in the earlier parts of this report. The System aims to improve the em- ployee digital experience by streamlining transactions and fostering engagement",
+                ". The Group strives to create long-term shareholder value by generating optimum returns on investment through leading ESG practices, providing transparent and timely disclosures, and deliver sustainable and long-term growth. • Annual General Meetings • Annual and Interim Reports • Announcements and Circulars • Quarterly updates on financial results • Investor conference calls • Investor meetings and roadshows Employees A conducive environment where employees are treated with respect and dignity, supporting their personal development, and helping to achieve career growth and work-life balance. The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance. Employees can provide feedback to management through open communication platforms such as networking sessions and regular update sessions",
+                ". • Ass ess the effectiveness of the Group’s risk control and management systems."
+              ],
+              "answer": "The context does not mention a \"Working Group.\"",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.7125943392789139,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 55.23
+        },
+        {
+          "trial_index": 4,
+          "params": {
+            "chunk_size": 512,
+            "chunk_overlap": 100,
+            "top_k": 5
+          },
+          "n_chunks": 555,
+          "scores": {
+            "context_precision": 0.11666666666083332,
+            "faithfulness": 1.0
+          },
+          "composite_score": 2.116666666660833,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "The context does not mention the \"WORKS Optimisation\" system.",
+            "Based on the context, three components of the EXCELLENCE principle at ASMPT are:\n\n*   Exceeding customer expectations with products, processes, and services.\n*   Admitting to and learning from mistake",
+            "\"Business Ethics\" and \"Corporate Governance\".",
+            "Over 500 colleagues.",
+            "The aim of the Working Group is to focus on education and best practice sharing for its members."
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". This increases efficiency and also helps to conserve valuable resources. As systems and machines are con- nected to each other via a digital backbone and the significant data is read out in real time, the value chain in the factory can be transparent at all times. ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+                ". ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing. It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory",
+                ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees"
+              ],
+              "answer": "The context does not mention the \"WORKS Optimisation\" system.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions",
+                ". • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy. EXCELLENCE in all that we do • We make a difference. We strive for excellence – learning and continuously adding value. • We are enthusiastic contributors. We are determined to succeed and to consistently deliver on quality. • We work well together to provide innovative smart solutions. We see all challenges as opportunities. • We are willing to change and execute.",
+                ". They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.",
+                "; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit",
+                ". We also set high standards for the quality of all our internal processes. This includes the way we work with our employees, whose health and safety is of the utmost priority.” Cheong Shuan Pei, Vice President Corporate Quality Management, ASMPT"
+              ],
+              "answer": "Based on the context, three components of the EXCELLENCE principle at ASMPT are:\n\n*   Exceeding customer expectations with products, processes, and services.\n*   Admitting to and learning from mistakes.\n*   Striving for excellence and continuously adding value.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+                ". In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs",
+                ". Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality & Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG",
+                "in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues",
+                "; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses"
+              ],
+              "answer": "\"Business Ethics\" and \"Corporate Governance\".",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                ". In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated",
+                ". In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course. Girls’ Day 2023 We see it as a vital necessity to get girls interested in technology at an early age and to break down outdated stereotypes. That’s why we invited school- girls to our SMT headquarters in Munich, Germany, for Girls’ Day, an activity that provides girls from the age of 10 to 16 years old with the opportunity to explore jobs that are often seen as “for males only”",
+                ". Our Blended Learning offerings seam- lessly integrate e-learning with instructor-led training, providing an optimal combination of both methods, contributing to a comprehensive and effective learning experience tailored to in- dividual needs",
+                "Supporting our Communities 90 ASMPT Technology Award 2023 In July 2023, the ASMPT Technology Award illumi- nated the path for innovation by showcasing the brightest minds in academia. Collaborating with top universities in Hong Kong, the event saw stu- dent presenters unfurling the depth of their crea- tivity and expertise, sharing their final year pro- jects with an assembly of inspired peers"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.5833333333041666
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings",
+                ". The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance. Employees can provide feedback to management through open communication platforms such as networking sessions and regular update sessions",
+                ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members. At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally",
+                ". • We consistently deliver on promises made and persevere until the job is done. RESPECT for one and all • We respect and value all internal and external partnerships. • We promote and foster an inclusive work environment. • We embrace the strengths of our global diverse talents and cultures. OWNERSHIP of all actions and behaviors • We are confident decision makers. We never give up. • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy",
+                ". We call them POWER – Passion, Ownership, Win, Excellence, Respect. These POWER values motivate us, flank our corporate goals and set out the rights and obligations for all of us. They reinforce commitment, ethical and moral behaviour, in everything we do, daily and at all levels of the organisation. With a steadfast commitment to nurturing a thriving workplace, we focus on cultivat- ing an environment where every individual feels valued, safe, and inspired to grow"
+              ],
+              "answer": "The aim of the Working Group is to focus on education and best practice sharing for its members.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999999698,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 63.57
+        },
+        {
+          "trial_index": 5,
+          "params": {
+            "chunk_size": 512,
+            "chunk_overlap": 100,
+            "top_k": 7
+          },
+          "n_chunks": 555,
+          "scores": {
+            "context_precision": 0.33333333330000003,
+            "faithfulness": 1.0
+          },
+          "composite_score": 2.3333333333,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "The standardised IPC-2591-CFX interface.",
+            "Based on the context, three components of the EXCELLENCE principle at ASMPT are:\n\n*   Exceeding customer expectations with products, processes, and services.\n*   Admitting to and learning from mistake",
+            "\"Business Ethics\" and \"Corporate Governance\".",
+            "Over 500 colleagues.",
+            "The aim of the Working Group is to focus on education and best practice sharing for its members."
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". This increases efficiency and also helps to conserve valuable resources. As systems and machines are con- nected to each other via a digital backbone and the significant data is read out in real time, the value chain in the factory can be transparent at all times. ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+                ". ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+                ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing. It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory",
+                ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees",
+                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side. Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data",
+                ". Our Approach Mobile devices, cameras, computers, internet infra- structure, cars and electric vehicles, smart home sys - tems, healthcare and industrial electronics – any de - vice containing electronics has probably been developed or built using ASMPT’s innovative hardware and software solutions in some way. ASMPT has a truly unique, broad-based portfolio in the market"
+              ],
+              "answer": "The standardised IPC-2591-CFX interface.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.29318044677933836,
+                "context_precision": 0.16666666665
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions",
+                ". • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy. EXCELLENCE in all that we do • We make a difference. We strive for excellence – learning and continuously adding value. • We are enthusiastic contributors. We are determined to succeed and to consistently deliver on quality. • We work well together to provide innovative smart solutions. We see all challenges as opportunities. • We are willing to change and execute.",
+                ". They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.",
+                "; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit",
+                ". We also set high standards for the quality of all our internal processes. This includes the way we work with our employees, whose health and safety is of the utmost priority.” Cheong Shuan Pei, Vice President Corporate Quality Management, ASMPT",
+                ". • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers. 2 Sustainability Strategy"
+              ],
+              "answer": "Based on the context, three components of the EXCELLENCE principle at ASMPT are:\n\n*   Exceeding customer expectations with products, processes, and services.\n*   Admitting to and learning from mistakes.\n*   Striving for excellence and continuously adding value.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+                ". In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs",
+                ". Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality & Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG",
+                "in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues",
+                "; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 31 3.3 Anti-Corruption Why it Matters Business ethics serve as the foundation for moral and ethical behaviour within our organisation. In an era of heightened governmental and regulatory standards and escalating stakeholder expectations, our commit- ment to ethical practices is more vital than ever. Up- holding the highest standards of integrity is a strategic imperative that strengthens the trust we receive from our stakeholders",
+                ". Employment Overview P.71 2–9 Governance structure and composition ESG Governance Structure P.25 2–10 Nomination and selection of the highest governance body Corporate Governance Report in the Annual Report 2–11 Chair of the highest governance body Corporate Governance Report in the Annual Report 2–12 Role of the highest governance body in overseeing the management of impacts Corporate Governance Report in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance"
+              ],
+              "answer": "\"Business Ethics\" and \"Corporate Governance\".",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.9999999999
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                ". In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated",
+                ". In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course. Girls’ Day 2023 We see it as a vital necessity to get girls interested in technology at an early age and to break down outdated stereotypes. That’s why we invited school- girls to our SMT headquarters in Munich, Germany, for Girls’ Day, an activity that provides girls from the age of 10 to 16 years old with the opportunity to explore jobs that are often seen as “for males only”",
+                ". Our Blended Learning offerings seam- lessly integrate e-learning with instructor-led training, providing an optimal combination of both methods, contributing to a comprehensive and effective learning experience tailored to in- dividual needs",
+                "Supporting our Communities 90 ASMPT Technology Award 2023 In July 2023, the ASMPT Technology Award illumi- nated the path for innovation by showcasing the brightest minds in academia. Collaborating with top universities in Hong Kong, the event saw stu- dent presenters unfurling the depth of their crea- tivity and expertise, sharing their final year pro- jects with an assembly of inspired peers",
+                ". eLearning Continuous education for specific target groups in their own work environment Virtual Reality Game-like and realistic knowledge acquisition with courses in 2D/3D virtual reality Instructor-led Practical exercises with experts on machines and in virtual software environments Blended Learning Combine the best of eLearning and instructor-led training environments One of ASMPT’s innovations “With ASMPT Academy, knowledge is at everyone´s fingertips, ASMPT employees, field service engineers",
+                ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members. At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.49999999995
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings",
+                ". The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance. Employees can provide feedback to management through open communication platforms such as networking sessions and regular update sessions",
+                ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members. At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally",
+                ". • We consistently deliver on promises made and persevere until the job is done. RESPECT for one and all • We respect and value all internal and external partnerships. • We promote and foster an inclusive work environment. • We embrace the strengths of our global diverse talents and cultures. OWNERSHIP of all actions and behaviors • We are confident decision makers. We never give up. • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy",
+                ". We call them POWER – Passion, Ownership, Win, Excellence, Respect. These POWER values motivate us, flank our corporate goals and set out the rights and obligations for all of us. They reinforce commitment, ethical and moral behaviour, in everything we do, daily and at all levels of the organisation. With a steadfast commitment to nurturing a thriving workplace, we focus on cultivat- ing an environment where every individual feels valued, safe, and inspired to grow",
+                ". • Driving the Right Behaviours: Encouraging col- laboration and linking rewards to performance. • Effective Implementation: Complying strictly with regulations and governance. We also provide different kinds of employee benefits including variable incentives, retirement support, insur- ance benefits, flexible spending accounts, flexible work arrangements, and wellness programmes, tailored by region and role",
+                ". • Employee community involvement programmes • Social enterprises involvement programmes • Corporate sponsorships and donations • Special open house activities • Scholarships and internships Government Bodies, Regulators, Standards Bodies, and Ratings Agencies Ensure that the Group complies with local laws, regulations and policies, and addresses pertinent issues. The Group operates in accordance with the laws of the countries where it conducts business"
+              ],
+              "answer": "The aim of the Working Group is to focus on education and best practice sharing for its members.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999999698,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 81.31
+        },
+        {
+          "trial_index": 6,
+          "params": {
+            "chunk_size": 256,
+            "chunk_overlap": 100,
+            "top_k": 7
+          },
+          "n_chunks": 1202,
+          "scores": {
+            "context_precision": 0.11666666666083332,
+            "faithfulness": 0.85
+          },
+          "composite_score": 1.8166666666608333,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "The context does not specify what WORKS Optimisation uses to integrate and visualize data.",
+            "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Exceeding customer expectations with products, processes, and services.\n2.  A holistic commitment to quality a",
+            "\"Business Ethics\" and \"Corporate Governance\"",
+            "Over 500 colleagues.",
+            "The aim of the Working Group is to provide education and best practice sharing for its members."
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side",
+                ". ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions",
+                ". This allows us to capture a holistic view of customer experiences and perceptions, driving our continuous efforts to provide high-quality services and products. “ASMPT’s software strategy aims to maximise our customers’ productivity",
+                ". Extension of Machine Life Another way to reduce our environmental impact is to extend the life of our products. To this end, ASMPT offers (refurbished) pre-owned equipment, is active in retrofitting existing systems (e.g",
+                ". With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+                ". Key to these are ASMPT’s R&D capabilities. ASMPT continuously invests in R&D, enabling it to build a deep R&D talent pool and significant inhouse pro - cess and development capabilities and expertise"
+              ],
+              "answer": "The context does not specify what WORKS Optimisation uses to integrate and visualize data.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services",
+                ". They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.",
+                ". The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+                ". The drivers of ASMPT’s success are: • QUALITY – ASMPT’s unwavering commitment to quality permeates every facet of the company and is evident in the daily actions of our people",
+                ". We also set high standards for the quality of all our internal processes. This includes the way we work with our employees, whose health and safety is of the utmost priority.” Cheong Shuan Pei, Vice President Corporate Quality Management, ASMPT",
+                "ASMPT Limited Environmental, Social and Governance Report 2023 33 Our Approach Design for Excellence (DFE) ASMPT’s DFE programme embodies our holistic com- mitment to quality and environmental stewardship from the inception of each product",
+                ". The programme is tailored around the compe - tencies needed for this new role such as leading themselves, their teams and to contributing to the business success. The ASMPT prerequisite: ONE ASMPT"
+              ],
+              "answer": "Based on the context, the three components of the EXCELLENCE principle at ASMPT are:\n\n1.  Exceeding customer expectations with products, processes, and services.\n2.  A holistic commitment to quality and environmental stewardship through the Design for Excellence (DFE) programme.\n3.  Unwavering commitment to quality in all facets of the company and its internal processes.",
+              "scores": {
+                "faithfulness": 0.25,
+                "answer_relevancy": 0.9988011880003812,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”",
+                ". Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics &",
+                "Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG and Air Emissions • Net-zero Initiatives •",
+                "Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+                "2–16 Communication of critical concerns ESG Governance Structure P.25 2–17 Collective knowledge of the highest governance body Corporate Governance Report in the Annual Report 2–18 Evaluation of the performance of the highest governance body Corporate",
+                "for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues",
+                ". HKEX Description Report Section/ Remark Page GRI 2: General Disclosures 2021 2–15 Conflicts of interest Corporate Governance Report in the Annual Report 2–16 Communication of critical concerns ESG Governance Structure P.25 2–17 Collective knowledge of"
+              ],
+              "answer": "\"Business Ethics\" and \"Corporate Governance\"",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                ". ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                ". In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course. Girls’ Day 2023 We see it as a vital necessity to get girls interested in technology at an early age and to break down outdated stereotypes",
+                ". Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated",
+                ". To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education",
+                ". These courses support the ongoing expansion of knowledge and ensure technical proficiency. Users can update and enhance their profession- al expertise effortlessly through our target group-specific e-learning courses",
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation",
+                ". Our Blended Learning offerings seam- lessly integrate e-learning with instructor-led training, providing an optimal combination of both methods, contributing to a comprehensive and effective learning experience tailored to in- dividual needs"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.5833333333041666
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent",
+                ". The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance",
+                ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members",
+                ". Our Commitment The Group is committed to attracting and retaining a diverse talent pool through equitable, competitive remuneration and a nurturing work culture",
+                ". Under the pillar of “Nurturing Our Employees”, we are dedicated to fostering a diverse, equal, and inclusive work environment globally",
+                ". A full day of in-depth working group discussions and sharing by external speakers provided valuable insights and set the course for SCC going forward",
+                ", “Minimising Environmental Impact”, “Creating Value through Innovation”, “Nurturing our Employees” and “Supporting our Communities” The ASMPT Group strategy is focused on “Shaping a bright and sustainable future for shareholders, employees"
+              ],
+              "answer": "The aim of the Working Group is to provide education and best practice sharing for its members.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999999698,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 73.5
+        },
+        {
+          "trial_index": 7,
+          "params": {
+            "chunk_size": 512,
+            "chunk_overlap": 100,
+            "top_k": 3
+          },
+          "n_chunks": 555,
+          "scores": {
+            "context_precision": 0.11666666666083332,
+            "faithfulness": 0.9818181818181818
+          },
+          "composite_score": 2.080303030297197,
+          "feasible": true,
+          "violations": [],
+          "answers_preview": [
+            "The context does not mention the \"WORKS Optimisation system\" or specify how it integrates and visualizes data.",
+            "Based on the context, three components of the EXCELLENCE principle at ASMPT are:\n\n*   We lead by example. We admit to and learn from mistakes.\n*   We are open, honest and trustworthy.\n*   We strive fo",
+            "\"Business Ethics\" and \"Corporate Governance\"",
+            "Over 500 colleagues.",
+            "The aim of the Working Group is to focus on education and best practice sharing for its members."
+          ],
+          "records": [
+            {
+              "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+              "ground_truth": null,
+              "contexts": [
+                ". This increases efficiency and also helps to conserve valuable resources. As systems and machines are con- nected to each other via a digital backbone and the significant data is read out in real time, the value chain in the factory can be transparent at all times. ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient",
+                ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+                ". ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources"
+              ],
+              "answer": "The context does not mention the \"WORKS Optimisation system\" or specify how it integrates and visualizes data.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+              "ground_truth": null,
+              "contexts": [
+                ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions",
+                ". • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy. EXCELLENCE in all that we do • We make a difference. We strive for excellence – learning and continuously adding value. • We are enthusiastic contributors. We are determined to succeed and to consistently deliver on quality. • We work well together to provide innovative smart solutions. We see all challenges as opportunities. • We are willing to change and execute.",
+                ". They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy."
+              ],
+              "answer": "Based on the context, three components of the EXCELLENCE principle at ASMPT are:\n\n*   We lead by example. We admit to and learn from mistakes.\n*   We are open, honest and trustworthy.\n*   We strive for excellence – learning and continuously adding value.",
+              "scores": {
+                "faithfulness": 0.9090909090909091,
+                "answer_relevancy": 0.9800363397277027,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+              "ground_truth": null,
+              "contexts": [
+                ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+                ". In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs",
+                ". Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality & Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG"
+              ],
+              "answer": "\"Business Ethics\" and \"Corporate Governance\"",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.0
+              }
+            },
+            {
+              "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+              "ground_truth": null,
+              "contexts": [
+                ". In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+                "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated",
+                ". In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course. Girls’ Day 2023 We see it as a vital necessity to get girls interested in technology at an early age and to break down outdated stereotypes. That’s why we invited school- girls to our SMT headquarters in Munich, Germany, for Girls’ Day, an activity that provides girls from the age of 10 to 16 years old with the opportunity to explore jobs that are often seen as “for males only”"
+              ],
+              "answer": "Over 500 colleagues.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.0,
+                "context_precision": 0.5833333333041666
+              }
+            },
+            {
+              "question": "What is the aim of the Working Group?",
+              "ground_truth": null,
+              "contexts": [
+                ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings",
+                ". The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance. Employees can provide feedback to management through open communication platforms such as networking sessions and regular update sessions",
+                ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members. At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally"
+              ],
+              "answer": "The aim of the Working Group is to focus on education and best practice sharing for its members.",
+              "scores": {
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.9999999999999698,
+                "context_precision": 0.0
+              }
+            }
+          ],
+          "elapsed_seconds": 55.43
+        }
+      ],
+      "best_params": {
+        "chunk_size": 512,
+        "chunk_overlap": 100,
+        "top_k": 7
+      },
+      "best_composite": 2.3333333333
+    }
+  },
+  "dspy_a_b": {
+    "no_gt": {
+      "stage_elapsed": {
+        "baseline_s": 93.54,
+        "optimize_s": 163.78,
+        "re_eval_s": 73.88,
+        "total_s": 331.2
+      },
+      "baseline_scores": {
+        "context_precision": 0.1499999999908333,
+        "faithfulness": 1.0,
+        "hallucination": 0.1429,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 1.0
+      },
+      "optimized_scores": {
+        "context_precision": 0.38333333330083336,
+        "faithfulness": 1.0,
+        "hallucination": 0.1714,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 1.0
+      },
+      "delta": {
+        "context_precision": 0.23333333331000006,
+        "faithfulness": 0.0
+      },
+      "composite": {
+        "objective_spec": {
+          "metrics": {
+            "faithfulness": 2.0,
+            "answer_relevancy": 1.5,
+            "context_precision": 1.0,
+            "g_eval": 0.5,
+            "hallucination": 0.5,
+            "bias": 0.1,
+            "toxicity": 0.1
+          },
+          "constraints": {
+            "faithfulness": [
+              "min",
+              0.85
+            ]
+          },
+          "mode": "weighted_sum"
+        },
+        "baseline": {
+          "score": 3.2785499999908336,
+          "feasible": true,
+          "violations": []
+        },
+        "optimized": {
+          "score": 3.4976333333008336,
+          "feasible": true,
+          "violations": []
+        },
+        "delta": 0.21908333330999996,
+        "winner": "optimized"
+      },
+      "baseline_sample_answers": [
+        "The standardised IPC-2591-CFX interface.",
+        "1. We lead by example\n2. We are open, honest and trustworthy\n3. We make a difference",
+        "Business Ethics and Corporate Governance",
+        "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
+        "The aim of the Working Group is education and best practice sharing for its members, including conducting presentations on low-carbon technologies, practices and landscapes globally."
+      ],
+      "optimized_sample_answers": [
+        "The standardised IPC-2591-CFX interface.",
+        "1. We lead by example. We admit to and learn from mistakes.\n2. We are open, honest and trustworthy.\n3. We make a difference. We strive for excellence – learning and continuously adding value.",
+        "Business Ethics and Corporate Governance",
+        "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
+        "The aim of the Working Group is education and best practice sharing for its members, including conducting presentations on low-carbon technologies, practices and landscapes globally."
+      ],
+      "records": [
+        {
+          "question": "What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?",
+          "ground_truth": null,
+          "contexts": [
+            ". This increases efficiency and also helps to conserve valuable resources. As systems and machines are con- nected to each other via a digital backbone and the significant data is read out in real time, the value chain in the factory can be transparent at all times. ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient",
+            ". The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.",
+            ". ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources",
+            ". ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing. It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory",
+            ". In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees",
+            ". In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side. Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data",
+            ". Our Approach Mobile devices, cameras, computers, internet infra- structure, cars and electric vehicles, smart home sys - tems, healthcare and industrial electronics – any de - vice containing electronics has probably been developed or built using ASMPT’s innovative hardware and software solutions in some way. ASMPT has a truly unique, broad-based portfolio in the market"
+          ],
+          "baseline_answer": "The standardised IPC-2591-CFX interface.",
+          "optimized_answer": "The standardised IPC-2591-CFX interface."
+        },
+        {
+          "question": "What are three components of the EXCELLENCE principle at ASMPT?",
+          "ground_truth": null,
+          "contexts": [
+            ". “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions",
+            ". • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy. EXCELLENCE in all that we do • We make a difference. We strive for excellence – learning and continuously adding value. • We are enthusiastic contributors. We are determined to succeed and to consistently deliver on quality. • We work well together to provide innovative smart solutions. We see all challenges as opportunities. • We are willing to change and execute.",
+            ". They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.",
+            "; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit",
+            ". We also set high standards for the quality of all our internal processes. This includes the way we work with our employees, whose health and safety is of the utmost priority.” Cheong Shuan Pei, Vice President Corporate Quality Management, ASMPT",
+            ". • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values",
+            ". ASMPT makes a difference through innovation, excellence, social & environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers. 2 Sustainability Strategy"
+          ],
+          "baseline_answer": "1. We lead by example\n2. We are open, honest and trustworthy\n3. We make a difference",
+          "optimized_answer": "1. We lead by example. We admit to and learn from mistakes.\n2. We are open, honest and trustworthy.\n3. We make a difference. We strive for excellence – learning and continuously adding value."
+        },
+        {
+          "question": "Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?",
+          "ground_truth": null,
+          "contexts": [
+            ". To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management & Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”",
+            ". In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics & Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs",
+            ". Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality & Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics & Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG",
+            "in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues",
+            "; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses",
+            "ASMPT Limited Environmental, Social and Governance Report 2023 31 3.3 Anti-Corruption Why it Matters Business ethics serve as the foundation for moral and ethical behaviour within our organisation. In an era of heightened governmental and regulatory standards and escalating stakeholder expectations, our commit- ment to ethical practices is more vital than ever. Up- holding the highest standards of integrity is a strategic imperative that strengthens the trust we receive from our stakeholders",
+            ". Employment Overview P.71 2–9 Governance structure and composition ESG Governance Structure P.25 2–10 Nomination and selection of the highest governance body Corporate Governance Report in the Annual Report 2–11 Chair of the highest governance body Corporate Governance Report in the Annual Report 2–12 Role of the highest governance body in overseeing the management of impacts Corporate Governance Report in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance"
+          ],
+          "baseline_answer": "Business Ethics and Corporate Governance",
+          "optimized_answer": "Business Ethics and Corporate Governance"
+        },
+        {
+          "question": "How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?",
+          "ground_truth": null,
+          "contexts": [
+            ". In the UK, we continue to offer the POWERful workshop, providing staff with the necessary tools to recognise and remedy bias. To enhance our commitment to under- standing unconscious bias, a company-wide rollout of related courses is planned for 2024 and beyond, furthering this vital initiative. ASMPT actively tackles unconscious bias, fostering self-awareness and education. In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course",
+            "Nurturing our Employees 74 Promote Awareness of Unconscious Bias Although eliminating unconscious bias presents challenges, ASMPT actively confronts it, acknowl- edging its influence on inclusion, performance, and innovation. Through self-awareness and education, we empower employees to navi- gate and challenge their biases. In 2023, our DEI promotion group in China launched an “Unconscious Bias” e-learning course via ASMPT Academy, where over 500 colleagues participated",
+            ". In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course. Girls’ Day 2023 We see it as a vital necessity to get girls interested in technology at an early age and to break down outdated stereotypes. That’s why we invited school- girls to our SMT headquarters in Munich, Germany, for Girls’ Day, an activity that provides girls from the age of 10 to 16 years old with the opportunity to explore jobs that are often seen as “for males only”",
+            ". Our Blended Learning offerings seam- lessly integrate e-learning with instructor-led training, providing an optimal combination of both methods, contributing to a comprehensive and effective learning experience tailored to in- dividual needs",
+            "Supporting our Communities 90 ASMPT Technology Award 2023 In July 2023, the ASMPT Technology Award illumi- nated the path for innovation by showcasing the brightest minds in academia. Collaborating with top universities in Hong Kong, the event saw stu- dent presenters unfurling the depth of their crea- tivity and expertise, sharing their final year pro- jects with an assembly of inspired peers",
+            ". eLearning Continuous education for specific target groups in their own work environment Virtual Reality Game-like and realistic knowledge acquisition with courses in 2D/3D virtual reality Instructor-led Practical exercises with experts on machines and in virtual software environments Blended Learning Combine the best of eLearning and instructor-led training environments One of ASMPT’s innovations “With ASMPT Academy, knowledge is at everyone´s fingertips, ASMPT employees, field service engineers",
+            ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members. At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally"
+          ],
+          "baseline_answer": "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.",
+          "optimized_answer": "Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023."
+        },
+        {
+          "question": "What is the aim of the Working Group?",
+          "ground_truth": null,
+          "contexts": [
+            ". Our Approach The Group’s approach is rooted in providing a friend- ly and equitable working environment that is condu- cive to the growth and development of its talent. To put into effect this value proposition, ASMPT has introduced flexible work arrangements, actively par- ticipated in global corporate social responsibility initi- atives, and promoted transparent communication through regular town hall meetings",
+            ". The Group adopts HR policies and practices that promote a fair, safe and comfortable working environment, reward good performance, provide opportuni- ties for learning and development, ensure career growth, and enable work-life balance. Employees can provide feedback to management through open communication platforms such as networking sessions and regular update sessions",
+            ". In 2023, the Working Group also focused on educa- tion and best practice sharing for our members. At many of our bi-weekly meetings led by ASMPT, invited Working Group members and external subject matter experts conducted insightful presentations on low-car- bon technologies, practices and landscapes globally",
+            ". • We consistently deliver on promises made and persevere until the job is done. RESPECT for one and all • We respect and value all internal and external partnerships. • We promote and foster an inclusive work environment. • We embrace the strengths of our global diverse talents and cultures. OWNERSHIP of all actions and behaviors • We are confident decision makers. We never give up. • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy",
+            ". We call them POWER – Passion, Ownership, Win, Excellence, Respect. These POWER values motivate us, flank our corporate goals and set out the rights and obligations for all of us. They reinforce commitment, ethical and moral behaviour, in everything we do, daily and at all levels of the organisation. With a steadfast commitment to nurturing a thriving workplace, we focus on cultivat- ing an environment where every individual feels valued, safe, and inspired to grow",
+            ". • Driving the Right Behaviours: Encouraging col- laboration and linking rewards to performance. • Effective Implementation: Complying strictly with regulations and governance. We also provide different kinds of employee benefits including variable incentives, retirement support, insur- ance benefits, flexible spending accounts, flexible work arrangements, and wellness programmes, tailored by region and role",
+            ". • Employee community involvement programmes • Social enterprises involvement programmes • Corporate sponsorships and donations • Special open house activities • Scholarships and internships Government Bodies, Regulators, Standards Bodies, and Ratings Agencies Ensure that the Group complies with local laws, regulations and policies, and addresses pertinent issues. The Group operates in accordance with the laws of the countries where it conducts business"
+          ],
+          "baseline_answer": "The aim of the Working Group is education and best practice sharing for its members, including conducting presentations on low-carbon technologies, practices and landscapes globally.",
+          "optimized_answer": "The aim of the Working Group is education and best practice sharing for its members, including conducting presentations on low-carbon technologies, practices and landscapes globally."
+        }
+      ],
+      "baseline_instructions": {
+        "predict": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+      },
+      "baseline_demos": {
+        "predict": []
+      },
+      "instructions": {
+        "predict": "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context."
+      },
+      "demos": {
+        "predict": []
+      },
+      "trial_scores": [],
+      "best_score_progression": [],
+      "mipro_auto": "light",
+      "dspy_metric_used": "embed_rubric",
+      "dspy_optimizer_used": "gepa",
+      "winning_demos": [],
+      "proposed_instructions_by_predictor": {
+        "predict": [
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.",
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.\n\nThe task is to answer a specific question based on a provided context. The context is a block of text containing various statements, often separated by bullet points or periods. The question will ask for a specific piece of information that is contained within this context.\n\nYour response should be structured in two parts:\n1.  **reasoning**: A step-by-step explanation of how you located the answer within the context. Explicitly state the keywords or phrases from the question that you searched for in the context and explain how the relevant information was found.\n2.  **answer**: A direct and concise answer to the question, using only the information presented in the context. Do not add any interpretation or external knowledge.\n\n**Strategy for Solving:**\n1.  **Identify Key Terms**: Break down the question into its key terms or concepts. For example, if the question is \"What are three components of the EXCELLENCE principle?\", the key terms are \"EXCELLENCE principle\" and \"components\".\n2.  **Scan the Context**: Systematically scan the context for these key terms. Look for exact matches or closely related phrases.\n3.  **Locate the Relevant Section**: Once a key term is found, read the surrounding text carefully to find the specific information that answers the question. Pay close attention to bullet points, lists, and phrases that directly address the question.\n4.  **Extract the Answer**: Copy the exact text from the context that provides the answer. If the answer is a list, ensure all items from the list are included.\n5.  **Formulate the Reasoning**: In your reasoning, describe the process you just followed. For instance: \"The question asks for the aim of the Working Group. I searched the context for the phrase 'Working Group' and found a sentence stating that in 2023, the Working Group 'focused on education and best practice sharing for our members.' This directly answers the question.\"\n6.  **Construct the Final Answer**: Present the extracted information as the answer, ensuring it is concise and directly responsive to the question.",
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.\n\nThe task is to answer a specific question based on a provided context. The context is a block of text that may contain multiple, repeated pieces of information. The answer must be a direct extraction of the relevant fact from the context.\n\nKey characteristics of the task:\n1.  **Source of Truth:** The context is the sole source of information. Do not use external knowledge.\n2.  **Conciseness:** The answer should be as brief as possible while remaining accurate.\n3.  **Fact-Fidelity:** The answer must not contain any information that is not explicitly stated in the context. Do not infer, summarize, or rephrase beyond what is necessary to extract the fact.\n4.  **Handling Repetition:** The context may contain the same fact stated multiple times. The answer should still be a direct and concise extraction of that fact, as if it were stated only once.\n\nExample of a good answer:\n*   Question: What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?\n*   Context: \"Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data.\"\n*   Answer: The standardised IPC-2591-CFX interface.\n\nExample of a bad answer (invents facts):\n*   Question: What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?\n*   Context: \"Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data.\"\n*   Answer: The IPC-2591-CFX interface, which is a standard for data integration.\n\nExample of a bad answer (not concise):\n*   Question: How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?\n*   Context: \"In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.\"\n*   Answer: In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.",
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.\n\n### Task Description\nYour task is to answer a specific question based on a provided context. The context is a collection of text snippets, often containing bullet points, quotes, and semi-structured information. You must extract the answer directly from these snippets without adding any external knowledge or making inferences that are not explicitly supported by the text.\n\n### Strategy\n1.  **Identify the Core Question:** Precisely understand what the question is asking for. Look for keywords such as \"what,\" \"how,\" \"aim,\" \"components,\" \"uses,\" etc.\n2.  **Scan the Context for Keywords:** Systematically read through the provided context snippets. Look for the keywords from the question or closely related terms.\n3.  **Pinpoint the Exact Answer:** Once a relevant snippet is found, locate the specific phrase or sentence that directly answers the question. The answer will often be explicitly stated.\n4.  **Formulate the Concise Answer:** Rephrase the exact information from the context into a brief and direct answer. Do not add explanations, examples, or additional details that are not present in the text. If the context provides a list, extract the required number of items directly from that list.\n\n### Domain-Specific Guidance\n*   **Corporate Values & Principles:** When questions ask about principles (e.g., \"EXCELLENCE\"), the answer will be a list of specific bullet points or phrases from the context that define that principle. Do not combine or summarize these points; list them as they appear.\n*   **Technical Systems & Interfaces:** When questions ask about a specific system (e.g., \"WORKS Optimisation\"), the answer will be a technical term, standard, or process name explicitly mentioned in the context (e.g., \"IPC-2591-CFX interface\").\n*   **Group Aims & Objectives:** When questions ask about the aim of a group (e.g., \"Working Group\"), the answer will be a direct quote or a concise summary of the group's stated purpose, such as \"education and best practice sharing.\"",
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.\n\nThe task is to answer a specific question based on a provided context. The context is a collection of text snippets, likely from a corporate report or document. The question will ask for a specific piece of information that is explicitly stated within the context.\n\nYour response must be structured in two parts:\n1.  **reasoning**: A brief explanation of how you found the answer in the context. State the exact phrase or sentence from the context that contains the answer.\n2.  **answer**: The direct answer to the question, extracted verbatim from the context.\n\n**Strategy:**\n1.  **Scan the Context**: Read through the provided context snippets to locate the sentence or phrase that directly answers the question.\n2.  **Avoid Extraneous Information**: Do not add any information, explanations, or context that is not explicitly stated in the provided text. Do not infer or summarize.\n3.  **Be Precise**: The answer must be a direct quote from the context. If the context provides a specific number, quote that number exactly. If it lists items, quote the list.\n4.  **Structure the Output**: Always provide the `reasoning` and `answer` sections as specified.\n\n**Example of Correct Application:**\n*   **Question:** Which two ESG factors were combined into \"Business Ethics & Corporate Governance\"?\n*   **Context:** \"...combining “Business Ethics” and “Corporate Governance” into “Business Ethics & Corporate Governance”...\"\n*   **Correct Output:**\n    *   **reasoning:** The context explicitly states the two factors that were combined.\n    *   **answer:** Business Ethics and Corporate Governance\n\n**Example of Incorrect Application (to be avoided):**\n*   **Question:** How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?\n*   **Context:** \"In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.\"\n*   **Incorrect Output:**\n    *   **reasoning:** The context mentions that over 500 colleagues participated in the course.\n    *   **answer:** Over 500 colleagues in China engaged in an \"Unconscious Bias\" e-learning course in 2023.\n*   **Correction:** The `answer` should be just the number, as it is the specific fact requested. The `reasoning` should point to the exact sentence.\n*   **Correct Output:**\n    *   **reasoning:** The context states that \"In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.\"\n    *   **answer:** Over 500",
+          "Answer the question using only the retrieved context.\nBe concise. Do not invent facts that are not in the context.\n\n### Task Description\nYour task is to answer a specific question based on a provided context. The context is a block of text containing various facts, figures, and statements about a company named ASMPT. You must extract the precise answer directly from this text without adding any external knowledge or making inferences beyond what is explicitly stated.\n\n### Strategy\n1.  **Identify the Core Question:** Carefully read the user's question to understand exactly what information is being requested.\n2.  **Scan the Context:** Systematically read through the provided context to locate the sentence or sentences that contain the answer. The context is not always structured logically, so you may need to scan it multiple times.\n3.  **Extract the Exact Fact:** Once you find the relevant information, copy the exact fact, figure, or phrase that answers the question. Do not rephrase or summarize. The answer must be a direct quote or a direct extraction from the text.\n4.  **Adhere to Constraints:**\n    *   **Conciseness:** Provide only the essential answer. Do not include introductory phrases like \"According to the context...\" or explanations.\n    *   **No Invention:** Do not add any information, assumptions, or interpretations that are not present in the context. If the context does not contain the answer, the correct response is that the information is not available.\n    *   **Domain-Specific Knowledge:** The context contains specific domain terminology (e.g., \"POWERful workshop,\" \"IPC-2591-CFX interface,\" \"WORKS Optimisation,\" \"e-learning\"). Your answer must use this exact terminology as it appears in the context.\n\n### Examples of Good and Bad Answers\n\n*   **Question:** What is the aim of the Working Group?\n    *   **Bad Answer (Invents a summary):** The aim is to create a good work environment and share knowledge.\n    *   **Good Answer (Direct extraction):** education and best practice sharing for its members, including conducting presentations on low-carbon technologies, practices and landscapes globally.\n\n*   **Question:** How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?\n    *   **Bad Answer (Too verbose):** In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.\n    *   **Good Answer (Concise and direct):** Over 500 colleagues.\n\n*   **Question:** What does ASMPT's WORKS Optimisation system use to integrate and visualize data from all machines on the line?\n    *   **Bad Answer (Rephrases):** It uses a standardized interface called IPC-2591-CFX.\n    *   **Good Answer (Exact term):** the standardised IPC-2591-CFX interface."
+        ]
+      },
+      "trial_log": [
+        {
+          "trial": 0,
+          "score": 1.8089806395650627,
+          "kind": "default (baseline program)",
+          "params": "Program 0 (seed)"
+        },
+        {
+          "trial": 1,
+          "score": 4.567722544747821,
+          "kind": "subsample (rejected)",
+          "params": "Iter 1: proposed score 4.57 vs prior best 5.18"
+        },
+        {
+          "trial": 2,
+          "score": 4.825997418070043,
+          "kind": "subsample (rejected)",
+          "params": "Iter 2: proposed score 4.83 vs prior best 6.04"
+        },
+        {
+          "trial": 3,
+          "score": 4.210490042035892,
+          "kind": "subsample (rejected)",
+          "params": "Iter 3: proposed score 4.21 vs prior best 4.88"
+        },
+        {
+          "trial": 4,
+          "score": 4.996588323681722,
+          "kind": "subsample (rejected)",
+          "params": "Iter 4: proposed score 5.00 vs prior best 6.33"
+        },
+        {
+          "trial": 5,
+          "score": 4.931418048870953,
+          "kind": "subsample (rejected)",
+          "params": "Iter 5: proposed score 4.93 vs prior best 5.45"
+        }
+      ],
+      "gt_mode": "no_gt",
+      "optimizer": "GEPA",
+      "trainset_size": 5,
+      "deepeval_supplement": {
+        "hallucination": 0.1714,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 1.0
+      },
+      "deepeval_supplement_baseline": {
+        "hallucination": 0.1429,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 1.0
+      },
+      "winner": "optimized",
+      "final_scores": {
+        "context_precision": 0.38333333330083336,
+        "faithfulness": 1.0,
+        "hallucination": 0.1714,
+        "bias": 0.0,
+        "toxicity": 0.0,
+        "g_eval": 1.0
+      }
+    }
+  },
+  "diagnosis": {
+    "no_gt": {
+      "summary": "Weakest layer: retrieval (0.38). Layer scores: retrieval=0.38, generation=0.96, e2e=1.00. Primary bottleneck: retrieval noise or weak ranking quality. 2 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.97.",
+      "expected_thresholds": {
+        "context_precision": 0.8,
+        "context_recall": 0.8,
+        "context_entities_recall": 0.75,
+        "hit_rate_at_k": 0.85,
+        "faithfulness": 0.9,
+        "response_relevancy": 0.85,
+        "context_utilization": 0.75,
+        "noise_sensitivity": 0.2,
+        "hallucination": 0.1,
+        "answer_correctness": 0.85,
+        "answer_accuracy": 0.85,
+        "citation_accuracy": 0.85,
+        "user_success_rate": 0.85
+      },
+      "metric_gaps": {
+        "context_precision": 0.4167,
+        "hallucination": 0.0714
+      },
+      "hypotheses": [
+        {
+          "component": "retrieval",
+          "root_cause": "retrieval noise or weak ranking quality",
+          "severity": "high",
+          "confidence": 0.84,
+          "evidence": [
+            "context_precision=0.38 is below target 0.80",
+            "Noisy contexts usually propagate to hallucination and citation failures."
+          ],
+          "recommended_actions": [
+            "Add or tune a reranker.",
+            "Reduce top-k, or separate the recall stage from the final evidence stage.",
+            "Use metadata or section-aware filters."
+          ]
+        },
+        {
+          "component": "generation",
+          "root_cause": "answer is fragile under distractors or unsupported reasoning",
+          "severity": "high",
+          "confidence": 0.81,
+          "evidence": [
+            "noise_sensitivity=0.00",
+            "hallucination=0.17",
+            "The generator likely overweights spurious or weakly relevant text."
+          ],
+          "recommended_actions": [
+            "Constrain the answer to quoted or cited evidence.",
+            "Use context packing with stronger ordering and section labels.",
+            "Add a verifier or claim-level grounding pass."
+          ]
+        }
+      ],
+      "optimization_candidates": [
+        "autorag_pipeline_search",
+        "dspy_prompt_optimization",
+        "joint_ablation_eval"
+      ],
+      "priority_actions": [
+        "Improve ranking precision and evidence filtering.",
+        "Run ablations to separate noisy retrieval from generator overreach.",
+        "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+      ],
+      "causal_signals": [
+        {
+          "node": "retrieval_precision_defect",
+          "component": "retrieval",
+          "posterior": 0.9745,
+          "prior": 0.95,
+          "evidence": [
+            "context_precision=0.38 is below target.",
+            "Hallucination rises when noisy passages enter the context window.",
+            "Sparse rerank spans suggest weak post-retrieval filtering."
+          ],
+          "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+        },
+        {
+          "node": "grounding_defect",
+          "component": "generation",
+          "posterior": 0.9628,
+          "prior": 0.95,
+          "evidence": [
+            "Hallucination exceeds threshold.",
+            "Verification spans are sparse.",
+            "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
+          ],
+          "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+        },
+        {
+          "node": "corpus_chunking_defect",
+          "component": "retrieval",
+          "posterior": 0.9595,
+          "prior": 0.95,
+          "evidence": [
+            "Traces show a small number of retrieved chunks per query."
+          ],
+          "recommended_experiment": "Run parser and chunking search before retriever tuning."
+        },
+        {
+          "node": "retrieval_recall_defect",
+          "component": "retrieval",
+          "posterior": 0.9492,
+          "prior": 0.9489,
+          "evidence": [],
+          "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+        },
+        {
+          "node": "citation_binding_defect",
+          "component": "e2e",
+          "posterior": 0.5499,
+          "prior": 0.5489,
+          "evidence": [],
+          "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+        },
+        {
+          "node": "context_packing_defect",
+          "component": "generation",
+          "posterior": 0.5413,
+          "prior": 0.5203,
+          "evidence": [
+            "Enough evidence exists but packing may be letting noise dominate."
+          ],
+          "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+        },
+        {
+          "node": "distribution_shift",
+          "component": "e2e",
+          "posterior": 0.4482,
+          "prior": 0.4482,
+          "evidence": [],
+          "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+        },
+        {
+          "node": "judge_or_metric_instability",
+          "component": "e2e",
+          "posterior": 0.2293,
+          "prior": 0.2293,
+          "evidence": [],
+          "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+        }
+      ],
+      "causal_graph": {
+        "nodes": [
+          {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9745,
+            "prior": 0.95,
+            "evidence": [
+              "context_precision=0.38 is below target.",
+              "Hallucination rises when noisy passages enter the context window.",
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.9628,
+            "prior": 0.95,
+            "evidence": [
+              "Hallucination exceeds threshold.",
+              "Verification spans are sparse.",
+              "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
+            "node": "corpus_chunking_defect",
+            "component": "retrieval",
+            "posterior": 0.9595,
+            "prior": 0.95,
+            "evidence": [
+              "Traces show a small number of retrieved chunks per query."
+            ],
+            "recommended_experiment": "Run parser and chunking search before retriever tuning."
+          },
+          {
+            "node": "retrieval_recall_defect",
+            "component": "retrieval",
+            "posterior": 0.9492,
+            "prior": 0.9489,
+            "evidence": [],
+            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+          },
+          {
+            "node": "citation_binding_defect",
+            "component": "e2e",
+            "posterior": 0.5499,
+            "prior": 0.5489,
+            "evidence": [],
+            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+          },
+          {
+            "node": "context_packing_defect",
+            "component": "generation",
+            "posterior": 0.5413,
+            "prior": 0.5203,
+            "evidence": [
+              "Enough evidence exists but packing may be letting noise dominate."
+            ],
+            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+          },
+          {
+            "node": "distribution_shift",
+            "component": "e2e",
+            "posterior": 0.4482,
+            "prior": 0.4482,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
+            "node": "judge_or_metric_instability",
+            "component": "e2e",
+            "posterior": 0.2293,
+            "prior": 0.2293,
+            "evidence": [],
+            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+          }
+        ],
+        "edges": [
+          {
+            "source": "corpus_chunking_defect",
+            "target": "retrieval_recall_defect",
+            "weight": 0.55,
+            "rationale": "Poor parsing and chunk boundaries directly suppress recall."
+          },
+          {
+            "source": "retrieval_recall_defect",
+            "target": "context_packing_defect",
+            "weight": 0.22,
+            "rationale": "Weak recall increases packing pressure on partial evidence."
+          },
+          {
+            "source": "retrieval_precision_defect",
+            "target": "context_packing_defect",
+            "weight": 0.18,
+            "rationale": "Noisy retrieval degrades packed context quality."
+          },
+          {
+            "source": "retrieval_precision_defect",
+            "target": "grounding_defect",
+            "weight": 0.45,
+            "rationale": "Noisy retrieval raises unsupported reasoning risk."
+          },
+          {
+            "source": "context_packing_defect",
+            "target": "grounding_defect",
+            "weight": 0.4,
+            "rationale": "Poor packing directly weakens grounding."
+          },
+          {
+            "source": "grounding_defect",
+            "target": "citation_binding_defect",
+            "weight": 0.3,
+            "rationale": "Unsupported claims often come with weak citation mapping."
+          },
+          {
+            "source": "judge_or_metric_instability",
+            "target": "distribution_shift",
+            "weight": 0.1,
+            "rationale": "Evaluator disagreement can indicate shift or judge mismatch."
+          },
+          {
+            "source": "distribution_shift",
+            "target": "retrieval_recall_defect",
+            "weight": 0.3,
+            "rationale": "Shifted traffic often first breaks evidence coverage."
+          },
+          {
+            "source": "distribution_shift",
+            "target": "grounding_defect",
+            "weight": 0.18,
+            "rationale": "Shifted domains also weaken grounding reliability."
+          }
+        ]
+      },
+      "evaluator_agreement": {},
+      "diagnosis_confidence": 0.825,
+      "disambiguation_actions": [],
+      "layer_scores": {
+        "retrieval": {
+          "score": 0.3833,
+          "metrics": {
+            "context_precision": 0.3833
+          },
+          "raw": {
+            "context_precision": 0.38333333330083336
+          },
+          "n": 1
+        },
+        "generation": {
+          "score": 0.9571,
+          "metrics": {
+            "faithfulness": 1.0,
+            "hallucination": 0.8286,
+            "bias": 1.0,
+            "toxicity": 1.0
+          },
+          "raw": {
+            "faithfulness": 1.0,
+            "hallucination": 0.1714,
+            "bias": 0.0,
+            "toxicity": 0.0
+          },
+          "n": 4
+        },
+        "e2e": {
+          "score": 1.0,
+          "metrics": {
+            "g_eval": 1.0
+          },
+          "raw": {
+            "g_eval": 1.0
+          },
+          "n": 1
+        }
+      },
+      "rule_based": {
+        "source": "rule",
+        "summary": "Weakest layer: retrieval (0.38). Layer scores: retrieval=0.38, generation=0.96, e2e=1.00. Primary bottleneck: retrieval noise or weak ranking quality. 2 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.97.",
+        "hypotheses": [
+          {
+            "component": "retrieval",
+            "root_cause": "retrieval noise or weak ranking quality",
+            "severity": "high",
+            "confidence": 0.84,
+            "evidence": [
+              "context_precision=0.38 is below target 0.80",
+              "Noisy contexts usually propagate to hallucination and citation failures."
+            ],
+            "recommended_actions": [
+              "Add or tune a reranker.",
+              "Reduce top-k, or separate the recall stage from the final evidence stage.",
+              "Use metadata or section-aware filters."
+            ]
+          },
+          {
+            "component": "generation",
+            "root_cause": "answer is fragile under distractors or unsupported reasoning",
+            "severity": "high",
+            "confidence": 0.81,
+            "evidence": [
+              "noise_sensitivity=0.00",
+              "hallucination=0.17",
+              "The generator likely overweights spurious or weakly relevant text."
+            ],
+            "recommended_actions": [
+              "Constrain the answer to quoted or cited evidence.",
+              "Use context packing with stronger ordering and section labels.",
+              "Add a verifier or claim-level grounding pass."
+            ]
+          }
+        ],
+        "causal_signals": [
+          {
+            "node": "retrieval_precision_defect",
+            "component": "retrieval",
+            "posterior": 0.9745,
+            "prior": 0.95,
+            "evidence": [
+              "context_precision=0.38 is below target.",
+              "Hallucination rises when noisy passages enter the context window.",
+              "Sparse rerank spans suggest weak post-retrieval filtering."
+            ],
+            "recommended_experiment": "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+          },
+          {
+            "node": "grounding_defect",
+            "component": "generation",
+            "posterior": 0.9628,
+            "prior": 0.95,
+            "evidence": [
+              "Hallucination exceeds threshold.",
+              "Verification spans are sparse.",
+              "Upstream propagation from retrieval_precision_defect (+0.01) via causal edge."
+            ],
+            "recommended_experiment": "Use grounded answer templates, verification, and citation-first prompting."
+          },
+          {
+            "node": "corpus_chunking_defect",
+            "component": "retrieval",
+            "posterior": 0.9595,
+            "prior": 0.95,
+            "evidence": [
+              "Traces show a small number of retrieved chunks per query."
+            ],
+            "recommended_experiment": "Run parser and chunking search before retriever tuning."
+          },
+          {
+            "node": "retrieval_recall_defect",
+            "component": "retrieval",
+            "posterior": 0.9492,
+            "prior": 0.9489,
+            "evidence": [],
+            "recommended_experiment": "Expand recall with hybrid retrieval, query rewriting, and larger candidate pools."
+          },
+          {
+            "node": "citation_binding_defect",
+            "component": "e2e",
+            "posterior": 0.5499,
+            "prior": 0.5489,
+            "evidence": [],
+            "recommended_experiment": "Bind citations at sentence or claim level and return passage ids."
+          },
+          {
+            "node": "context_packing_defect",
+            "component": "generation",
+            "posterior": 0.5413,
+            "prior": 0.5203,
+            "evidence": [
+              "Enough evidence exists but packing may be letting noise dominate."
+            ],
+            "recommended_experiment": "Tune context packing order, context budget, and section-aware packing."
+          },
+          {
+            "node": "distribution_shift",
+            "component": "e2e",
+            "posterior": 0.4482,
+            "prior": 0.4482,
+            "evidence": [],
+            "recommended_experiment": "Cluster failing traffic, review domain shift, and expand the benchmark."
+          },
+          {
+            "node": "judge_or_metric_instability",
+            "component": "e2e",
+            "posterior": 0.2293,
+            "prior": 0.2293,
+            "evidence": [],
+            "recommended_experiment": "Audit evaluator prompts, compare against human labels, and calibrate judges."
+          }
+        ],
+        "metric_gaps": {
+          "context_precision": 0.4167,
+          "hallucination": 0.0714
+        },
+        "optimization_candidates": [
+          "autorag_pipeline_search",
+          "dspy_prompt_optimization",
+          "joint_ablation_eval"
+        ],
+        "priority_actions": [
+          "Improve ranking precision and evidence filtering.",
+          "Run ablations to separate noisy retrieval from generator overreach.",
+          "Strengthen reranking, filtering, and precision-oriented retrieval settings."
+        ],
+        "disambiguation_actions": [],
+        "diagnosis_confidence": 0.825
+      },
+      "llm_based": null,
+      "synthesis": null,
+      "active_source": "rule"
+    }
+  },
+  "extras": {
+    "pdf_meta": {
+      "page_count": 114,
+      "chunks": 548,
+      "chunk_size": 512,
+      "chunk_overlap": 50,
+      "raw_text_chars": 211339
+    }
+  }
+}

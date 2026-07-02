@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>ragdx demo — ASMPT ESG report, no-GT end-to-end experiment</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root { --fg:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#ffffff;
+        --accent:#1a73e8; --warn:#b45309; --ok:#15803d; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                          Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 14px; line-height: 1.55; }
+.page { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+h1 { font-size: 28px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 12px; padding-top: 16px;
+     border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 20px 0 8px; color: #111827; }
+h4 { font-size: 14px; margin: 14px 0 6px; color: #374151; }
+.subtle { color: var(--muted); font-size: 13px; }
+.caption { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }
+.callout { padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.callout.warn { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; }
+.callout.ok { background: #dcfce7; border: 1px solid #22c55e; color: #14532d; }
+h1.part { font-size: 24px; margin: 48px 0 4px; padding: 12px 16px;
+          background: #eef2ff; border-left: 5px solid var(--accent);
+          border-radius: 6px; }
+nav.toc { background: #f9fafb; border: 1px solid var(--line);
+          border-radius: 8px; padding: 14px 20px; margin: 20px 0; }
+nav.toc .toc-title { font-weight: 600; margin-bottom: 6px; }
+nav.toc ol { margin: 0; padding-left: 20px; }
+nav.toc a { color: var(--accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+.metric-row { display: flex; gap: 16px; margin: 12px 0 20px; flex-wrap: wrap; }
+.metric { flex: 1 1 180px; padding: 12px 16px; background: #f9fafb;
+          border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
+.metric .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase;
+               letter-spacing: 0.05em; }
+.metric .val { font-size: 18px; font-weight: 600; margin-top: 2px;
+               word-break: break-all; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px;
+        font-size: 13px; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px;
+         text-align: left; vertical-align: top; }
+th { background: #f3f4f6; font-weight: 600; }
+tr:hover td { background: #fafbfc; }
+pre, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 12px; }
+pre { background: #f3f4f6; padding: 10px 12px; border-radius: 6px;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+.box { border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px;
+       margin: 12px 0; background: #fafbfc; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two-col > div { min-width: 0; }
+details { margin: 8px 0; border: 1px solid var(--line); border-radius: 6px;
+          padding: 8px 12px; background: #fafbfc; }
+details > summary { cursor: pointer; font-weight: 500; color: #374151; }
+details[open] > summary { margin-bottom: 10px; }
+.warn { color: var(--warn); }
+.ok { color: var(--ok); }
+.tag { display: inline-block; padding: 2px 8px; background: #eef2ff;
+       color: #3730a3; border-radius: 4px; font-size: 12px; }
+.tag.warn { background: #fef3c7; color: #92400e; }
+.tag.ok { background: #d1fae5; color: #065f46; }
+.divider { border-top: 1px dashed var(--line); margin: 16px 0; }
+@media print {
+  .page { max-width: none; margin: 0; padding: 12mm; }
+  h2 { page-break-before: auto; }
+  details { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body><div class="page">
+<header>
+  <h1>ragdx demo — ASMPT ESG report, no-GT end-to-end experiment</h1>
+  <div class="subtle">Generated 2026-07-02 23:46:54 · ragdx schema v1</div>
+</header>
+<nav class="toc"><div class="toc-title">Contents</div><ol><li><a href="#experiment-config">1 · Experiment Config</a></li><li><a href="#rag-optimize">3 · RAG Optimization (Bayesian search)</a></li><li><a href="#prompt-optimize">4 · Prompt Optimization (DSPy)</a></li><li><a href="#final-diagnosis">5 · Final Evaluation &amp; Diagnosis</a></li><li><a href="#run-cost">6 · Run Cost &amp; Extras</a></li></ol></nav>
+<section id="experiment-config"><h1 class="part">1 · Experiment Config</h1>
+<h2>Run metadata</h2>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Experiment mode</div><div class="val">no_gt</div></div>
+<div class="metric"><div class="lbl">Model</div><div class="val">openai/glm-4-airx</div></div>
+<div class="metric"><div class="lbl">Endpoint</div><div class="val">https://open.bigmodel.cn/api/paas/v4</div></div>
+</div>
+<h3>Run config (reproducibility)</h3>
+<p class="caption">These are the values of <code>ragdx experiment</code>'s flags at the time this bundle was produced. The same values plus the bundle's seed reproduce this run exactly.</p>
+<table><thead><tr><th>flag</th><th>value</th></tr></thead><tbody><tr><td>llm_max_concurrent</td><td>2</td></tr><tr><td>llm_max_retries</td><td>5</td></tr><tr><td>n_bo_trials</td><td>8</td></tr><tr><td>n_bo_init</td><td>3</td></tr><tr><td>n_questions</td><td>5</td></tr><tr><td>seed</td><td>7</td></tr><tr><td>system_instruction</td><td>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.</td></tr></tbody></table>
+<details open><summary>Corpus source</summary><pre>{
+  &quot;corpus&quot;: &quot;.ragdx_ui_runs\\exp-20260702-230958\\inputs\\e0522-asmptesgreport.pdf&quot;,
+  &quot;kind&quot;: &quot;pdf&quot;,
+  &quot;pdf_meta&quot;: {
+    &quot;page_count&quot;: 114,
+    &quot;chunks&quot;: 548,
+    &quot;raw_text_chars&quot;: 211339,
+    &quot;initial_load_chunk_size&quot;: 512,
+    &quot;initial_load_chunk_overlap&quot;: 50
+  },
+  &quot;questions_path&quot;: &quot;.ragdx_ui_runs\\exp-20260702-230958\\out\\questions_synthesized.jsonl&quot;
+}</pre><p class="caption">PDF <code>initial_load_*</code> fields reflect the chunking used at load-time for question synthesis. The Bayesian search below explores alternate chunk_size / chunk_overlap values; see <strong>Bayesian search → best_params</strong> for the winner.</p></details>
+<h2>Questions</h2>
+<table><thead><tr><th>#</th><th>question</th><th>ground_truth</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>_(none)_</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>_(none)_</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>_(none)_</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>_(none)_</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>_(none)_</td></tr></tbody></table>
+<h2>Composite objectives</h2>
+<p class="caption"><strong>Metric weights</strong> combine into the composite score (<code>sum of weight_i * metric_i</code>) -- what BO and DSPy optimize against. Weights follow the practical priority hierarchy <em>groundedness &gt; correctness &gt; retrieval quality &gt; auxiliary judges</em>. Lower-is-better metrics (hallucination / bias / toxicity) are inverted (<code>1 - value</code>) before weighting, so every weight rewards the healthy direction. <strong>Constraints</strong> are hard pass/fail thresholds: a trial that violates one is still scored but marked <strong>infeasible</strong> so the planner can filter unsafe configs.</p>
+<details open><summary>`no_gt` objective</summary><div><h4>Metric weights</h4><table><thead><tr><th>metric</th><th>weight</th><th>what it measures</th></tr></thead><tbody><tr><td>faithfulness</td><td>2.0</td><td>Of the claims in the answer, how many are supported by the retrieved context. Low = the generator is making things up.</td></tr><tr><td>answer_relevancy</td><td>1.5</td><td>How directly the answer addresses the question (not off-topic or padded).</td></tr><tr><td>context_precision</td><td>1.0</td><td>Of the retrieved chunks, how many are actually relevant — and are the relevant ones ranked first. Low = the retriever is pulling noise.</td></tr><tr><td>g_eval</td><td>0.5</td><td>A chain-of-thought LLM judge scoring overall answer quality against a rubric (grounded + complete + on-topic).</td></tr><tr><td>hallucination</td><td>0.5</td><td>How much of the answer is fabricated / contradicts the context. Lower is better.</td></tr><tr><td>bias</td><td>0.1</td><td>Presence of biased framing in the answer. Lower is better.</td></tr><tr><td>toxicity</td><td>0.1</td><td>Presence of toxic / harmful language in the answer. Lower is better.</td></tr></tbody></table></div><div><h4>Constraints</h4><table><thead><tr><th>metric</th><th>direction</th><th>bound</th></tr></thead><tbody><tr><td>faithfulness</td><td>min</td><td>0.85</td></tr></tbody></table></div></details>
+<h2>Data diagnostics</h2><table><thead><tr><th>mode</th><th>has_ground_truth</th><th>gt_mode</th><th>record_count</th></tr></thead><tbody><tr><td>no_gt</td><td>False</td><td>no_gt</td><td>5</td></tr></tbody></table></section>
+<section id="rag-optimize"><h1 class="part">3 · RAG Optimization (Bayesian search)</h1>
+<h2>Bayesian RAG-config search</h2>
+<h3>Mode: <code>no_gt</code></h3>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Trials</div><div class="val">8</div></div>
+<div class="metric"><div class="lbl">Best composite</div><div class="val">2.333</div></div>
+<div class="metric"><div class="lbl">Best params</div><div class="val">chunk_size=512 · chunk_overlap=100 · top_k=7</div></div>
+</div>
+<details><summary>Search space</summary><pre>{
+  &quot;chunk_size&quot;: [
+    256,
+    512,
+    1024
+  ],
+  &quot;chunk_overlap&quot;: [
+    0,
+    50,
+    100
+  ],
+  &quot;top_k&quot;: [
+    1,
+    3,
+    5,
+    7
+  ]
+}</pre></details>
+<table><thead><tr><th>#</th><th>params</th><th>composite</th><th>feasible</th><th>context_precision</th><th>faithfulness</th></tr></thead><tbody><tr><td>0</td><td>chunk_size=1024 · chunk_overlap=50 · top_k=7</td><td>1.788</td><td>✓</td><td>0.073</td><td>0.857</td></tr><tr><td>1</td><td>chunk_size=1024 · chunk_overlap=0 · top_k=1</td><td>2.000</td><td>✓</td><td>0.000</td><td>1.000</td></tr><tr><td>2</td><td>chunk_size=256 · chunk_overlap=100 · top_k=5</td><td>1.850</td><td>✗</td><td>0.250</td><td>0.800</td></tr><tr><td>3</td><td>chunk_size=1024 · chunk_overlap=0 · top_k=3</td><td>1.400</td><td>✗</td><td>0.067</td><td>0.667</td></tr><tr><td>4</td><td>chunk_size=512 · chunk_overlap=100 · top_k=5</td><td>2.117</td><td>✓</td><td>0.117</td><td>1.000</td></tr><tr><td>5</td><td>chunk_size=512 · chunk_overlap=100 · top_k=7</td><td>2.333</td><td>✓</td><td>0.333</td><td>1.000</td></tr><tr><td>6</td><td>chunk_size=256 · chunk_overlap=100 · top_k=7</td><td>1.817</td><td>✓</td><td>0.117</td><td>0.850</td></tr><tr><td>7</td><td>chunk_size=512 · chunk_overlap=100 · top_k=3</td><td>2.080</td><td>✓</td><td>0.117</td><td>0.982</td></tr></tbody></table>
+<div>                            <div id="0c5f364f-d016-494a-8ea3-097cea7d423a" class="plotly-graph-div" style="height:360px; width:100%;"></div>            <script type="text/javascript">                                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("0c5f364f-d016-494a-8ea3-097cea7d423a")) {                    Plotly.newPlot(                        "0c5f364f-d016-494a-8ea3-097cea7d423a",                        [{"hovertemplate":"series=composite\u003cbr\u003etrial=%{x}\u003cbr\u003escore=%{y}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"composite","line":{"color":"#636efa","dash":"solid"},"marker":{"symbol":"circle"},"mode":"lines+markers","name":"composite","orientation":"v","showlegend":true,"x":[1,2,3,4,5,6,7,8],"xaxis":"x","y":[1.7876190476117142,2.0,1.8499999999883334,1.3999999999933332,2.116666666660833,2.3333333333,1.8166666666608333,2.080303030297197],"yaxis":"y","type":"scatter"},{"hovertemplate":"series=running best\u003cbr\u003etrial=%{x}\u003cbr\u003escore=%{y}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"running best","line":{"color":"#EF553B","dash":"solid"},"marker":{"symbol":"circle"},"mode":"lines+markers","name":"running best","orientation":"v","showlegend":true,"x":[1,2,3,4,5,6,7,8],"xaxis":"x","y":[1.7876190476117142,2.0,2.0,2.0,2.116666666660833,2.3333333333,2.3333333333,2.3333333333],"yaxis":"y","type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"xaxis":{"anchor":"y","domain":[0.0,1.0],"title":{"text":"trial"}},"yaxis":{"anchor":"x","domain":[0.0,1.0],"title":{"text":"score"}},"legend":{"title":{"text":"series"},"tracegroupgap":0},"title":{"text":"BO progression — no_gt"},"margin":{"t":60,"b":40},"height":360},                        {"responsive": true}                    )                };                            </script>        </div>
+<p class="caption"><strong>composite</strong> = this trial's composite score (per the objective above). <strong>running best</strong> = highest composite seen so far -- the non-decreasing curve shows BO convergence.</p>
+<details open><summary>Per-record outputs (8 trials, toggleable)</summary><p class="caption">Tick a trial to show / hide its per-record answers + metrics. The first three are shown by default.</p><div style="margin:8px 0;line-height:2"><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-0" checked> Trial #0</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-1" checked> Trial #1</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-2" checked> Trial #2</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-3"> Trial #3</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-4"> Trial #4</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-5"> Trial #5</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-6"> Trial #6</label><label style="margin-right:14px;white-space:nowrap"><input type="checkbox" class="trial-toggle" data-target="trial-no_gt-7"> Trial #7</label></div><div id="trial-no_gt-0" style=""><h4>Trial #0 (chunk_size=1024 · chunk_overlap=50 · top_k=7)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The standardised IPC-2591-CFX interface.</td><td>1.000</td><td>0.293</td><td>0.167</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, the three components of the EXCELLENCE principle at ASMPT are:
+
+1.  Exceeding customers&#x27; expectations with products, processes, and services.
+2.  Enabling customers to achieve the highest level of quality in their production.
+3.  Learning and continuously adding value.</td><td>0.286</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>Anti-Corruption and ESG Governance Structure.</td><td>1.000</td><td>0.616</td><td>0.000</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The aim of the Working Group is to create a collaborative roadmap and execute it to reduce and eliminate its members’ Scope 2 emissions, impact the semiconductor value chain, and increase access to low-carbon energy.</td><td>1.000</td><td>1.000</td><td>0.200</td></tr></tbody></table></div><div id="trial-no_gt-1" style=""><h4>Trial #1 (chunk_size=1024 · chunk_overlap=0 · top_k=1)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The context does not mention the WORKS Optimisation system.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, the three components of the EXCELLENCE principle at ASMPT are:
+
+1.  Products
+2.  Processes
+3.  Services</td><td>1.000</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>The context does not specify which two ESG factors were combined.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The context does not mention a &quot;Working Group.&quot;</td><td>1.000</td><td>0.713</td><td>0.000</td></tr></tbody></table></div><div id="trial-no_gt-2" style=""><h4>Trial #2 (chunk_size=256 · chunk_overlap=100 · top_k=5)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The context does not specify what WORKS Optimisation uses to integrate and visualize data.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, the three components of the EXCELLENCE principle at ASMPT are:
+
+1.  Exceeding customer expectations with products.
+2.  Exceeding customer expectations with processes.
+3.  Exceeding customer expectations with services.</td><td>0.000</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>&quot;Business Ethics&quot; and &quot;Corporate Governance&quot;</td><td>1.000</td><td>0.000</td><td>0.250</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>1.000</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The aim of the Working Group is to focus on education and best practice sharing for its members.</td><td>1.000</td><td>1.000</td><td>0.000</td></tr></tbody></table></div><div id="trial-no_gt-3" style="display:none"><h4>Trial #3 (chunk_size=1024 · chunk_overlap=0 · top_k=3)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The context does not specify what the WORKS Optimisation system uses to integrate and visualize data.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, the three components of the EXCELLENCE principle at ASMPT are:
+
+*   Exceeding customers&#x27; expectations with products, processes, and services.
+*   Enabling customers to achieve the highest level of quality in their production.
+*   Embracing a high-performance behavioral model.</td><td>0.333</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>Anti-Corruption and ESG Governance Structure.</td><td>0.000</td><td>0.616</td><td>0.333</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The context does not mention a &quot;Working Group.&quot;</td><td>1.000</td><td>0.713</td><td>0.000</td></tr></tbody></table></div><div id="trial-no_gt-4" style="display:none"><h4>Trial #4 (chunk_size=512 · chunk_overlap=100 · top_k=5)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The context does not mention the &quot;WORKS Optimisation&quot; system.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, three components of the EXCELLENCE principle at ASMPT are:
+
+*   Exceeding customer expectations with products, processes, and services.
+*   Admitting to and learning from mistakes.
+*   Striving for excellence and continuously adding value.</td><td>1.000</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>&quot;Business Ethics&quot; and &quot;Corporate Governance&quot;.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.583</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The aim of the Working Group is to focus on education and best practice sharing for its members.</td><td>1.000</td><td>1.000</td><td>0.000</td></tr></tbody></table></div><div id="trial-no_gt-5" style="display:none"><h4>Trial #5 (chunk_size=512 · chunk_overlap=100 · top_k=7)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The standardised IPC-2591-CFX interface.</td><td>1.000</td><td>0.293</td><td>0.167</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, three components of the EXCELLENCE principle at ASMPT are:
+
+*   Exceeding customer expectations with products, processes, and services.
+*   Admitting to and learning from mistakes.
+*   Striving for excellence and continuously adding value.</td><td>1.000</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>&quot;Business Ethics&quot; and &quot;Corporate Governance&quot;.</td><td>1.000</td><td>0.000</td><td>1.000</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.500</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The aim of the Working Group is to focus on education and best practice sharing for its members.</td><td>1.000</td><td>1.000</td><td>0.000</td></tr></tbody></table></div><div id="trial-no_gt-6" style="display:none"><h4>Trial #6 (chunk_size=256 · chunk_overlap=100 · top_k=7)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The context does not specify what WORKS Optimisation uses to integrate and visualize data.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, the three components of the EXCELLENCE principle at ASMPT are:
+
+1.  Exceeding customer expectations with products, processes, and services.
+2.  A holistic commitment to quality and environmental stewardship through the Design for Excellence (DFE) programme.
+3.  Unwavering commitment to quality in all facets of the company and its internal processes.</td><td>0.250</td><td>0.999</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>&quot;Business Ethics&quot; and &quot;Corporate Governance&quot;</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.583</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The aim of the Working Group is to provide education and best practice sharing for its members.</td><td>1.000</td><td>1.000</td><td>0.000</td></tr></tbody></table></div><div id="trial-no_gt-7" style="display:none"><h4>Trial #7 (chunk_size=512 · chunk_overlap=100 · top_k=3)</h4><table><thead><tr><th>#</th><th>question</th><th>ground_truth</th><th>answer</th><th>faithfulness</th><th>answer_relevancy</th><th>context_precision</th></tr></thead><tbody><tr><td>1</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td><td>—</td><td>The context does not mention the &quot;WORKS Optimisation system&quot; or specify how it integrates and visualizes data.</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>2</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td><td>—</td><td>Based on the context, three components of the EXCELLENCE principle at ASMPT are:
+
+*   We lead by example. We admit to and learn from mistakes.
+*   We are open, honest and trustworthy.
+*   We strive for excellence – learning and continuously adding value.</td><td>0.909</td><td>0.980</td><td>0.000</td></tr><tr><td>3</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td><td>—</td><td>&quot;Business Ethics&quot; and &quot;Corporate Governance&quot;</td><td>1.000</td><td>0.000</td><td>0.000</td></tr><tr><td>4</td><td>How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?</td><td>—</td><td>Over 500 colleagues.</td><td>1.000</td><td>0.000</td><td>0.583</td></tr><tr><td>5</td><td>What is the aim of the Working Group?</td><td>—</td><td>The aim of the Working Group is to focus on education and best practice sharing for its members.</td><td>1.000</td><td>1.000</td><td>0.000</td></tr></tbody></table></div></details></section>
+<section id="prompt-optimize"><h1 class="part">4 · Prompt Optimization (DSPy)</h1>
+<h2>Prompt optimization — before/after (GEPA, at the RAG winner config)</h2>
+<p class="caption">Both columns are evaluated with the same pipeline, questions, and metric set as the rest of this report. The <strong>final system ships whichever prompt scored higher on the composite objective</strong> — if the optimized prompt did not beat the baseline, the final config keeps the baseline prompt and the final scores below are the baseline column.</p>
+<h3>Mode: <code>no_gt</code></h3>
+<p class="callout ok"><strong>Winner: optimized prompt.</strong> The final config ships the DSPy-optimized prompt.</p>
+<div>                            <div id="e7c93cd8-da7c-40e5-a66c-4bf575482b19" class="plotly-graph-div" style="height:420px; width:100%;"></div>            <script type="text/javascript">                                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("e7c93cd8-da7c-40e5-a66c-4bf575482b19")) {                    Plotly.newPlot(                        "e7c93cd8-da7c-40e5-a66c-4bf575482b19",                        [{"alignmentgroup":"True","hovertemplate":"phase=baseline\u003cbr\u003emetric=%{x}\u003cbr\u003escore_display=%{y}\u003cbr\u003etext=%{text}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"baseline","marker":{"color":"#9aa0a6","pattern":{"shape":""}},"name":"baseline","offsetgroup":"baseline","orientation":"v","showlegend":true,"text":["0.000","0.150","1.000","1.000","0.143","0.000"],"textposition":"outside","x":["bias","context_precision","faithfulness","g_eval","hallucination","toxicity"],"xaxis":"x","y":[0.0,0.1499999999908333,1.0,1.0,0.1429,0.0],"yaxis":"y","type":"bar"},{"alignmentgroup":"True","hovertemplate":"phase=optimized\u003cbr\u003emetric=%{x}\u003cbr\u003escore_display=%{y}\u003cbr\u003etext=%{text}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"optimized","marker":{"color":"#1a73e8","pattern":{"shape":""}},"name":"optimized","offsetgroup":"optimized","orientation":"v","showlegend":true,"text":["0.000","0.383","1.000","1.000","0.171","0.000"],"textposition":"outside","x":["bias","context_precision","faithfulness","g_eval","hallucination","toxicity"],"xaxis":"x","y":[0.0,0.38333333330083336,1.0,1.0,0.1714,0.0],"yaxis":"y","type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"xaxis":{"anchor":"y","domain":[0.0,1.0],"title":{"text":"metric"},"tickangle":-25},"yaxis":{"anchor":"x","domain":[0.0,1.0],"title":{"text":"score"},"range":[0,1.05]},"legend":{"title":{},"tracegroupgap":0},"title":{"text":"DSPy baseline vs optimized — no_gt"},"barmode":"group","margin":{"t":60,"b":80},"height":420},                        {"responsive": true}                    )                };                            </script>        </div>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Composite baseline</div><div class="val">3.279</div></div>
+<div class="metric"><div class="lbl">Composite optimized</div><div class="val">3.498</div></div>
+<div class="metric"><div class="lbl">Composite Δ</div><div class="val">+0.219</div></div>
+<div class="metric"><div class="lbl">Composite final (shipped)</div><div class="val">3.498</div></div>
+</div>
+<table><thead><tr><th>metric</th><th>baseline</th><th>optimized</th><th>delta</th></tr></thead><tbody><tr><td>bias</td><td>0.000</td><td>0.000</td><td>N/A</td></tr><tr><td>context_precision</td><td>0.150</td><td>0.383</td><td>↑ +0.233</td></tr><tr><td>faithfulness</td><td>1.000</td><td>1.000</td><td>→ +0.000</td></tr><tr><td>g_eval</td><td>1.000</td><td>1.000</td><td>N/A</td></tr><tr><td>hallucination</td><td>0.143</td><td>0.171</td><td>N/A</td></tr><tr><td>toxicity</td><td>0.000</td><td>0.000</td><td>N/A</td></tr></tbody></table>
+<h4>Candidate instructions GEPA proposed</h4>
+<p class="caption">MIPROv2 generates N candidate <code>system_instruction</code>s (via its grounded proposer) and evaluates each on the trainset. The winner (highlighted) is what ends up in <code>generator.system_instruction</code>. A candidate count of 1 means MIPROv2 only tried the seed — usually because the budget was too tight or the trainset was too small for the proposer.</p>
+<details open><summary>Predictor `predict` — 6 candidate(s)</summary><p class="subtle">6 candidate(s) for predictor <code>predict</code>.</p>
+<details open><summary>Candidate 0 ★ <strong>winner</strong></summary><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.</pre></details>
+<details ><summary>Candidate 1</summary><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+The task is to answer a specific question based on a provided context. The context is a block of text containing various statements, often separated by bullet points or periods. The question will ask for a specific piece of information that is contained within this context.
+
+Your response should be structured in two parts:
+1.  **reasoning**: A step-by-step explanation of how you located the answer within the context. Explicitly state the keywords or phrases from the question that you searched for in the context and explain how the relevant information was found.
+2.  **answer**: A direct and concise answer to the question, using only the information presented in the context. Do not add any interpretation or external knowledge.
+
+**Strategy for Solving:**
+1.  **Identify Key Terms**: Break down the question into its key terms or concepts. For example, if the question is &quot;What are three components of the EXCELLENCE principle?&quot;, the key terms are &quot;EXCELLENCE principle&quot; and &quot;components&quot;.
+2.  **Scan the Context**: Systematically scan the context for these key terms. Look for exact matches or closely related phrases.
+3.  **Locate the Relevant Section**: Once a key term is found, read the surrounding text carefully to find the specific information that answers the question. Pay close attention to bullet points, lists, and phrases that directly address the question.
+4.  **Extract the Answer**: Copy the exact text from the context that provides the answer. If the answer is a list, ensure all items from the list are included.
+5.  **Formulate the Reasoning**: In your reasoning, describe the process you just followed. For instance: &quot;The question asks for the aim of the Working Group. I searched the context for the phrase &#x27;Working Group&#x27; and found a sentence stating that in 2023, the Working Group &#x27;focused on education and best practice sharing for our members.&#x27; This directly answers the question.&quot;
+6.  **Construct the Final Answer**: Present the extracted information as the answer, ensuring it is concise and directly responsive to the question.</pre></details>
+<details ><summary>Candidate 2</summary><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+The task is to answer a specific question based on a provided context. The context is a block of text that may contain multiple, repeated pieces of information. The answer must be a direct extraction of the relevant fact from the context.
+
+Key characteristics of the task:
+1.  **Source of Truth:** The context is the sole source of information. Do not use external knowledge.
+2.  **Conciseness:** The answer should be as brief as possible while remaining accurate.
+3.  **Fact-Fidelity:** The answer must not contain any information that is not explicitly stated in the context. Do not infer, summarize, or rephrase beyond what is necessary to extract the fact.
+4.  **Handling Repetition:** The context may contain the same fact stated multiple times. The answer should still be a direct and concise extraction of that fact, as if it were stated only once.
+
+Example of a good answer:
+*   Question: What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?
+*   Context: &quot;Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data.&quot;
+*   Answer: The standardised IPC-2591-CFX interface.
+
+Example of a bad answer (invents facts):
+*   Question: What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?
+*   Context: &quot;Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data.&quot;
+*   Answer: The IPC-2591-CFX interface, which is a standard for data integration.
+
+Example of a bad answer (not concise):
+*   Question: How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?
+*   Context: &quot;In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.&quot;
+*   Answer: In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.</pre></details>
+<details ><summary>Candidate 3</summary><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+### Task Description
+Your task is to answer a specific question based on a provided context. The context is a collection of text snippets, often containing bullet points, quotes, and semi-structured information. You must extract the answer directly from these snippets without adding any external knowledge or making inferences that are not explicitly supported by the text.
+
+### Strategy
+1.  **Identify the Core Question:** Precisely understand what the question is asking for. Look for keywords such as &quot;what,&quot; &quot;how,&quot; &quot;aim,&quot; &quot;components,&quot; &quot;uses,&quot; etc.
+2.  **Scan the Context for Keywords:** Systematically read through the provided context snippets. Look for the keywords from the question or closely related terms.
+3.  **Pinpoint the Exact Answer:** Once a relevant snippet is found, locate the specific phrase or sentence that directly answers the question. The answer will often be explicitly stated.
+4.  **Formulate the Concise Answer:** Rephrase the exact information from the context into a brief and direct answer. Do not add explanations, examples, or additional details that are not present in the text. If the context provides a list, extract the required number of items directly from that list.
+
+### Domain-Specific Guidance
+*   **Corporate Values &amp; Principles:** When questions ask about principles (e.g., &quot;EXCELLENCE&quot;), the answer will be a list of specific bullet points or phrases from the context that define that principle. Do not combine or summarize these points; list them as they appear.
+*   **Technical Systems &amp; Interfaces:** When questions ask about a specific system (e.g., &quot;WORKS Optimisation&quot;), the answer will be a technical term, standard, or process name explicitly mentioned in the context (e.g., &quot;IPC-2591-CFX interface&quot;).
+*   **Group Aims &amp; Objectives:** When questions ask about the aim of a group (e.g., &quot;Working Group&quot;), the answer will be a direct quote or a concise summary of the group&#x27;s stated purpose, such as &quot;education and best practice sharing.&quot;</pre></details>
+<details ><summary>Candidate 4</summary><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+The task is to answer a specific question based on a provided context. The context is a collection of text snippets, likely from a corporate report or document. The question will ask for a specific piece of information that is explicitly stated within the context.
+
+Your response must be structured in two parts:
+1.  **reasoning**: A brief explanation of how you found the answer in the context. State the exact phrase or sentence from the context that contains the answer.
+2.  **answer**: The direct answer to the question, extracted verbatim from the context.
+
+**Strategy:**
+1.  **Scan the Context**: Read through the provided context snippets to locate the sentence or phrase that directly answers the question.
+2.  **Avoid Extraneous Information**: Do not add any information, explanations, or context that is not explicitly stated in the provided text. Do not infer or summarize.
+3.  **Be Precise**: The answer must be a direct quote from the context. If the context provides a specific number, quote that number exactly. If it lists items, quote the list.
+4.  **Structure the Output**: Always provide the `reasoning` and `answer` sections as specified.
+
+**Example of Correct Application:**
+*   **Question:** Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?
+*   **Context:** &quot;...combining “Business Ethics” and “Corporate Governance” into “Business Ethics &amp; Corporate Governance”...&quot;
+*   **Correct Output:**
+    *   **reasoning:** The context explicitly states the two factors that were combined.
+    *   **answer:** Business Ethics and Corporate Governance
+
+**Example of Incorrect Application (to be avoided):**
+*   **Question:** How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?
+*   **Context:** &quot;In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.&quot;
+*   **Incorrect Output:**
+    *   **reasoning:** The context mentions that over 500 colleagues participated in the course.
+    *   **answer:** Over 500 colleagues in China engaged in an &quot;Unconscious Bias&quot; e-learning course in 2023.
+*   **Correction:** The `answer` should be just the number, as it is the specific fact requested. The `reasoning` should point to the exact sentence.
+*   **Correct Output:**
+    *   **reasoning:** The context states that &quot;In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.&quot;
+    *   **answer:** Over 500</pre></details>
+<details ><summary>Candidate 5</summary><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+### Task Description
+Your task is to answer a specific question based on a provided context. The context is a block of text containing various facts, figures, and statements about a company named ASMPT. You must extract the precise answer directly from this text without adding any external knowledge or making inferences beyond what is explicitly stated.
+
+### Strategy
+1.  **Identify the Core Question:** Carefully read the user&#x27;s question to understand exactly what information is being requested.
+2.  **Scan the Context:** Systematically read through the provided context to locate the sentence or sentences that contain the answer. The context is not always structured logically, so you may need to scan it multiple times.
+3.  **Extract the Exact Fact:** Once you find the relevant information, copy the exact fact, figure, or phrase that answers the question. Do not rephrase or summarize. The answer must be a direct quote or a direct extraction from the text.
+4.  **Adhere to Constraints:**
+    *   **Conciseness:** Provide only the essential answer. Do not include introductory phrases like &quot;According to the context...&quot; or explanations.
+    *   **No Invention:** Do not add any information, assumptions, or interpretations that are not present in the context. If the context does not contain the answer, the correct response is that the information is not available.
+    *   **Domain-Specific Knowledge:** The context contains specific domain terminology (e.g., &quot;POWERful workshop,&quot; &quot;IPC-2591-CFX interface,&quot; &quot;WORKS Optimisation,&quot; &quot;e-learning&quot;). Your answer must use this exact terminology as it appears in the context.
+
+### Examples of Good and Bad Answers
+
+*   **Question:** What is the aim of the Working Group?
+    *   **Bad Answer (Invents a summary):** The aim is to create a good work environment and share knowledge.
+    *   **Good Answer (Direct extraction):** education and best practice sharing for its members, including conducting presentations on low-carbon technologies, practices and landscapes globally.
+
+*   **Question:** How many colleagues in China engaged in an “Unconscious Bias” e-learning course in 2023?
+    *   **Bad Answer (Too verbose):** In 2023, over 500 colleagues in China engaged in an “Unconscious Bias” e-learning course.
+    *   **Good Answer (Concise and direct):** Over 500 colleagues.
+
+*   **Question:** What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?
+    *   **Bad Answer (Rephrases):** It uses a standardized interface called IPC-2591-CFX.
+    *   **Good Answer (Exact term):** the standardised IPC-2591-CFX interface.</pre></details></details>
+<h4>Candidate evolution timeline</h4><p class="caption">Each row = one proposed instruction in proposal order. Score (when available) is the best trial score that picked this candidate. Winner marked with a star.</p><ol style="border-left:2px solid var(--line);padding-left:18px;list-style:none"><li style="margin:8px 0;position:relative"><span style="position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#15803d;border:2px solid #fff"></span><div><span class="tag">#0</span> <strong>score:</strong> 1.809 &#x2605; <strong>winner</strong></div><pre style="margin:4px 0;font-size:11px">Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.</pre></li><li style="margin:8px 0;position:relative"><span style="position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#6b7280;border:2px solid #fff"></span><div><span class="tag">#1</span> <strong>score:</strong> 4.568</div><pre style="margin:4px 0;font-size:11px">Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+The task is to answer a specific question ba...</pre></li><li style="margin:8px 0;position:relative"><span style="position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#6b7280;border:2px solid #fff"></span><div><span class="tag">#2</span> <strong>score:</strong> 4.826</div><pre style="margin:4px 0;font-size:11px">Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+The task is to answer a specific question ba...</pre></li><li style="margin:8px 0;position:relative"><span style="position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#6b7280;border:2px solid #fff"></span><div><span class="tag">#3</span> <strong>score:</strong> 4.210</div><pre style="margin:4px 0;font-size:11px">Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+### Task Description
+Your task is to answer ...</pre></li><li style="margin:8px 0;position:relative"><span style="position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#6b7280;border:2px solid #fff"></span><div><span class="tag">#4</span> <strong>score:</strong> 4.997</div><pre style="margin:4px 0;font-size:11px">Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+The task is to answer a specific question ba...</pre></li><li style="margin:8px 0;position:relative"><span style="position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#6b7280;border:2px solid #fff"></span><div><span class="tag">#5</span> <strong>score:</strong> 4.931</div><pre style="margin:4px 0;font-size:11px">Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.
+
+### Task Description
+Your task is to answer ...</pre></li></ol>
+<h4>Trial-by-trial decisions</h4>
+<p class="caption">Each row is one MIPROv2 trial. <code>params</code> is the chosen <code>(instruction_idx, demo_idx)</code> tuple from the candidate sets above. Combine with the candidate list to see which prompt got tried on which trial.</p>
+<table><thead><tr><th>trial</th><th>kind</th><th>score</th><th>params</th></tr></thead><tbody><tr><td>0</td><td>default (baseline program)</td><td>1.809</td><td>Program 0 (seed)</td></tr><tr><td>1</td><td>subsample (rejected)</td><td>4.568</td><td>Iter 1: proposed score 4.57 vs prior best 5.18</td></tr><tr><td>2</td><td>subsample (rejected)</td><td>4.826</td><td>Iter 2: proposed score 4.83 vs prior best 6.04</td></tr><tr><td>3</td><td>subsample (rejected)</td><td>4.210</td><td>Iter 3: proposed score 4.21 vs prior best 4.88</td></tr><tr><td>4</td><td>subsample (rejected)</td><td>4.997</td><td>Iter 4: proposed score 5.00 vs prior best 6.33</td></tr><tr><td>5</td><td>subsample (rejected)</td><td>4.931</td><td>Iter 5: proposed score 4.93 vs prior best 5.45</td></tr></tbody></table>
+<h4>Prompts: baseline vs GEPA-optimized</h4>
+<p class="caption"><strong>Baseline</strong> = the DSPy signature's instruction at run start (your <code>--system-instruction</code> if set, else ragdx default). <strong>Optimized</strong> = what MIPROv2 picked after its inner-loop search. Identical columns = MIPROv2 found no improvement and kept the seed (the right default when scores are tied).</p>
+<details open><summary>Predictor `predict`</summary><div class="two-col"><div><h4>Baseline instruction</h4><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.</pre></div><div><h4>Optimized instruction</h4><pre>Answer the question using only the retrieved context.
+Be concise. Do not invent facts that are not in the context.</pre></div></div><p class="caption">Few-shot demos: baseline = 0 · optimized = 0</p></details>
+<details open><summary>Per-record before/after (first 3 of 5)</summary><h4>Record 1</h4><table><thead><tr><th>field</th><th>content</th></tr></thead><tbody><tr><td>question</td><td>What does ASMPT&#x27;s WORKS Optimisation system use to integrate and visualize data from all machines on the line?</td></tr><tr><td>retrieved contexts (7)</td><td>[Context 1]
+. This increases efficiency and also helps to conserve valuable resources. As systems and machines are con- nected to each other via a digital backbone and the significant data is read out in real time, the value chain in the factory can be transparent at all times. ASMPT intelligent software solutions can quickly and accurate- ly show where resources can be saved and processes can be made more efficient
+
+---
+
+[Context 2]
+. The result: less energy and material consumption, less costs and waste. To reach this Intelligent Factory, ASMPT offers a wide range of innovative hardware and software solutions. The use of open industry standards, machine learning and artificial intelligence make electronics manufactur- ing even more efficient and environmentally friendly.
+
+---
+
+[Context 3]
+. ASMPT’s solutions support this development and help customers to realise the full potential of their pro- duction equipment and the required resources. With the Industry 4.0 concept of the Intelligent Factory, ASMPT optimises manufacturing processes and en- sures that they remain adaptable. This increases efficiency and also helps to conserve valuable resources
+
+---
+
+[Context 4]
+. ASMPT has a truly unique, broad-based portfolio in the market. The depth and scope of our solutions set us apart from other equipment manufacturers, mak- ing ASMPT the technology pioneer and key solutions provider in electronics manufacturing. It offers leading edge hardware and software solutions across microe - lectronics, SMT, semiconductors, photonics, and opto- electronics industries, as well as holistic, data-driven and integrative concepts for the Intelligent Factory
+
+---
+
+[Context 5]
+. In-depth analysis of the three application fields “Time”, “Condition” and “Material” on placement, machine, line and facility level enables resource efficiency through holistic process optimisation. One of ASMPT’s innovations Intelligent Software Solutions Supports Operators and Technical Teams In times of skilled labour shortages and steadily rising customer requirements there is no way around the digital transformation for electronics manufacturers if they want to support their em- ployees
+
+---
+
+[Context 6]
+. In contrast to prevailing inspection systems that focus on individual products and manufacturing stations, ASMPT’s intelligent inline system, WORKS Optimisation, takes a comprehensive view of the entire operational process on the software side. Using the standardised IPC-2591-CFX interface, the intelligent application from the WORKS Software Suite includes all machines on the line in its defect analysis as it integrates and visualises the data
+
+---
+
+[Context 7]
+. Our Approach Mobile devices, cameras, computers, internet infra- structure, cars and electric vehicles, smart home sys - tems, healthcare and industrial electronics – any de - vice containing electronics has probably been developed or built using ASMPT’s innovative hardware and software solutions in some way. ASMPT has a truly unique, broad-based portfolio in the market</td></tr><tr><td>baseline answer</td><td>The standardised IPC-2591-CFX interface.</td></tr><tr><td>optimized answer</td><td>The standardised IPC-2591-CFX interface.</td></tr></tbody></table><p class="caption"><em>(Baseline and optimized answers are identical -- prompt change had no textual effect on this record.)</em></p><h4>Record 2</h4><table><thead><tr><th>field</th><th>content</th></tr></thead><tbody><tr><td>question</td><td>What are three components of the EXCELLENCE principle at ASMPT?</td></tr><tr><td>retrieved contexts (7)</td><td>[Context 1]
+. “Excellence is a firmly anchored corporate value at ASMPT. Our declared aim is to exceed our customers’ expectations with our products, processes and services. In doing so, we want to enable them to achieve the highest level of quality in their production and, in turn, meet the requirements of their demanding customers.” Joe Poh, Co-CEO, ASMPT Semiconductor Solutions
+
+---
+
+[Context 2]
+. • We lead by example. We admit to and learn from mistakes. • We are open, honest and trustworthy. EXCELLENCE in all that we do • We make a difference. We strive for excellence – learning and continuously adding value. • We are enthusiastic contributors. We are determined to succeed and to consistently deliver on quality. • We work well together to provide innovative smart solutions. We see all challenges as opportunities. • We are willing to change and execute.
+
+---
+
+[Context 3]
+. They are precisely aligned with ASMPT’s strict govern- ance requirements and form the cornerstones of ASMPT’s sustainability strategy.
+
+---
+
+[Context 4]
+; these enable better deci- sions and makes ASMPT a very fulfilling company to work in We appreciate our high performance and POWER culture • Always support and empower employees, striving for the best while being open to suggestions on how to do better • Distinctive culture is a strength, making ASMPT a glob- ally strong, competitive and contributing company • Embrace high-performance behavioural model that provides critical skills to interact, commit
+
+---
+
+[Context 5]
+. We also set high standards for the quality of all our internal processes. This includes the way we work with our employees, whose health and safety is of the utmost priority.” Cheong Shuan Pei, Vice President Corporate Quality Management, ASMPT
+
+---
+
+[Context 6]
+. • PEOPLE – ASMPT´s success is the result of its peo- ple’s experience, commitment and performance. The strong corporate culture of ASMPT promotes diversity, inclusion and equal opportunity. • INNOVATION – ASMPT creates success through innovation and invests in advanced technologies. The foundation of ASMPT’s success are: The POWER VALUES. In the ASMPT Corporate strategy, people are at the heart of the company’s success. The people of ASMPT are guided by the POWER values
+
+---
+
+[Context 7]
+. ASMPT makes a difference through innovation, excellence, social &amp; environmental responsibility as an enabler of the digital world. As ASMPT expands its market leader- ship and influence, it also helps ensure the long-term success of its customers. 2 Sustainability Strategy</td></tr><tr><td>baseline answer</td><td>1. We lead by example
+2. We are open, honest and trustworthy
+3. We make a difference</td></tr><tr><td>optimized answer</td><td>1. We lead by example. We admit to and learn from mistakes.
+2. We are open, honest and trustworthy.
+3. We make a difference. We strive for excellence – learning and continuously adding value.</td></tr></tbody></table><h4>Answer diff (baseline -> optimized)</h4><p class="caption">Red strikethrough = removed by optimization. Green bold = added. Plain = unchanged.</p><pre style="white-space:pre-wrap;background:#fafbfc;padding:12px;border:1px solid var(--line);border-radius:6px">1. We lead by <span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">example</span><span style="background:#dcfce7;font-weight:600;color:#166534">example. We admit to and learn from mistakes.</span>
+2. We are open, honest and <span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">trustworthy</span><span style="background:#dcfce7;font-weight:600;color:#166534">trustworthy.</span>
+3. We make a <span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">difference</span><span style="background:#dcfce7;font-weight:600;color:#166534">difference. We strive for excellence – learning and continuously adding value.</span></pre><h4>Record 3</h4><table><thead><tr><th>field</th><th>content</th></tr></thead><tbody><tr><td>question</td><td>Which two ESG factors were combined into &quot;Business Ethics &amp; Corporate Governance&quot;?</td></tr><tr><td>retrieved contexts (7)</td><td>[Context 1]
+. To enhance clarity, consistency and alignment with recognised standards and practices in the industry and ESG arena, the Group has made some adjust- ments to the ESG Material Factors. Similar factors have been combined - they include combining “Ener- gy Management” and “Product Energy Efficiency” into “Energy Management &amp; Product Energy Efficiency” as well as “Business Ethics” and “Corporate Governance” into “Business Ethics &amp; Corporate Governance”
+
+---
+
+[Context 2]
+. In 2023, the Group mapped 15 out of its 19 ESG Material Factors to the relevant SDGs, en- suring our activities contribute to these important sus- tainability targets. The remaining four ESG Material Factors — ”Business Ethics &amp; Corporate Governance”, “Customer Relationship Management”, “Environmen- tal Compliance”, and “Regulatory Compliance” — are equally significant in guiding our operations to be re - sponsible and transparent, even if they may not have a direct impact on the SDGs
+
+---
+
+[Context 3]
+. Material Factors Aligned SDGs Addressed in this Report Governance Cybersecurity and IP Protection • Intellectual Property and Cybersecurity • Intellectual Property Product Quality &amp; Safety • Product Responsibility Supply Chain Management • Supply Chain Management and Responsible Sourcing Material Climate Risk Management • Climate Risks Management Regulatory Compliance • ESG Governance Structure • About this Report Business Ethics &amp; Corporate Governance • Anti-Corruption Minimising Environmental Impact GHG
+
+---
+
+[Context 4]
+in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance Report in the Annual Report 2–14 Role of the highest governance body in sustainability reporting Governance Structure (i) A disclosure of the board’s oversight of ESG issues
+
+---
+
+[Context 5]
+; (iii) How the board reviews progress made against ESG-related goals and targets with an explana- tion of how they relate to the issuer’s businesses
+
+---
+
+[Context 6]
+ASMPT Limited Environmental, Social and Governance Report 2023 31 3.3 Anti-Corruption Why it Matters Business ethics serve as the foundation for moral and ethical behaviour within our organisation. In an era of heightened governmental and regulatory standards and escalating stakeholder expectations, our commit- ment to ethical practices is more vital than ever. Up- holding the highest standards of integrity is a strategic imperative that strengthens the trust we receive from our stakeholders
+
+---
+
+[Context 7]
+. Employment Overview P.71 2–9 Governance structure and composition ESG Governance Structure P.25 2–10 Nomination and selection of the highest governance body Corporate Governance Report in the Annual Report 2–11 Chair of the highest governance body Corporate Governance Report in the Annual Report 2–12 Role of the highest governance body in overseeing the management of impacts Corporate Governance Report in the Annual Report 2–13 Delegation of responsi- bility for managing impacts Corporate Governance</td></tr><tr><td>baseline answer</td><td>Business Ethics and Corporate Governance</td></tr><tr><td>optimized answer</td><td>Business Ethics and Corporate Governance</td></tr></tbody></table><p class="caption"><em>(Baseline and optimized answers are identical -- prompt change had no textual effect on this record.)</em></p></details></section>
+<section id="final-diagnosis"><h1 class="part">5 · Final Evaluation &amp; Diagnosis</h1>
+<h2>Diagnosis — final system</h2><p class="caption">Rule-based root-cause analysis of the fully-optimized system (after Bayesian search + DSPy prompt tuning). The weakest layer and highest-posterior causal nodes are what to attack next. For an LLM-refined view, run <code>ragdx diagnose --use-both</code> on the saved run.</p><h3>Mode: no_gt</h3>
+<div class="metric-row">
+<div class="metric"><div class="lbl">Diagnosis confidence</div><div class="val">0.82</div></div>
+<div class="metric"><div class="lbl">Causal signals</div><div class="val">8</div></div>
+<div class="metric"><div class="lbl">Hypotheses</div><div class="val">2</div></div>
+<div class="metric"><div class="lbl">Source</div><div class="val">rule</div></div>
+</div>
+<div class="box">Weakest layer: retrieval (0.38). Layer scores: retrieval=0.38, generation=0.96, e2e=1.00. Primary bottleneck: retrieval noise or weak ranking quality. 2 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.97.</div>
+<h4>Three-layer score overview</h4>
+<p class="caption">Aggregate score per layer (weighted mean of the layer's <em>computed</em> metrics; lower-is-better metrics like <code>hallucination</code> are inverted so higher = healthier). Expand a layer to see every metric, its meaning, and a <strong>weight box</strong> — edit the weights and the layer score above recomputes live.</p>
+<div class="ovlayer" data-layer="retrieval"><div style="display:flex;align-items:center;gap:10px;margin:6px 0"><div style="width:90px;font-weight:600;text-transform:capitalize">retrieval</div><div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative"><div class="ovbar-fill" style="width:38%;background:#dc2626;height:100%;border-radius:5px"></div></div><div class="ovscore" style="width:48px;text-align:right;font-variant-numeric:tabular-nums">0.38</div></div><details><summary>retrieval — 1/4 metric(s) computed</summary><table><thead><tr><th>metric</th><th>value / status</th><th>weight</th><th>direction</th><th>what it measures</th></tr></thead><tbody><tr><td><code>context_precision</code></td><td>0.383 (inverted for score)</td><td><input class="lw" type="number" step="0.1" min="0" value="1" data-oriented="0.383300" style="width:56px" aria-label="weight for context_precision"></td><td class="subtle">↑ higher better</td><td class="subtle">Of the retrieved chunks, how many are actually relevant — and are the relevant ones ranked first. Low = the retriever is pulling noise.</td></tr><tr><td><code>context_recall</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">Of the information needed to answer, how much was retrieved. Low = the retriever is missing evidence (needs the ground-truth answer to measure).</td></tr><tr><td><code>context_entities_recall</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">Of the key entities in the ground-truth answer, how many appear in the retrieved context.</td></tr><tr><td><code>hit_rate_at_k</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">Fraction of queries where at least one relevant chunk is in the top-k.</td></tr></tbody></table><p class="caption">Weights apply within this layer (weighted mean of the computed metrics). Set a weight to 0 to drop a metric; the bar above updates as you type.</p></details></div>
+<div class="ovlayer" data-layer="generation"><div style="display:flex;align-items:center;gap:10px;margin:6px 0"><div style="width:90px;font-weight:600;text-transform:capitalize">generation</div><div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative"><div class="ovbar-fill" style="width:96%;background:#16a34a;height:100%;border-radius:5px"></div></div><div class="ovscore" style="width:48px;text-align:right;font-variant-numeric:tabular-nums">0.96</div></div><details><summary>generation — 4/7 metric(s) computed</summary><table><thead><tr><th>metric</th><th>value / status</th><th>weight</th><th>direction</th><th>what it measures</th></tr></thead><tbody><tr><td><code>faithfulness</code></td><td>1.000</td><td><input class="lw" type="number" step="0.1" min="0" value="1" data-oriented="1.000000" style="width:56px" aria-label="weight for faithfulness"></td><td class="subtle">↑ higher better</td><td class="subtle">Of the claims in the answer, how many are supported by the retrieved context. Low = the generator is making things up.</td></tr><tr><td><code>answer_relevancy</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">not computed</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">How directly the answer addresses the question (not off-topic or padded).</td></tr><tr><td><code>context_utilization</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">How much of the retrieved context the answer actually used.</td></tr><tr><td><code>noise_sensitivity</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↓ lower better</td><td class="subtle">How easily the answer is derailed by irrelevant/distractor chunks. Lower = more robust.</td></tr><tr><td><code>hallucination</code></td><td>0.171 (inverted for score)</td><td><input class="lw" type="number" step="0.1" min="0" value="1" data-oriented="0.828600" style="width:56px" aria-label="weight for hallucination"></td><td class="subtle">↓ lower better</td><td class="subtle">How much of the answer is fabricated / contradicts the context. Lower is better.</td></tr><tr><td><code>bias</code></td><td>0.000 (inverted for score)</td><td><input class="lw" type="number" step="0.1" min="0" value="1" data-oriented="1.000000" style="width:56px" aria-label="weight for bias"></td><td class="subtle">↓ lower better</td><td class="subtle">Presence of biased framing in the answer. Lower is better.</td></tr><tr><td><code>toxicity</code></td><td>0.000 (inverted for score)</td><td><input class="lw" type="number" step="0.1" min="0" value="1" data-oriented="1.000000" style="width:56px" aria-label="weight for toxicity"></td><td class="subtle">↓ lower better</td><td class="subtle">Presence of toxic / harmful language in the answer. Lower is better.</td></tr></tbody></table><p class="caption">Weights apply within this layer (weighted mean of the computed metrics). Set a weight to 0 to drop a metric; the bar above updates as you type.</p></details></div>
+<div class="ovlayer" data-layer="e2e"><div style="display:flex;align-items:center;gap:10px;margin:6px 0"><div style="width:90px;font-weight:600;text-transform:capitalize">e2e</div><div style="flex:1;background:#eef0f2;border-radius:5px;height:20px;position:relative"><div class="ovbar-fill" style="width:100%;background:#16a34a;height:100%;border-radius:5px"></div></div><div class="ovscore" style="width:48px;text-align:right;font-variant-numeric:tabular-nums">1.00</div></div><details><summary>e2e — 1/5 metric(s) computed</summary><table><thead><tr><th>metric</th><th>value / status</th><th>weight</th><th>direction</th><th>what it measures</th></tr></thead><tbody><tr><td><code>answer_correctness</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">How correct the final answer is vs the ground truth (facts + semantics combined).</td></tr><tr><td><code>answer_accuracy</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires ground truth</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">Accuracy of the final answer against the ground truth.</td></tr><tr><td><code>citation_accuracy</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires trace data</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">Whether the answer&#x27;s citations point to the passages that actually support each claim.</td></tr><tr><td><code>g_eval</code></td><td>1.000</td><td><input class="lw" type="number" step="0.1" min="0" value="1" data-oriented="1.000000" style="width:56px" aria-label="weight for g_eval"></td><td class="subtle">↑ higher better</td><td class="subtle">A chain-of-thought LLM judge scoring overall answer quality against a rubric (grounded + complete + on-topic).</td></tr><tr><td><code>user_success_rate</code></td><td><span class="tag" style="background:#f3f4f6;color:#6b7280">requires feedback</span></td><td><span class="subtle">—</span></td><td class="subtle">↑ higher better</td><td class="subtle">Share of production interactions users marked successful (from feedback).</td></tr></tbody></table><p class="caption">Weights apply within this layer (weighted mean of the computed metrics). Set a weight to 0 to drop a metric; the bar above updates as you type.</p></details></div>
+<h4>Per-source diagnosis layers</h4><p class="caption">Which signals come from where. <strong>Rule</strong> = deterministic causal-graph analysis. <strong>LLM</strong> = LLM-refined view of the same data. <strong>Synthesis</strong> = LLM-merged final answer combining both. The active layer drives the top-level summary above.</p><h4>Rule-based (active) <span class="tag">rule</span></h4>
+<div class="box">Weakest layer: retrieval (0.38). Layer scores: retrieval=0.38, generation=0.96, e2e=1.00. Primary bottleneck: retrieval noise or weak ranking quality. 2 diagnosis hypotheses were generated. Lead causal node: retrieval_precision_defect with posterior 0.97.</div>
+<table><thead><tr><th>severity</th><th>component</th><th>root cause</th><th>confidence</th></tr></thead><tbody><tr><td>high</td><td>retrieval</td><td>retrieval noise or weak ranking quality</td><td>0.84</td></tr><tr><td>high</td><td>generation</td><td>answer is fragile under distractors or unsupported reasoning</td><td>0.81</td></tr></tbody></table>
+<p><strong>Candidates:</strong> <span class="tag">autorag_pipeline_search</span> <span class="tag">dspy_prompt_optimization</span> <span class="tag">joint_ablation_eval</span></p>
+<h4>Metric gaps (below threshold)</h4>
+<table><thead><tr><th>metric</th><th>gap</th></tr></thead><tbody><tr id="gap-context_precision"><td>context_precision</td><td>0.4167</td></tr><tr id="gap-hallucination"><td>hallucination</td><td>0.0714</td></tr></tbody></table>
+<h4>Causal graph (SVG)</h4><p class="caption"><strong>How to read it:</strong> each circle is a hypothesized <em>defect</em> (failure mode). The circle's size and fill opacity scale with its <em>posterior probability</em> — how likely that defect is, given the metrics + traces — so the biggest, boldest node is the prime suspect. Colour = which layer the defect sits in (retrieval blue / generation orange / e2e green). Arrows are causal-propagation edges: a defect upstream raises the probability of the ones it points to. Lower posterior = healthier. The number inside each node is its posterior.</p><svg viewBox="0 0 640 360" width="100%" height="360" style="border:1px solid var(--line);border-radius:6px;background:#fff" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/></marker></defs><line x1="110" y1="80" x2="110" y2="180" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="110" y1="180" x2="310" y2="130" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="110" y1="280" x2="310" y2="130" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="110" y1="280" x2="310" y2="240" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="310" y1="130" x2="310" y2="240" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="310" y1="240" x2="510" y2="240" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="510" y1="80" x2="510" y2="160" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="510" y1="160" x2="110" y2="180" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><line x1="510" y1="160" x2="310" y2="240" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" /><circle cx="110" cy="80" r="27" fill="#1d4ed8" fill-opacity="0.98" stroke="#1d4ed8" stroke-width="1.5"><title>corpus_chunking_defect (post=0.96, component=retrieval)</title></circle><text x="110" y="84" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.96</text><text x="110" y="121" font-size="11" fill="#374151" text-anchor="middle">corpus chunking</text><circle cx="110" cy="180" r="27" fill="#1d4ed8" fill-opacity="0.97" stroke="#1d4ed8" stroke-width="1.5"><title>retrieval_recall_defect (post=0.95, component=retrieval)</title></circle><text x="110" y="184" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.95</text><text x="110" y="221" font-size="11" fill="#374151" text-anchor="middle">retrieval recall</text><circle cx="110" cy="280" r="27" fill="#1d4ed8" fill-opacity="0.98" stroke="#1d4ed8" stroke-width="1.5"><title>retrieval_precision_defect (post=0.97, component=retrieval)</title></circle><text x="110" y="284" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.97</text><text x="110" y="321" font-size="11" fill="#374151" text-anchor="middle">retrieval precision</text><circle cx="310" cy="130" r="20" fill="#c2410c" fill-opacity="0.72" stroke="#c2410c" stroke-width="1.5"><title>context_packing_defect (post=0.54, component=generation)</title></circle><text x="310" y="134" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.54</text><text x="310" y="164" font-size="11" fill="#374151" text-anchor="middle">context packing</text><circle cx="310" cy="240" r="27" fill="#c2410c" fill-opacity="0.98" stroke="#c2410c" stroke-width="1.5"><title>grounding_defect (post=0.96, component=generation)</title></circle><text x="310" y="244" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.96</text><text x="310" y="281" font-size="11" fill="#374151" text-anchor="middle">grounding</text><circle cx="510" cy="240" r="20" fill="#15803d" fill-opacity="0.73" stroke="#15803d" stroke-width="1.5"><title>citation_binding_defect (post=0.55, component=e2e)</title></circle><text x="510" y="244" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.55</text><text x="510" y="274" font-size="11" fill="#374151" text-anchor="middle">citation binding</text><circle cx="510" cy="80" r="15" fill="#15803d" fill-opacity="0.54" stroke="#15803d" stroke-width="1.5"><title>judge_or_metric_instability (post=0.23, component=e2e)</title></circle><text x="510" y="84" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.23</text><text x="510" y="109" font-size="11" fill="#374151" text-anchor="middle">judge or metric instability</text><circle cx="510" cy="160" r="19" fill="#15803d" fill-opacity="0.67" stroke="#15803d" stroke-width="1.5"><title>distribution_shift (post=0.45, component=e2e)</title></circle><text x="510" y="164" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">0.45</text><text x="510" y="193" font-size="11" fill="#374151" text-anchor="middle">distribution shift</text><rect x="490" y="12" width="12" height="12" fill="#1d4ed8" fill-opacity="0.7" /><text x="506" y="22" font-size="11" fill="#374151">retrieval</text><rect x="490" y="30" width="12" height="12" fill="#c2410c" fill-opacity="0.7" /><text x="506" y="40" font-size="11" fill="#374151">generation</text><rect x="490" y="48" width="12" height="12" fill="#15803d" fill-opacity="0.7" /><text x="506" y="58" font-size="11" fill="#374151">e2e</text></svg><div style="margin-top:10px"><details><summary>Causal node glossary (what each node means)</summary><table><thead><tr><th>node</th><th>layer</th><th>posterior</th><th>what it means</th></tr></thead><tbody><tr><td><code>corpus_chunking_defect</code></td><td>retrieval</td><td>0.96</td><td class="subtle">The document was split badly — chunks cut across topics or bury the answer — so retrieval can&#x27;t find clean evidence. Fix at the parser / chunker before tuning the retriever. </td></tr><tr><td><code>retrieval_recall_defect</code></td><td>retrieval</td><td>0.95</td><td class="subtle">The retriever misses relevant evidence (it&#x27;s not in the top-k at all). Widen recall: hybrid search, bigger candidate pool, query rewriting. </td></tr><tr><td><code>retrieval_precision_defect</code></td><td>retrieval</td><td>0.97</td><td class="subtle">The retriever returns too much noise alongside the relevant chunks. Tighten ranking: reranker, lower top-k, metadata filters. </td></tr><tr><td><code>context_packing_defect</code></td><td>generation</td><td>0.54</td><td class="subtle">Evidence was retrieved but packed into the prompt poorly (order, truncation, no section labels), so the generator under-uses it. </td></tr><tr><td><code>grounding_defect</code></td><td>generation</td><td>0.96</td><td class="subtle">The generator doesn&#x27;t stick to the retrieved evidence — it paraphrases loosely or invents. Fix with citation-first prompting, verification, a stronger LM. </td></tr><tr><td><code>citation_binding_defect</code></td><td>e2e</td><td>0.55</td><td class="subtle">The answer may be right but its citations don&#x27;t map to the supporting passages. Fix with sentence-level citation formatting / passage ids. </td></tr><tr><td><code>judge_or_metric_instability</code></td><td>e2e</td><td>0.23</td><td class="subtle">The evaluator itself is unreliable (judge disagreement, prompt drift) — the metrics may not be trustworthy. Audit / calibrate the judge before acting on scores. </td></tr><tr><td><code>distribution_shift</code></td><td>e2e</td><td>0.45</td><td class="subtle">The traffic / question distribution changed from what the system was built for. Cluster failing queries and expand the benchmark. </td></tr></tbody></table></details></div>
+<h4>Causal signals (top 8 by posterior)</h4>
+<p class="caption">Each row is a hypothesized defect. <strong>posterior</strong> = how likely that defect is after weighing the metrics, traces, and causal propagation. Lower is healthier; the top row is the prime suspect. (The pre-evidence prior is omitted — it tracks the learned store and adds little per-report signal.)</p>
+<table><thead><tr><th>node</th><th>layer</th><th>posterior</th><th>what it means</th><th>recommended experiment</th></tr></thead><tbody><tr id="signal-retrieval_precision_defect"><td><code>retrieval_precision_defect</code></td><td>retrieval</td><td>0.97</td><td class="subtle">The retriever returns too much noise alongside the relevant chunks. Tighten ranking: reranker, lower top-k, metadata filters.</td><td>Strengthen reranking, filtering, and precision-oriented retrieval settings.</td></tr><tr id="signal-grounding_defect"><td><code>grounding_defect</code></td><td>generation</td><td>0.96</td><td class="subtle">The generator doesn&#x27;t stick to the retrieved evidence — it paraphrases loosely or invents. Fix with citation-first prompting, verification, a stronger LM.</td><td>Use grounded answer templates, verification, and citation-first prompting.</td></tr><tr id="signal-corpus_chunking_defect"><td><code>corpus_chunking_defect</code></td><td>retrieval</td><td>0.96</td><td class="subtle">The document was split badly — chunks cut across topics or bury the answer — so retrieval can&#x27;t find clean evidence. Fix at the parser / chunker before tuning the retriever.</td><td>Run parser and chunking search before retriever tuning.</td></tr><tr id="signal-retrieval_recall_defect"><td><code>retrieval_recall_defect</code></td><td>retrieval</td><td>0.95</td><td class="subtle">The retriever misses relevant evidence (it&#x27;s not in the top-k at all). Widen recall: hybrid search, bigger candidate pool, query rewriting.</td><td>Expand recall with hybrid retrieval, query rewriting, and larger candidate pools.</td></tr><tr id="signal-citation_binding_defect"><td><code>citation_binding_defect</code></td><td>e2e</td><td>0.55</td><td class="subtle">The answer may be right but its citations don&#x27;t map to the supporting passages. Fix with sentence-level citation formatting / passage ids.</td><td>Bind citations at sentence or claim level and return passage ids.</td></tr><tr id="signal-context_packing_defect"><td><code>context_packing_defect</code></td><td>generation</td><td>0.54</td><td class="subtle">Evidence was retrieved but packed into the prompt poorly (order, truncation, no section labels), so the generator under-uses it.</td><td>Tune context packing order, context budget, and section-aware packing.</td></tr><tr id="signal-distribution_shift"><td><code>distribution_shift</code></td><td>e2e</td><td>0.45</td><td class="subtle">The traffic / question distribution changed from what the system was built for. Cluster failing queries and expand the benchmark.</td><td>Cluster failing traffic, review domain shift, and expand the benchmark.</td></tr><tr id="signal-judge_or_metric_instability"><td><code>judge_or_metric_instability</code></td><td>e2e</td><td>0.23</td><td class="subtle">The evaluator itself is unreliable (judge disagreement, prompt drift) — the metrics may not be trustworthy. Audit / calibrate the judge before acting on scores.</td><td>Audit evaluator prompts, compare against human labels, and calibrate judges.</td></tr></tbody></table>
+<h4>Hypotheses</h4>
+<details open><summary>1. retrieval noise or weak ranking quality</summary><p><span class="tag warn">high</span> · component: <code>retrieval</code> · confidence 0.84</p><h4>Evidence</h4><ul><li><a href="#gap-context_precision"><code>context_precision</code></a>=0.38 is below target 0.80</li><li>Noisy contexts usually propagate to <a href="#gap-hallucination"><code>hallucination</code></a> and citation failures.</li></ul><h4>Recommended actions</h4><ul><li>Add or tune a reranker.</li><li>Reduce top-k, or separate the recall stage from the final evidence stage.</li><li>Use metadata or section-aware filters.</li></ul></details>
+<details><summary>2. answer is fragile under distractors or unsupported reasoning</summary><p><span class="tag warn">high</span> · component: <code>generation</code> · confidence 0.81</p><h4>Evidence</h4><ul><li>noise_sensitivity=0.00</li><li><a href="#gap-hallucination"><code>hallucination</code></a>=0.17</li><li>The generator likely overweights spurious or weakly relevant text.</li></ul><h4>Recommended actions</h4><ul><li>Constrain the answer to quoted or cited evidence.</li><li>Use context packing with stronger ordering and section labels.</li><li>Add a verifier or claim-level grounding pass.</li></ul></details>
+<h4>Priority actions</h4><ul>
+<li>Improve ranking precision and evidence filtering.</li>
+<li>Run ablations to separate noisy retrieval from generator overreach.</li>
+<li>Strengthen reranking, filtering, and precision-oriented retrieval settings.</li>
+</ul>
+<h4>Optimization candidates</h4><p><span class="tag">autorag_pipeline_search</span> <span class="tag">dspy_prompt_optimization</span> <span class="tag">joint_ablation_eval</span></p></section>
+<section id="run-cost"><h1 class="part">6 · Run Cost &amp; Extras</h1>
+<h2>Run cost</h2>
+<p class="caption">Wall-clock cost of the optimization run, derived from per-trial elapsed times. Token / dollar accounting only renders when traces carry it (not by default).</p>
+<table><thead><tr><th>section</th><th>trials</th><th>questions / trial</th><th>total runtime (s)</th><th>mean per question (s)</th></tr></thead><tbody><tr><td>BO (no_gt)</td><td>8</td><td>5</td><td>539.3</td><td>13.5</td></tr><tr><td>DSPy (no_gt)</td><td>phases: baseline / optimize / re-eval</td><td>5</td><td>331.2  (baseline 94s / optimize 164s / re_eval 74s)</td><td>66.2</td></tr></tbody></table>
+<p class="caption"><strong>Total tracked runtime:</strong> 870.5s (14.5 min)</p>
+<h2>Extras</h2>
+<details><summary>PDF metadata</summary><pre>{
+  &quot;page_count&quot;: 114,
+  &quot;chunks&quot;: 548,
+  &quot;chunk_size&quot;: 512,
+  &quot;chunk_overlap&quot;: 50,
+  &quot;raw_text_chars&quot;: 211339
+}</pre></details></section>
+</div>
+<script>
+// item 7: live-editable layer weights. Each .ovlayer recomputes its
+// aggregate from its own weight inputs (oriented values already account
+// for lower-is-better inversion server-side).
+function ragdxRecomputeLayer(layerEl){
+  var inputs = layerEl.querySelectorAll('input.lw');
+  var num=0, den=0, custom=false;
+  inputs.forEach(function(inp){
+    var w = parseFloat(inp.value); if(isNaN(w)||w<0) w=0;
+    if(Math.abs(w-1)>1e-9) custom=true;
+    var ov = parseFloat(inp.getAttribute('data-oriented'));
+    if(!isNaN(ov) && w>0){ num += ov*w; den += w; }
+  });
+  var fill = layerEl.querySelector('.ovbar-fill');
+  var st = layerEl.querySelector('.ovscore');
+  // "custom weights active" marker: when any weight deviates from 1,
+  // tag the score so the user can SEE the recompute fired even when
+  // the weighted mean happens to equal the default (e.g. all metric
+  // values identical -- any weighting gives the same mean).
+  var displayScore = function(s){
+    if(st){ st.textContent = s; st.title = custom ? 'custom weights applied' : '';
+      st.style.fontStyle = custom ? 'italic' : 'normal';
+      st.style.color = custom ? '#1a73e8' : ''; }
+  };
+  if(den<=0){ displayScore('-'); if(fill) fill.style.width='0%'; return; }
+  var score = num/den;
+  var pct = Math.round(score*100);
+  if(fill){ fill.style.width = pct+'%';
+    fill.style.background = score<0.6?'#dc2626':(score<0.8?'#d97706':'#16a34a'); }
+  displayScore(score.toFixed(2) + (custom ? '\u2009\u2696' : ''));
+}
+// item 6: per-trial visibility checkboxes toggle each trial block.
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(t && t.classList && t.classList.contains('trial-toggle')){
+    var id = t.getAttribute('data-target');
+    var el = document.getElementById(id);
+    if(el) el.style.display = t.checked ? '' : 'none';
+  }
+});
+document.addEventListener('input', function(e){
+  if(e.target && e.target.classList && e.target.classList.contains('lw')){
+    var layerEl = e.target.closest('.ovlayer');
+    if(layerEl) ragdxRecomputeLayer(layerEl);
+  }
+});
+</script>
+</body></html>
