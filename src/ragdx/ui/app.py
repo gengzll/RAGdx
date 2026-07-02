@@ -236,6 +236,27 @@ def _run_app() -> None:
             "Seed", 0, 10_000, 7, disabled=running,
             help="Deterministic seed for the search and question synthesis.",
         )
+    o1, o2 = st.columns(2)
+    with o1:
+        dspy_optimizer = st.selectbox(
+            "Prompt optimizer (DSPy)",
+            ["gepa", "mipro", "copro"],
+            index=0,
+            disabled=running,
+            help="Algorithm that optimizes the generator prompt: "
+            "'gepa' (reflective evolution, default), 'mipro' (Bayesian "
+            "instruction+demo search), or 'copro' (iterative rewrite).",
+        )
+    with o2:
+        mipro_auto = st.selectbox(
+            "Optimizer budget",
+            ["light", "medium", "heavy"],
+            index=0,
+            disabled=running,
+            help="How hard the prompt optimizer searches. GEPA: ~30 / 100 / "
+            "300 LLM calls; bigger = better but slower. Use 'light' for a "
+            "quick run.",
+        )
     system_instruction = st.text_area(
         "System instruction (optional)",
         value="",
@@ -264,6 +285,8 @@ def _run_app() -> None:
                 n_bo_init=int(n_bo_init),
                 seed=int(seed),
                 system_instruction=system_instruction or None,
+                dspy_optimizer=dspy_optimizer,
+                mipro_auto=mipro_auto,
             ),
         )
         st.rerun()

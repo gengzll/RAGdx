@@ -99,6 +99,17 @@ def experiment(
         "instruction. Useful for long / multi-line prompts. Mutually "
         "exclusive with --system-instruction.",
     ),
+    dspy_optimizer: str = typer.Option(
+        "gepa", "--dspy-optimizer",
+        help="DSPy prompt optimizer for the generation stage: "
+        "'gepa' (default), 'mipro', 'copro', or 'bootstrap_fewshot'.",
+    ),
+    mipro_auto: str = typer.Option(
+        "light", "--mipro-auto",
+        help="Optimizer budget: 'light' / 'medium' / 'heavy'. For GEPA "
+        "maps to max_metric_calls (30 / 100 / 300); for MIPROv2 the "
+        "'auto' preset. Bigger = more thorough but more LLM calls.",
+    ),
     save_run: bool = typer.Option(
         False, "--save-run",
         help="Also persist the experiment as a Run in the local RunStore "
@@ -187,6 +198,8 @@ def experiment(
             llm_max_concurrent=llm_max_concurrent,
             llm_max_retries=llm_max_retries,
             system_instruction=resolved_instruction,
+            dspy_optimizer=dspy_optimizer,
+            mipro_auto=mipro_auto,
             save=not no_save,
             resume=resume,
             no_checkpoint=no_checkpoint,

@@ -203,6 +203,17 @@ class ExperimentConfig:
     dashboard can display it and you can reproduce the run from the
     bundle alone."""
 
+    dspy_optimizer: str = "gepa"
+    """DSPy prompt optimizer for the generation stage: ``"gepa"``
+    (default), ``"mipro"``, ``"copro"``, or ``"bootstrap_fewshot"``.
+    Threaded into the generation :class:`StageContext`."""
+
+    mipro_auto: str = "light"
+    """Optimizer budget: ``"light"`` / ``"medium"`` / ``"heavy"``. For
+    GEPA this maps to explicit ``max_metric_calls`` (30 / 100 / 300); for
+    MIPROv2 it is the ``auto`` preset. Bigger budgets search harder but
+    cost proportionally more LLM calls."""
+
     def __post_init__(self) -> None:
         # mode validation -- can't request with-GT runs when no GT exists.
         if not self.has_gt and self.mode in ("with_gt", "both"):
@@ -1168,8 +1179,10 @@ def _run_one_mode(
         label=mode,
         checkpoint=ckpt_gen,
         checkpoint_store=ckpt_store,
+        dspy_optimizer=cfg.dspy_optimizer,
+        mipro_auto=cfg.mipro_auto,
     )
-    _emit("dspy_start", 0.58, "DSPy prompt optimization (before/after)")
+    _emit("dspy_start", 0.58, f"Prompt optimization ({cfg.dspy_optimizer}, {cfg.mipro_auto})")
     gen_result = GenerationOptimizer().optimize(gen_ctx)
     if ckpts is not None:
         ckpts.complete(ckpt_gen)
@@ -1922,6 +1935,8 @@ def run_experiment(
     llm_max_concurrent: int = 2,
     llm_max_retries: int = 5,
     system_instruction: str | None = None,
+    dspy_optimizer: str = "gepa",
+    mipro_auto: str = "light",
     save: bool = True,
     resume: str = "",
     no_checkpoint: bool = False,
@@ -2027,6 +2042,8 @@ def run_experiment(
         llm_max_concurrent=llm_max_concurrent,
         llm_max_retries=llm_max_retries,
         system_instruction=system_instruction,
+        dspy_optimizer=dspy_optimizer,
+        mipro_auto=mipro_auto,
     )
 
     modes_to_run = ["with_gt", "no_gt"] if cfg.mode == "both" else (
