@@ -844,11 +844,20 @@ def _render_run_viewer(*, ss, st, name, render_report, run_experiment, api_key) 
             "trial/phase."
         )
         if st.button("⟳ Resume this experiment", type="primary"):
+            resume_meta = {**meta, "status": "running"}
+            # Reuse the questions the interrupted run synthesized (the
+            # engine persists them next to the bundle) — skips the
+            # re-synthesis LLM calls and keeps checkpointed trial scores
+            # comparable.
+            if not resume_meta.get("questions_path"):
+                synth_q = run_dir / "out" / "questions_synthesized.jsonl"
+                if synth_q.exists():
+                    resume_meta["questions_path"] = str(synth_q)
             _launch_worker(
                 ss=ss,
                 run_experiment=run_experiment,
                 run_dir=run_dir,
-                meta={**meta, "status": "running"},
+                meta=resume_meta,
                 api_key=api_key,
                 resume=name,
             )

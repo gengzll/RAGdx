@@ -300,6 +300,12 @@ class StageOptimizer(ABC):
         checkpoint = getattr(ctx, "checkpoint", None)
         checkpoint_store = getattr(ctx, "checkpoint_store", None)
         if checkpoint is not None and checkpoint.trials_completed:
+            import logging as _logging
+            _logging.getLogger(__name__).info(
+                "[%s] checkpoint resume: replaying %d completed trial(s) "
+                "without LLM calls, then continuing the search.",
+                ctx.label, len(checkpoint.trials_completed),
+            )
             for ct in checkpoint.trials_completed:
                 bo._pending_params = dict(ct.params)
                 bo.report(dict(ct.params), float(ct.composite_score))

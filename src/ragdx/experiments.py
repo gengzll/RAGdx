@@ -2096,6 +2096,25 @@ def run_experiment(
     chunks_master, base_records, source_meta = _load_corpus_and_records(cfg, runtime)
     reporter.emit("corpus_loaded", pct=0.05, detail=f"{len(chunks_master)} chunks loaded")
 
+    # Persist synthesized questions next to the bundle so an interrupted
+    # run can be resumed with ``questions_path=<this file>`` — skipping
+    # the re-synthesis LLM calls and guaranteeing the resumed run scores
+    # the exact same questions the checkpointed trials used.
+    if save and not cfg.questions_path and not cfg.has_gt:
+        try:
+            qp = cfg.output_dir / "questions_synthesized.jsonl"
+            qp.parent.mkdir(parents=True, exist_ok=True)
+            with qp.open("w", encoding="utf-8") as f:
+                for r in base_records:
+                    f.write(json.dumps(
+                        {"question": r.question, "ground_truth": r.ground_truth,
+                         "contexts": list(r.contexts or [])},
+                        ensure_ascii=False,
+                    ) + "\n")
+            logger.info("synthesized questions persisted: %s", qp)
+        except Exception as exc:  # pragma: no cover - persistence is best-effort
+            logger.warning("could not persist synthesized questions: %s", exc)
+
     # Checkpointing: one Checkpoint per (mode, stage), grouped by an
     # experiment id. ``resume="auto"`` (or a group id) picks the run
     # back up -- completed stages replay without LLM calls, the
