@@ -46,6 +46,18 @@ h3 { font-size: 16px; margin: 20px 0 8px; color: #111827; }
 h4 { font-size: 14px; margin: 14px 0 6px; color: #374151; }
 .subtle { color: var(--muted); font-size: 13px; }
 .caption { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }
+.callout { padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.callout.warn { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; }
+.callout.ok { background: #dcfce7; border: 1px solid #22c55e; color: #14532d; }
+h1.part { font-size: 24px; margin: 48px 0 4px; padding: 12px 16px;
+          background: #eef2ff; border-left: 5px solid var(--accent);
+          border-radius: 6px; }
+nav.toc { background: #f9fafb; border: 1px solid var(--line);
+          border-radius: 8px; padding: 14px 20px; margin: 20px 0; }
+nav.toc .toc-title { font-weight: 600; margin-bottom: 6px; }
+nav.toc ol { margin: 0; padding-left: 20px; }
+nav.toc a { color: var(--accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
 .metric-row { display: flex; gap: 16px; margin: 12px 0 20px; flex-wrap: wrap; }
 .metric { flex: 1 1 180px; padding: 12px 16px; background: #f9fafb;
           border: 1px solid var(--line); border-radius: 8px; min-width: 160px; }
@@ -200,12 +212,6 @@ def _render_meta(bundle: dict) -> str:
 
     parts.append('<div class="metric-row">')
     parts.append(_metric("Experiment mode", meta.get("experiment_mode", "?")))
-    parts.append(_metric("Modes run", ", ".join(meta.get("modes_run") or []) or "—"))
-    parts.append(_metric("Has GT", "Yes" if meta.get("has_gt") else "No"))
-    parts.append(_metric("Detected GT", meta.get("detected_gt_mode", "—")))
-    parts.append('</div>')
-
-    parts.append('<div class="metric-row">')
     parts.append(_metric("Model", meta.get("model", "?")))
     parts.append(_metric("Endpoint", meta.get("model_endpoint", "?")))
     parts.append('</div>')
@@ -1224,11 +1230,18 @@ def _render_objectives(bundle: dict) -> str:
     objs = bundle.get("objectives") or {}
     if not objs:
         return ""
+    from ragdx.core.metrics import METRIC_GLOSSARY
+
     parts = ['<h2>Composite objectives</h2>']
     parts.append(
         '<p class="caption"><strong>Metric weights</strong> combine into '
         'the composite score (<code>sum of weight_i * metric_i</code>) -- '
-        'what BO and DSPy optimize against. <strong>Constraints</strong> '
+        'what BO and DSPy optimize against. Weights follow the practical '
+        'priority hierarchy <em>groundedness &gt; correctness &gt; '
+        'retrieval quality &gt; auxiliary judges</em>. Lower-is-better '
+        'metrics (hallucination / bias / toxicity) are inverted '
+        '(<code>1 - value</code>) before weighting, so every weight '
+        'rewards the healthy direction. <strong>Constraints</strong> '
         'are hard pass/fail thresholds: a trial that violates one is '
         'still scored but marked <strong>infeasible</strong> so the '
         'planner can filter unsafe configs.</p>'
@@ -1236,11 +1249,18 @@ def _render_objectives(bundle: dict) -> str:
     for m, spec in objs.items():
         weights = (spec or {}).get("metrics") or {}
         constraints = (spec or {}).get("constraints") or {}
-        body = '<div class="two-col">'
-        body += '<div><h4>Metric weights</h4>'
+        body = '<div>'
+        body += '<h4>Metric weights</h4>'
         body += _table(
-            [{"metric": k, "weight": v} for k, v in weights.items()],
-            cols=["metric", "weight"],
+            [
+                {
+                    "metric": k,
+                    "weight": v,
+                    "what it measures": (METRIC_GLOSSARY.get(k) or {}).get("desc", "—"),
+                }
+                for k, v in sorted(weights.items(), key=lambda kv: -kv[1])
+            ],
+            cols=["metric", "weight", "what it measures"],
         )
         body += '</div><div><h4>Constraints</h4>'
         if constraints:
@@ -1253,7 +1273,7 @@ def _render_objectives(bundle: dict) -> str:
             body += _table(crows, cols=["metric", "direction", "bound"])
         else:
             body += '<p class="caption">_(no hard constraints)_</p>'
-        body += '</div></div>'
+        body += '</div>'
         parts.append(_details(f"`{m}` objective", body, open_=(len(objs) <= 2)))
     return "\n".join(parts)
 
@@ -1431,7 +1451,15 @@ def _render_dspy_a_b(bundle: dict) -> str:
     _first_payload = next(iter(ab.values()), {}) or {}
     _algo_key = _first_payload.get("dspy_optimizer_used") or "mipro"
     _algo_label = _algo_label_map.get(_algo_key, "DSPy")
-    parts = [f'<h2>DSPy before/after (at {_esc(_algo_label)} winner config)</h2>']
+    parts = [f'<h2>Prompt optimization — before/after ({_esc(_algo_label)}, at the RAG winner config)</h2>']
+    parts.append(
+        '<p class="caption">Both columns are evaluated with the same '
+        'pipeline, questions, and metric set as the rest of this report. '
+        'The <strong>final system ships whichever prompt scored higher '
+        'on the composite objective</strong> — if the optimized prompt '
+        'did not beat the baseline, the final config keeps the baseline '
+        'prompt and the final scores below are the baseline column.</p>'
+    )
 
     for mode, payload in ab.items():
         payload = payload or {}
@@ -1441,10 +1469,25 @@ def _render_dspy_a_b(bundle: dict) -> str:
         os_ = payload.get("optimized_scores") or {}
         delta = payload.get("delta") or {}
         comp = payload.get("composite") or {}
+        winner = payload.get("winner") or comp.get("winner")
 
         if not bs and not os_:
             parts.append('<p class="subtle">No before/after scores recorded.</p>')
             continue
+
+        # Winner banner: which prompt the final config actually ships.
+        if winner == "baseline":
+            parts.append(
+                '<p class="callout warn"><strong>Winner: baseline prompt.</strong> '
+                'The optimized prompt scored lower on the composite objective, '
+                'so the final config keeps the baseline (seed) prompt. The '
+                '"optimized" column is shown for transparency only.</p>'
+            )
+        elif winner == "optimized":
+            parts.append(
+                '<p class="callout ok"><strong>Winner: optimized prompt.</strong> '
+                'The final config ships the DSPy-optimized prompt.</p>'
+            )
 
         # Bar chart
         metrics = sorted(set(bs) | set(os_))
@@ -1475,6 +1518,7 @@ def _render_dspy_a_b(bundle: dict) -> str:
             b = (comp.get("baseline") or {}).get("score")
             o = (comp.get("optimized") or {}).get("score")
             d = comp.get("delta")
+            final = b if winner == "baseline" else o
             parts.append('<div class="metric-row">')
             parts.append(_metric(
                 "Composite baseline",
@@ -1487,6 +1531,10 @@ def _render_dspy_a_b(bundle: dict) -> str:
             parts.append(_metric(
                 "Composite Δ",
                 f"{d:+.3f}" if isinstance(d, (int, float)) else "—",
+            ))
+            parts.append(_metric(
+                "Composite final (shipped)",
+                f"{final:.3f}" if isinstance(final, (int, float)) else "—",
             ))
             parts.append('</div>')
 
@@ -1796,31 +1844,55 @@ def render_report(bundle: dict, *, title: str | None = None) -> str:
         f"ragdx experiment report — {meta.get('model', '?')} · "
         f"{', '.join(meta.get('modes_run') or []) or 'unknown'}"
     )
-    sections = "\n".join(
-        s for s in (
+    # Top-level parts: each is (anchor-id, part title, [section renderers]).
+    # Empty parts (all sections render "") are skipped, and the TOC only
+    # lists parts that actually appear.
+    part_specs: list[tuple[str, str, list[str]]] = [
+        ("experiment-config", "1 · Experiment Config", [
             _render_meta(bundle),
-            _render_diagnostics(bundle),
-            # Baseline diagnosis comes BEFORE the optimization sections
-            # because it's the *why*: a baseline-driven flow looks at
-            # the diagnosis to decide which directions to optimize.
-            _render_baseline_diagnosis(bundle),
-            _render_objectives(bundle),
-            _render_bayes_search(bundle),
-            _render_dspy_a_b(bundle),
-            # Comparison section first: the "did it work?" story (delta
-            # between baseline and optimized diagnoses). This is the
-            # natural narrative bridge between the optimization
-            # sections above and the residual analysis below.
-            _render_diagnosis_comparison(bundle),
-            # Optimized diagnosis closes the loop: what (if anything)
-            # is still broken at the optimized config?
-            _render_optimized_diagnosis(bundle),
-            # Phase 4e: how long did this all take?
-            _render_run_cost(bundle),
             _render_questions(bundle),
+            _render_objectives(bundle),
+            _render_diagnostics(bundle),
+        ]),
+        # Baseline diagnosis comes BEFORE the optimization sections
+        # because it's the *why*: a baseline-driven flow looks at
+        # the diagnosis to decide which directions to optimize.
+        ("baseline-diagnosis", "2 · Baseline Diagnosis", [
+            _render_baseline_diagnosis(bundle),
+        ]),
+        ("rag-optimize", "3 · RAG Optimization (Bayesian search)", [
+            _render_bayes_search(bundle),
+        ]),
+        ("prompt-optimize", "4 · Prompt Optimization (DSPy)", [
+            _render_dspy_a_b(bundle),
+        ]),
+        # Comparison first ("did it work?"), then the residual analysis
+        # ("what's still broken at the final config?").
+        ("final-diagnosis", "5 · Final Evaluation & Diagnosis", [
+            _render_diagnosis_comparison(bundle),
+            _render_optimized_diagnosis(bundle),
+        ]),
+        ("run-cost", "6 · Run Cost & Extras", [
+            _render_run_cost(bundle),
             _render_extras(bundle),
-        ) if s
+        ]),
+    ]
+    parts_html: list[str] = []
+    toc_items: list[str] = []
+    for anchor, part_title, section_list in part_specs:
+        content = "\n".join(s for s in section_list if s)
+        if not content:
+            continue
+        toc_items.append(f'<li><a href="#{anchor}">{_esc(part_title)}</a></li>')
+        parts_html.append(
+            f'<section id="{anchor}">'
+            f'<h1 class="part">{_esc(part_title)}</h1>\n{content}</section>'
+        )
+    toc = (
+        '<nav class="toc"><div class="toc-title">Contents</div>'
+        f'<ol>{"".join(toc_items)}</ol></nav>'
     )
+    sections = toc + "\n" + "\n".join(parts_html)
     return _wrap(
         title or auto_title,
         sections,

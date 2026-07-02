@@ -1225,6 +1225,35 @@ def _run_one_mode(
     except Exception as exc:  # pragma: no cover - depends on judge LM
         logger.warning("deepeval supplement skipped: %s", exc)
 
+    # --- Best-of gate: recompute the composite on the SUPPLEMENTED
+    # score sets and only ship the DSPy prompt if it actually beats the
+    # baseline on the full objective. Prompt optimization can regress
+    # (small trainsets, noisy judge); when it does, the final config
+    # keeps the baseline (seed) prompt and every downstream consumer
+    # (final/ deliverables, diagnosis, report) follows the winner.
+    base_scores = dict(gen_result.extras.get("baseline_scores") or {})
+    opt_scores = dict(gen_result.extras.get("optimized_scores") or {})
+    comp_base = objective.evaluate(base_scores)
+    comp_opt = objective.evaluate(opt_scores)
+    prompt_winner = "optimized" if comp_opt["score"] >= comp_base["score"] else "baseline"
+    gen_result.extras["composite"] = {
+        "objective_spec": objective.to_dict(),
+        "baseline": comp_base,
+        "optimized": comp_opt,
+        "delta": comp_opt["score"] - comp_base["score"],
+        "winner": prompt_winner,
+    }
+    gen_result.extras["winner"] = prompt_winner
+    gen_result.extras["final_scores"] = (
+        opt_scores if prompt_winner == "optimized" else base_scores
+    )
+    if prompt_winner == "baseline":
+        logger.info(
+            "[DSPy/%s] optimized prompt did not beat the baseline "
+            "(composite %.3f < %.3f); final config keeps the seed prompt.",
+            mode, comp_opt["score"], comp_base["score"],
+        )
+
     _emit("mode_done", 1.0, f"{mode} mode complete")
     return {
         "bayes_search": joint_result.to_bayes_search_bundle(),
@@ -1234,10 +1263,14 @@ def _run_one_mode(
         # ``_dspy_before_after``.
         "dspy_a_b": gen_result.extras,
         "objective_spec": objective.to_dict(),
-        # The fully-optimized RAGConfig (BO winner params + DSPy winner
-        # prompt). In-memory object -- ``run_experiment`` pops it before
-        # the bundle is serialized and writes it to ``final/``.
-        "final_config": gen_result.best_config or winner_config,
+        # The fully-optimized RAGConfig (BO winner params + the winning
+        # prompt: DSPy's when it beat the baseline, the seed otherwise).
+        # In-memory object -- ``run_experiment`` pops it before the
+        # bundle is serialized and writes it to ``final/``.
+        "final_config": (
+            (gen_result.best_config if prompt_winner == "optimized" else winner_config)
+            or winner_config
+        ),
     }
 
 
@@ -1495,7 +1528,11 @@ def _diagnose_per_mode(results_by_mode: dict[str, dict]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for mode, payload in results_by_mode.items():
         dspy_ab = payload.get("dspy_a_b") or {}
-        final_scores = dict(dspy_ab.get("optimized_scores") or {})
+        # ``final_scores`` follows the best-of gate (baseline scores when
+        # DSPy didn't beat the seed prompt); fall back for old bundles.
+        final_scores = dict(
+            dspy_ab.get("final_scores") or dspy_ab.get("optimized_scores") or {}
+        )
         if not final_scores:
             # No DSPy stage ran -- the BO winner IS the final system.
             final_scores = _winner_scores(payload.get("bayes_search") or {})

@@ -213,18 +213,27 @@ class CompositeObjective:
 # hallucinates 30% of the time is unshippable.
 #
 # Why these specific numbers:
-# * ``faithfulness=1.5`` -- highest single weight. The #1 reason users
-#   abandon a RAG product is "it made up an answer". Half a point more
-#   than the next-tier metrics so it dominates ties.
-# * ``context_recall=1.0`` (with-GT only) and ``answer_correctness=1.0``
-#   (with-GT only) -- the two GT-grounded "did the system find AND say
-#   the right thing" signals; tied at 1.0 because both matter equally.
-# * ``answer_relevancy=1.0`` -- in no-GT mode this replaces correctness:
-#   we can't check if the answer is right, but we can check it actually
-#   answers the question.
-# * ``context_precision=0.3`` -- low weight on retrieval efficiency.
-#   Important for cost / latency but not directly user-visible; we
-#   accept a slightly noisy retrieval if it boosts recall.
+# * ``faithfulness=2.0`` -- highest single weight. The #1 reason users
+#   abandon a RAG product is "it made up an answer". A clear tier above
+#   everything else so groundedness dominates ties.
+# * ``answer_correctness=1.5`` (with-GT) / ``answer_relevancy=1.5``
+#   (no-GT) -- the primary "is the answer right / useful" signal for
+#   the mode. In no-GT mode relevancy replaces correctness: we can't
+#   check if the answer is right, but we can check it actually answers
+#   the question.
+# * ``context_recall=1.0`` (with-GT only) and ``context_precision=1.0``
+#   -- retrieval quality both ways: recall = "did we fetch the needed
+#   evidence", precision = "is what we fetched actually relevant".
+#   Precision matters in practice (noisy contexts mislead generation
+#   and waste tokens), so it sits in the same tier as recall.
+# * ``g_eval=0.5`` -- deepeval's G-Eval: a chain-of-thought LLM judge
+#   scoring overall answer quality against a rubric (grounded +
+#   complete + on-topic). Useful holistic tie-breaker but partially
+#   overlaps the ragas metrics, so it stays at half weight.
+# * ``hallucination=0.5``, ``bias=0.1``, ``toxicity=0.1`` -- safety
+#   supplements (lower-is-better; inverted in ``score()``). Usually
+#   saturated near 0, so low weights: they act as tie-breakers, and
+#   real safety enforcement belongs in constraints.
 # * ``faithfulness min=0.85`` -- hard floor (rendered in the default
 #   spec as a safety gate). Industry rule of thumb: keep claim
 #   groundedness above 0.80-0.85 for general-purpose RAG; stricter
@@ -274,15 +283,15 @@ def default_objective(mode: GTMode) -> CompositeObjective:
     if mode == "with_gt":
         return CompositeObjective(
             metrics={
-                "faithfulness": 1.5,
-                "answer_correctness": 1.0,
+                "faithfulness": 2.0,
+                "answer_correctness": 1.5,
                 "context_recall": 1.0,
+                "context_precision": 1.0,
                 "answer_relevancy": 0.5,
-                "context_precision": 0.3,
-                "g_eval": 1.0,
+                "g_eval": 0.5,
                 "hallucination": 0.5,
-                "bias": 0.25,
-                "toxicity": 0.25,
+                "bias": 0.1,
+                "toxicity": 0.1,
             },
             constraints={
                 "faithfulness": ("min", 0.85),
@@ -293,13 +302,13 @@ def default_objective(mode: GTMode) -> CompositeObjective:
     # of correctness as the "is the answer actually useful" signal.
     return CompositeObjective(
         metrics={
-            "faithfulness": 1.5,
-            "answer_relevancy": 1.0,
-            "context_precision": 0.3,
-            "g_eval": 1.0,
+            "faithfulness": 2.0,
+            "answer_relevancy": 1.5,
+            "context_precision": 1.0,
+            "g_eval": 0.5,
             "hallucination": 0.5,
-            "bias": 0.25,
-            "toxicity": 0.25,
+            "bias": 0.1,
+            "toxicity": 0.1,
         },
         constraints={
             "faithfulness": ("min", 0.85),
