@@ -246,38 +246,9 @@ def test_bo_optimizer_replays_completed_trials_into_sampler():
     assert len(replayed) == 1
 
 
-# ============================================================ CLI wiring
-def test_tune_has_resume_and_no_checkpoint_flags():
-    """``--resume`` and ``--no-checkpoint`` must appear on the tune
-    command so users can drive the new flow from the shell."""
-    from ragdx.cli import tune as cli_tune
-
-    params = set(inspect.signature(cli_tune).parameters)
-    assert "resume" in params
-    assert "no_checkpoint" in params
-
-
-def test_checkpoints_command_registered():
-    from ragdx.cli import app
-    names = {info.name or info.callback.__name__ for info in app.registered_commands}
-    assert "checkpoints" in names
-    assert "checkpoint-clean" in names
-
-
-def test_resume_with_unknown_id_raises_bad_parameter(tmp_path, monkeypatch):
-    """Loading a missing checkpoint must surface a typer.BadParameter
-    (not a raw FileNotFoundError) so the CLI prints a friendly message."""
-
-    # Point the default CheckpointStore root at an empty tmp_path.
+def test_resume_with_unknown_id_raises_file_not_found(tmp_path, monkeypatch):
+    """Loading a missing checkpoint must surface a clear FileNotFoundError."""
     monkeypatch.chdir(tmp_path)
-
     store = CheckpointStore(root=tmp_path)
-    with pytest.raises(FileNotFoundError, match="ragdx checkpoints"):
+    with pytest.raises(FileNotFoundError):
         store.load("ckpt_does_not_exist")
-    # And the CLI translates that to BadParameter (smoke test the
-    # try/except chain in cli/tune.py without invoking the full
-    # tune body, which requires a config etc.):
-    from ragdx.cli import tune as cli_tune
-    src = inspect.getsource(cli_tune)
-    assert "FileNotFoundError" in src
-    assert "typer.BadParameter" in src

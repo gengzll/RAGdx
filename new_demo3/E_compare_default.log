@@ -1,8 +1,0 @@
-Baseline: latest run ca1fba72987e (demo3-optimized)
-                       Metric comparison                        
-+--------------------------------------------------------------+
-| Metric            | Current | Baseline | Delta   | Direction |
-|-------------------+---------+----------+---------+-----------|
-| context_precision | 0.5556  | 0.5833   | -0.0278 | regressed |
-| faithfulness      | 1.0000  | 1.0000   | +0.0000 | unchanged |
-+--------------------------------------------------------------+

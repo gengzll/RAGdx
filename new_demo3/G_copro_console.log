@@ -1,49 +1,0 @@
-Inheriting from run d84762c9da44: experiment=corpus-chunking-search, 
-stage=corpus, max_trials=3, search_space={'parser': ['pymupdf_layout', 
-'unstructured', 'html_semantic'], 'document_structure': ['preserve_sections', 
-'flat_chunks'], 'chunk_size': [384, 512, 768, 1024], 'chunk_overlap': [32, 64, 
-96, 128], 'table_strategy': ['repeat_headers', 'table_to_text']}
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
-Key                     | Status     |  | 
-------------------------+------------+--+-
-embeddings.position_ids | UNEXPECTED |  | 
-
-[3mNotes:
-- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
-Checkpoint: ckpt_a308872b (resumable via `ragdx tune --resume ckpt_a308872b`)
-Running generation optimizer on 548 chunks x 3 records (GT mode: no_gt, budget:
-3)...
-2026-06-02 15:56:16 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (a) baseline run
-2026-06-02 15:56:55 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:04<00:37,  4.74s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:22<01:25, 12.19s/it]Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [00:40<01:29, 14.88s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:40<00:45,  9.18s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:45<00:30,  7.53s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [01:01<00:31, 10.50s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [01:03<00:15,  7.56s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:08<00:06,  6.94s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  9.36s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:23<00:00,  9.26s/it]
-2026-06-02 15:58:20 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] using ragas composite (context_precision + faithfulness + answer_relevancy) as inner-loop metric
-2026-06-02 15:58:20 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (b) MIPROv2 optimisation
-2026-06-02 15:58:20 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] running COPRO with kwargs={'breadth': 10, 'depth': 3, 'init_temperature': 1.4, 'track_stats': True}
-2026/06/02 15:58:28 INFO dspy.teleprompt.copro_optimizer: Iteration Depth: 1/3.
-2026/06/02 15:58:28 INFO dspy.teleprompt.copro_optimizer: At Depth 1/3, Evaluating Prompt Candidate #1/2 for Predictor 1 of 1.
-2026/06/02 16:00:00 INFO dspy.evaluate.evaluate: Average Metric: 6.982128859540433 / 3 (232.7%)
-2026/06/02 16:00:00 INFO dspy.teleprompt.copro_optimizer: At Depth 1/3, Evaluating Prompt Candidate #2/2 for Predictor 1 of 1.
-2026/06/02 16:01:24 INFO dspy.evaluate.evaluate: Average Metric: 7.312963552803762 / 3 (243.8%)
-2026/06/02 16:01:30 INFO dspy.teleprompt.copro_optimizer: Iteration Depth: 2/3.
-2026/06/02 16:01:30 INFO dspy.teleprompt.copro_optimizer: At Depth 2/3, Evaluating Prompt Candidate #1/1 for Predictor 1 of 1.
-2026/06/02 16:02:52 INFO dspy.evaluate.evaluate: Average Metric: 6.792633517985877 / 3 (226.4%)
-2026/06/02 16:03:00 INFO dspy.teleprompt.copro_optimizer: Iteration Depth: 3/3.
-2026/06/02 16:03:00 INFO dspy.teleprompt.copro_optimizer: At Depth 3/3, Evaluating Prompt Candidate #1/1 for Predictor 1 of 1.
-2026/06/02 16:05:25 INFO dspy.evaluate.evaluate: Average Metric: 6.493162328525979 / 3 (216.4%)
-2026-06-02 16:05:25 INFO    ragdx.optim.stages.generation :: [DSPy/no_gt] (c) optimised re-run
-2026-06-02 16:05:52 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:05<00:47,  5.96s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:25<01:36, 13.79s/it]Exception raised in Job[3]: TimeoutError()
-Evaluating:  33%|¨€¨€¨€¨†      | 3/9 [03:25<08:58, 89.69s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [03:29<04:40, 56.04s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [03:54<02:58, 44.67s/it]Exception raised in Job[0]: TimeoutError()
-Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [03:59<01:33, 31.18s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [04:04<00:45, 22.65s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [04:26<00:22, 22.35s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [04:33<00:00, 17.75s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [04:33<00:00, 30.41s/it]
-Wrote new_demo3\G_copro_tune.json
-Wrote optimized config new_demo3\rag_config.copro_winner.yaml (credentials 
-scrubbed)
-Best composite: 1.667
-Best params: {'system_instruction': 'You are an ESG sustainability analyst 
-reviewing ASMPT\'s 2024 report.\nQuote exact wording from the supplied context 
-when possible. If the\nanswer is not in the context, reply "Not in report".'}
-2026-06-02 16:10:26 INFO    ragdx.storage.run_store :: Saved run 7083a760fdfb name=demo3-generation-copro
-Saved run: 7083a760fdfb (name: demo3-generation-copro)
-Next: `ragdx runs` / `ragdx dashboard` / `ragdx export-report 7083a760fdfb 
-report.md`.

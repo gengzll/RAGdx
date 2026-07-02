@@ -1,143 +1,109 @@
-![Alt text](docs/logo.png)
+![ragdx](docs/logo.png)
 
-`ragdx` is a Python workbench for **RAG evaluation, diagnosis, and
-optimization**. It sits above an existing RAG application as a
-quality + optimization control plane rather than replacing your
-runtime framework, retriever stack, or orchestration layer.
+`ragdx` runs an **end-to-end RAG optimization experiment** on your own
+documents and shows you the result. Point it at a PDF (optionally with a
+ground-truth question set), and it will:
 
-It pairs (a) deterministic rule-based + LLM-augmented diagnosis on
-top of an explicit causal graph with (b) stage-targeted Bayesian
-search + DSPy prompt evolution, plus (c) per-experiment workspaces
-and rendered HTML reports that close the optimize-and-compare loop.
+1. **Load & chunk** the document and resolve an evaluation question set —
+   either from your ground truth, or synthesized from the corpus.
+2. **Search** RAG configurations (chunk size / overlap / top-k) with
+   Bayesian optimization.
+3. **Optimize the prompt** at the winning config with DSPy (before/after).
+4. **Evaluate** everything with a composite objective (Ragas / DeepEval)
+   and **diagnose** what's still weak.
+5. **Report**: a self-contained HTML report you can view and download,
+   plus the ship-ready optimized `RAGConfig` + prompt.
+
+Two ground-truth modes, chosen automatically:
+
+- **with-GT** — you provide questions + reference answers (Excel/CSV or
+  JSONL); metrics include answer correctness.
+- **no-GT** — questions are synthesized from the document; metrics use
+  reference-free signals (faithfulness, relevancy, …).
 
 ## Install
 
 ```bash
-pip install -e ".[experiment]"     # everything for an end-to-end run
-# or pick extras à la carte:
-pip install -e ".[langchain,bo,ragas,deepeval,dspy,openai]"
+pip install -e ".[experiment]"     # recommended: everything for a run + the UI
 ```
 
-API keys are read from env vars in this fallback order:
-`ZHIPU_API_KEY` → `OPENAI_API_KEY` (other providers documented via
-`ragdx providers list`).
+API keys are read from the environment in this fallback order:
+`ZHIPU_API_KEY` → `OPENAI_API_KEY`. The defaults target Zhipu GLM
+(`openai/glm-4-flash`); override the model / base URL in the UI or via
+CLI flags for OpenAI, Anthropic, etc.
 
-## 60-second quickstart (per-experiment workspace)
-
-The recommended way to run anything is through a **workspace** — a
-single folder under `workspaces/<name>/` that owns your config,
-questions, and every artifact every command produces:
+## Quickstart — the studio (recommended)
 
 ```bash
-# 1. Create the workspace + drop in your config + eval questions
-ragdx workspace init my-exp --config rag.yaml --questions q.jsonl
-
-# 2. Score the baseline (uses the workspace's config + questions)
-ragdx workspace eval my-exp
-
-# 3. Diagnose it -- pick rule-based, LLM, or "both" for synthesis
-ragdx workspace diagnose my-exp                 # rule-based only
-ragdx workspace diagnose my-exp --use-llm       # LLM-refined
-ragdx workspace diagnose my-exp --use-both      # rule + LLM + synthesised
-
-# 4. Tune what the diagnosis pointed at
-ragdx workspace tune-rag my-exp                 # chunker / retriever / joint
-ragdx workspace tune-prompt my-exp              # DSPy prompt + few-shot demos
-
-# 5. Render the HTML report (baseline diagnosis → optimization → comparison)
-ragdx workspace report my-exp
-
-# 6. Compare multiple workspaces side-by-side
-ragdx workspace compare my-exp my-exp-v2 -o compare.html
+ragdx ui
 ```
 
-The legacy `ragdx evaluate / diagnose / tune` commands keep working
-unchanged — workspaces are an additive convenience.
+This opens the Streamlit studio in your browser:
 
-## What you get
+1. **Upload** a PDF. Optionally upload an Excel/CSV ground-truth file —
+   columns named `question` / `ground_truth` (and optional `contexts`)
+   are auto-detected; if they're named differently you map them in the UI.
+2. Set the model / API key and trial budget in the sidebar, then click
+   **Run experiment**.
+3. Watch **live progress** (Bayesian search → prompt optimization →
+   evaluation) with a running log.
+4. When it finishes, the **report renders inline** and you can download
+   the HTML report, the raw `result.json` bundle, and the optimized
+   config + prompt.
 
-| Command | What it does |
-|---|---|
-| `ragdx workspace ...` | Per-experiment workspace (config + history + artifacts in one folder) |
-| `ragdx evaluate` | Score a `RAGConfig` against an eval suite (`--evaluator {ragas,deepeval}`) |
-| `ragdx diagnose` | Rule-based root-cause + optional LLM refinement, schema with `rule_based` / `llm_based` / `synthesis` layers |
-| `ragdx tune --stage X` | Stage-targeted Bayesian search (chunking / retrieval / joint) or DSPy prompt tuning (generation, optimizers: `mipro / copro / bootstrap_fewshot / gepa`) |
-| `ragdx experiment` | One-shot end-to-end (corpus → BO → DSPy → diagnosis bundle) |
-| `ragdx experiment-report` | Render any bundle as a self-contained HTML report |
-| `ragdx providers list/template <name>` | LLM provider catalog (OpenAI, Anthropic, Zhipu, Moonshot, DeepSeek, Qwen, Ollama, vLLM, Groq, Together) |
-| `ragdx dashboard` | Streamlit dashboard over the local RunStore |
+## Headless CLI
 
-Diagnosis is layered:
-- **rule-based** — deterministic causal-graph reasoning (always run)
-- **LLM-refined** — `--use-llm` adds a CoT view
-- **synthesis** — `--use-both` adds an LLM-merged final answer
-- Reports show all populated layers side-by-side with an `(active)` marker
+Same pipeline without the UI:
 
-Evaluation backends are pluggable: `--evaluator ragas` (default) or
-`--evaluator deepeval` (G-Eval-backed; resists `faithfulness`
-saturation on permissive judges). DSPy inner-loop metrics include
-`embed_rubric` (cheap, no saturation) and `geval` (deepeval) on top
-of the classic `ragas` / `llm_judge` / `token_f1`.
+```bash
+# no-GT: questions synthesized from the PDF
+ragdx experiment path/to/report.pdf --no-gt --bo-trials 8 --n-questions 5
 
-## Reports
+# with-GT: labelled questions in a JSONL ({question, ground_truth, contexts?})
+ragdx experiment path/to/report.pdf --has-gt \
+    --questions data/labelled_qa.jsonl --mode with_gt
 
-`ragdx workspace report <name>` writes a self-contained HTML
-covering:
+# render / re-render any bundle as a standalone HTML report
+ragdx experiment-report .ragdx_experiment/result.json -o report.html
+```
 
-- baseline diagnosis with per-source layers, causal graph SVG,
-  posterior table, hypothesis evidence with anchor links back to the
-  metric / signal it references
-- Bayesian search trials + per-record metric breakdowns (not just
-  trial means)
-- DSPy A/B with word-level answer diff (red strikethrough / green
-  highlight) and optimizer evolution timeline
-- baseline-vs-optimized comparison: resolved / persisted / emerged
-  hypotheses, posterior shifts, metric deltas
-- optimized diagnosis (what's still broken)
-- run cost (wall time, mean per-question latency)
-
-## Documentation
-
-Full details live under [`docs/`](docs/):
-
-- [`12-evaluate-tune-workflow.md`](docs/12-evaluate-tune-workflow.md) — the recommended starting point: hands-on walkthrough of `evaluate → diagnose → tune`
-- [`01-overview.md`](docs/01-overview.md) — scope, design goals, lifecycle
-- [`02-architecture.md`](docs/02-architecture.md) — component layout
-- [`03-data-models.md`](docs/03-data-models.md) — `EvaluationResult` / `DiagnosisReport` / trace schemas
-- [`04-workflows.md`](docs/04-workflows.md) — operational workflows
-- [`05-cli-and-dashboard.md`](docs/05-cli-and-dashboard.md) — every CLI command + the dashboard
-- [`06-configuration.md`](docs/06-configuration.md) — env vars, extras, runners
-- [`07-optimization-and-diagnosis.md`](docs/07-optimization-and-diagnosis.md) — metrics, causal graph, optimization strategies
-- [`08-runtime-integrations.md`](docs/08-runtime-integrations.md) — DSPy, AutoRAG, LangChain, LlamaIndex
-- [`09-extension-guide.md`](docs/09-extension-guide.md) — adding metrics, tools, runtimes
-- [`10-examples.md`](docs/10-examples.md) — recipes
-- [`11-limitations-and-roadmap.md`](docs/11-limitations-and-roadmap.md) — what doesn't work yet
-- `new_demo3/` — fully-executed walkthrough (artifacts + console logs preserved)
+`ragdx experiment` writes a `schema_version: 1` bundle to
+`--output-dir/result.json` plus a `final/` folder (optimized
+`rag_config.yaml` + `prompt.md`). `ragdx experiment-dashboard` opens the
+Streamlit viewer on an existing bundle.
 
 ## Programmatic API
 
-The CLI is a thin wrapper. The same eval + diagnose + plan calls in
-Python:
+```python
+from ragdx import run_experiment
+
+result = run_experiment(
+    corpus="report.pdf",
+    has_gt=False,               # no-GT: synthesize questions from the PDF
+    n_bo_trials=8,
+    api_key="<your-key>",
+    progress_callback=lambda ev: print(ev["pct"], ev["stage"]),
+)
+print(result.bundle["bayes_search"]["no_gt"]["best_params"])
+```
+
+For with-GT runs, pass `questions_path=` (a JSONL). To turn an
+Excel/CSV into that JSONL, use the loader the studio uses:
 
 ```python
-from ragdx import (
-    UnifiedEvaluator,        # ragas / ragchecker / embedding adapters
-    RAGDiagnosisEngine,      # rule-based + optional LLM
-    OptimizationPlanner,     # diagnosis → optimization plan
-    OptimizationExecutor,    # simulate / prepare / execute
-    RunStore,                # local persistence
-    run_experiment,          # end-to-end shortcut
-)
+from ragdx.loaders import load_gt_table, records_from_table, write_questions_jsonl
+
+df = load_gt_table("labelled_qa.xlsx")
+records = records_from_table(df)                 # auto-detects columns
+write_questions_jsonl(records, "questions.jsonl")
 ```
 
 ## Testing
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest -q
+ruff check src tests
 ```
-
-CI matrix: Python 3.10 / 3.11 / 3.12 on Ubuntu. `ruff check src tests`
-must pass; `mypy src/ragdx` runs informational.
 
 ## License
 

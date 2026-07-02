@@ -283,6 +283,28 @@ def experiment_dashboard(
     subprocess.run(cmd, check=False)
 
 
+@app.command("ui")
+def ui(
+    port: int = typer.Option(
+        8501, "--port", help="Streamlit server port.",
+    ),
+):
+    """Launch the ragdx studio: upload a PDF (+ optional Excel/CSV
+    ground-truth), run the end-to-end experiment with live progress,
+    then view and download the report.
+
+    This is the recommended entry point for interactive use::
+
+        ragdx ui
+    """
+    script = Path(__file__).resolve().parents[1] / "ui" / "app.py"
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", str(script),
+        "--server.port", str(port),
+    ]
+    subprocess.run(cmd, check=False)
+
+
 @app.command("experiment-report")
 def experiment_report(
     bundle: str = typer.Argument(
@@ -321,4 +343,4 @@ def experiment_report(
     print("  PDF export: Ctrl-P in the browser, choose 'Save as PDF'.")
 
 
-__all__ = ["experiment", "experiment_dashboard", "experiment_report"]
+__all__ = ["experiment", "experiment_dashboard", "experiment_report", "ui"]

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ragdx"
 version = "0.9.0"
-description = "RAG evaluation, diagnosis, and optimization workbench integrating Ragas, RAGChecker, DSPy, AutoRAG, LangChain, and LlamaIndex."
+description = "End-to-end RAG optimization experiment: Bayesian RAG-config search + DSPy prompt tuning, evaluated with Ragas/DeepEval, with a Streamlit studio (upload PDF/ground-truth → live progress → report)."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -72,18 +72,18 @@ langchain = [
   "langchain-openai>=0.2,<1",
 ]
 llamaindex = ["llama-index-core>=0.12,<1"]
-bo = ["ax-platform>=1.1,<2", "botorch>=0.17,<1", "torch>=2.2,<3"]
 ragas = ["ragas>=0.3,<0.4"]
 deepeval = ["deepeval>=2.0,<4", "langchain-openai>=0.2,<1"]
 ragchecker = ["ragchecker>=0.1,<0.2"]
 dspy = ["dspy>=2.5.6,<4"]
-autorag = ["AutoRAG>=0.3,<0.4"]
-# End-to-end ``ragdx experiment`` pipeline: PDF loader + HF datasets
-# + question synthesis + ragas eval + DSPy A/B. Composes the langchain
-# / ragas / dspy extras with the loader-specific deps.
+# End-to-end ``ragdx experiment`` pipeline + Streamlit studio: PDF loader
+# + Excel/CSV ground-truth + HF datasets + question synthesis + ragas eval
+# + DSPy A/B. Composes the langchain / ragas / dspy extras with the
+# loader-specific deps. This is the recommended install for ragdx.
 experiment = [
   "pypdf>=4.0,<7",
   "datasets>=2.18,<4",
+  "openpyxl>=3.1,<4",
   "langchain>=0.3,<2",
   "langchain-core>=0.3,<2",
   "langchain-community>=0.3,<1",
@@ -108,7 +108,6 @@ all = [
   "ragas>=0.3,<0.4",
   "ragchecker>=0.1,<0.2",
   "dspy>=2.5.6,<4",
-  "AutoRAG>=0.3,<0.4",
   "langchain>=0.3,<2",
   "langchain-core>=0.3,<2",
   "langchain-community>=0.3,<1",
@@ -117,11 +116,9 @@ all = [
   "llama-index-core>=0.12,<1",
   "pypdf>=4.0,<7",
   "datasets>=2.18,<4",
+  "openpyxl>=3.1,<4",
   "sentence-transformers>=2.7,<6",
   "faiss-cpu>=1.7,<2",
-  "ax-platform>=1.1,<2",
-  "botorch>=0.17,<1",
-  "torch>=2.2,<3",
 ]
 
 [project.urls]
@@ -132,8 +129,7 @@ Source = "https://github.com/ragdx/ragdx"
 
 [project.scripts]
 ragdx = "ragdx.cli:main"
-ragdx-dashboard = "ragdx.ui.dashboard:main"
-ragdx-demo = "ragdx.demo:main"
+ragdx-ui = "ragdx.ui.app:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

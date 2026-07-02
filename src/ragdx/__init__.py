@@ -7,10 +7,10 @@ write::
         UnifiedEvaluator,
         RAGDiagnosisEngine,
         OptimizationPlanner,
-        OptimizationExecutor,
         RunStore,
         get_settings,
         get_llm_callable,
+        run_experiment,
     )
 
 For provider-specific or lower-level APIs (custom LLM providers, engines,
@@ -111,7 +111,6 @@ from ragdx.llm import (
     list_providers,
     register_provider,
 )
-from ragdx.optim.executor import OptimizationExecutor
 from ragdx.optim.planner import OptimizationPlanner
 from ragdx.schemas.models import (
     CausalSignal,
@@ -164,7 +163,6 @@ __all__ = [  # noqa: RUF022 — grouped by category, not alphabetical
     "RAGDiagnosisEngine",
     # optim
     "OptimizationPlanner",
-    "OptimizationExecutor",
     # experiments (one-call end-to-end driver)
     "run_experiment",
     "ExperimentConfig",

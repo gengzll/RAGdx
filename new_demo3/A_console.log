@@ -1,21 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-C:\Users\gengz\anaconda3\Lib\site-packages\huggingface_hub\file_download.py:129: UserWarning: `huggingface_hub` cache-system uses symlinks by default to efficiently store duplicated files but your machine does not support them in C:\Users\gengz\.cache\huggingface\hub\models--sentence-transformers--all-MiniLM-L6-v2. Caching files will still work but in a degraded version that might require more space on your disk. This warning can be disabled by setting the `HF_HUB_DISABLE_SYMLINKS_WARNING` environment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.
-To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
-  warnings.warn(message)
-[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
-Key                     | Status     |  | 
-------------------------+------------+--+-
-embeddings.position_ids | UNEXPECTED |  | 
-
-[3mNotes:
-- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
-2026-06-01 16:09:20 INFO    ragdx.workflows.evaluate :: evaluate: 548 chunks, 3 records, model=openai/glm-4-flash
-2026-06-01 16:09:33 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 3 records with 3 metrics
-Evaluating:   0%|          | 0/9 [00:00<?, ?it/s]Evaluating:  11%|¨€         | 1/9 [00:06<00:53,  6.72s/it]Evaluating:  22%|¨€¨€¨‡       | 2/9 [00:25<01:38, 14.04s/it]Evaluating:  44%|¨€¨€¨€¨€¨…     | 4/9 [00:30<00:33,  6.64s/it]Evaluating:  56%|¨€¨€¨€¨€¨€¨„    | 5/9 [00:45<00:36,  9.22s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 6/9 [00:54<00:27,  9.11s/it]Evaluating:  78%|¨€¨€¨€¨€¨€¨€¨€¨‚  | 7/9 [00:58<00:15,  7.66s/it]Evaluating:  89%|¨€¨€¨€¨€¨€¨€¨€¨€¨ | 8/9 [01:02<00:06,  6.58s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:10<00:00,  7.03s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 9/9 [01:10<00:00,  7.86s/it]
-Wrote new_demo3\A_baseline.json
-  Retrieval: {"context_precision": 0.5556}
-  Generation: {"faithfulness": 1.0}
-  E2E: {}
-
-Next: `ragdx diagnose <out>` / `ragdx plan <out>` / `ragdx compare <out> 
-<baseline>` (or re-run with --save to persist to the RunStore).

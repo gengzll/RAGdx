@@ -1,876 +1,0 @@
-D:\work\RAGdx-main\RAGdx-main\examples\demo_optimize_gt_modes.py:263: DeprecationWarning: LangchainLLMWrapper is deprecated and will be removed in a future version. Use llm_factory instead: from openai import OpenAI; from ragas.llms import llm_factory; llm = llm_factory('gpt-4o-mini', client=OpenAI(api_key='...'))
-  return LangchainLLMWrapper(chat)
-D:\work\RAGdx-main\RAGdx-main\examples\demo_optimize_gt_modes.py:282: DeprecationWarning: LangchainEmbeddingsWrapper is deprecated and will be removed in a future version. Use the modern embedding providers instead: embedding_factory('openai', model='text-embedding-3-small', client=openai_client) or from ragas.embeddings import OpenAIEmbeddings, GoogleEmbeddings, HuggingFaceEmbeddings
-  return LangchainEmbeddingsWrapper(hf)
-2026-05-25 15:09:40 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 4 metrics
-Loading amnesty_qa[:5] corpus + records (may download on first run) ...
-  corpus chunks: 15; records: 5
-
-==============================================================================
-STEP 1 / 6 -- Corpus + data diagnostics
-==============================================================================
-  Corpus: explodinggradients/amnesty_qa (english_v3, eval[:5])
-  5 questions, 15 corpus chunks total.
-  Data diagnostics (with-GT):
-    has_ground_truth     True
-    has_answers          False
-    has_contexts         False
-    gt_mode              with_gt
-
-  Data diagnostics (no-GT):
-    has_ground_truth     False
-    has_answers          False
-    has_contexts         False
-    gt_mode              no_gt
-
-==============================================================================
-STEP 2 / 6 -- AutoRAG specs (descriptive, GT-mode contrast)
-==============================================================================
-
-  AutoRAG spec (with-GT):
-    gt_mode              with_gt
-    objective_metric     answer_correctness
-    metrics              answer_accuracy, answer_correctness, answer_relevancy, claim_recall, context_entity_recall, context_precision, context_recall, context_utilization, faithfulness, hallucination, noise_sensitivity, recall, response_relevancy, self_knowledge
-    requires_gt          True
-
-  AutoRAG spec (no-GT):
-    gt_mode              no_gt
-    objective_metric     faithfulness
-    metrics              answer_relevancy, context_precision, faithfulness, hallucination, noise_sensitivity, response_relevancy, self_knowledge
-    requires_gt          False
-
-==============================================================================
-STEP 3 / 6 -- Canonical metric set by GT mode (static)
-==============================================================================
-  Step 3 is purely declarative: gt_mode determines which metrics
-  ragdx will let through. Adapters call validate_metrics_for_mode()
-  on every explicit request and RAISE on mismatch.
-
-  Canonical metric set for gt_mode='with_gt' (with-GT):
-    14 metrics: ['answer_accuracy', 'answer_correctness', 'answer_relevancy', 'claim_recall', 'context_entity_recall', 'context_precision', 'context_recall', 'context_utilization', 'faithfulness', 'hallucination', 'noise_sensitivity', 'recall', 'response_relevancy', 'self_knowledge']
-
-  Canonical metric set for gt_mode='no_gt' (no-GT):
-    7 metrics: ['answer_relevancy', 'context_precision', 'faithfulness', 'hallucination', 'noise_sensitivity', 'response_relevancy', 'self_knowledge']
-
-  ragas metrics (with-GT path): ['faithfulness', 'answer_relevancy', 'context_precision', 'context_recall']
-  ragas metrics (no-GT path):   ['faithfulness', 'answer_relevancy', 'context_precision']
-
-==============================================================================
-STEP 4 / 6 -- AutoRAG REAL grid search in BOTH GT modes
-==============================================================================
-  with-GT: objective = context_recall (the GT-aware retrieval signal)
-  no-GT:   objective = faithfulness  (ref-free, universally applicable)
-
-  Building shared embeddings + vector store [with-GT] ...
-
-  [AutoRAG [with-GT]] top_k=1
-    Q1: retrieved 1 ctxs, answer='The global implications include fear of anti-abortion legislative attacks in oth'
-    Q2: retrieved 1 ctxs, answer='Major oil and gas producers and coal mining companies are the main contributors '
-    Q3: retrieved 1 ctxs, answer='The context does not provide specific names of private companies in the Americas'
-    Q4: retrieved 1 ctxs, answer='Amnesty International urged its supporters to sign petitions, write letters to g'
-    Q5: retrieved 1 ctxs, answer="Amnesty International's recommendations to the Special Rapporteur often include "
-    evaluating with ragas ...
-Evaluating:   0%|          | 0/20 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   5%|¨„         | 1/20 [00:02<00:46,  2.43s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  10%|¨€         | 2/20 [00:02<00:21,  1.22s/it]Evaluating:  20%|¨€¨€        | 4/20 [00:02<00:07,  2.04it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  30%|¨€¨€¨€       | 6/20 [00:03<00:04,  3.17it/s]Evaluating:  35%|¨€¨€¨€¨„      | 7/20 [00:04<00:06,  1.96it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  40%|¨€¨€¨€¨€      | 8/20 [00:04<00:05,  2.06it/s]Evaluating:  50%|¨€¨€¨€¨€¨€     | 10/20 [00:05<00:04,  2.03it/s]Evaluating:  55%|¨€¨€¨€¨€¨€¨„    | 11/20 [00:06<00:04,  1.89it/s]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 12/20 [00:07<00:04,  1.75it/s]Evaluating:  65%|¨€¨€¨€¨€¨€¨€¨„   | 13/20 [00:10<00:09,  1.43s/it]Evaluating:  70%|¨€¨€¨€¨€¨€¨€¨€   | 14/20 [00:13<00:10,  1.73s/it]Evaluating:  75%|¨€¨€¨€¨€¨€¨€¨€¨„  | 15/20 [00:15<00:09,  1.86s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 16/20 [00:15<00:05,  1.38s/it]Evaluating:  85%|¨€¨€¨€¨€¨€¨€¨€¨€¨„ | 17/20 [00:17<00:04,  1.43s/it]Evaluating:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 18/20 [00:20<00:03,  1.82s/it]Evaluating:  95%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨„| 19/20 [00:20<00:01,  1.45s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:31<00:00,  4.29s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:31<00:00,  1.58s/it]
-2026-05-25 15:10:27 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 4 metrics
-      scores: {'context_precision': 0.79999999992, 'context_recall': 0.6222222222222222, 'faithfulness': 1.0}
-
-  [AutoRAG [with-GT]] top_k=3
-    Q1: retrieved 3 ctxs, answer='The global implications include fear of anti-abortion legislative attacks in oth'
-    Q2: retrieved 3 ctxs, answer='Major oil and gas producers and coal mining companies are the main contributors '
-    Q3: retrieved 3 ctxs, answer='ExxonMobil, Chevron, and Peabody.'
-    Q4: retrieved 3 ctxs, answer='Amnesty International urged its supporters to sign petitions, write letters to g'
-    Q5: retrieved 3 ctxs, answer='Amnesty International recommends greater accountability for violence and harassm'
-    evaluating with ragas ...
-Evaluating:   0%|          | 0/20 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   5%|¨„         | 1/20 [00:03<01:11,  3.77s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  15%|¨€¨„        | 3/20 [00:04<00:21,  1.25s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 4/20 [00:05<00:16,  1.05s/it]Evaluating:  25%|¨€¨€¨„       | 5/20 [00:06<00:16,  1.13s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  30%|¨€¨€¨€       | 6/20 [00:06<00:12,  1.17it/s]Evaluating:  35%|¨€¨€¨€¨„      | 7/20 [00:08<00:14,  1.08s/it]Evaluating:  40%|¨€¨€¨€¨€      | 8/20 [00:17<00:42,  3.56s/it]Evaluating:  45%|¨€¨€¨€¨€¨„     | 9/20 [00:18<00:31,  2.82s/it]Evaluating:  50%|¨€¨€¨€¨€¨€     | 10/20 [00:18<00:20,  2.07s/it]Evaluating:  55%|¨€¨€¨€¨€¨€¨„    | 11/20 [00:20<00:17,  1.98s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 12/20 [00:20<00:11,  1.45s/it]Evaluating:  65%|¨€¨€¨€¨€¨€¨€¨„   | 13/20 [00:21<00:08,  1.25s/it]Evaluating:  70%|¨€¨€¨€¨€¨€¨€¨€   | 14/20 [00:23<00:08,  1.40s/it]Evaluating:  75%|¨€¨€¨€¨€¨€¨€¨€¨„  | 15/20 [00:25<00:08,  1.74s/it]Evaluating:  85%|¨€¨€¨€¨€¨€¨€¨€¨€¨„ | 17/20 [00:31<00:06,  2.16s/it]Evaluating:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 18/20 [00:35<00:05,  2.74s/it]Evaluating:  95%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨„| 19/20 [00:37<00:02,  2.39s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:42<00:00,  3.06s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:42<00:00,  2.10s/it]
-2026-05-25 15:11:29 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 4 metrics
-      scores: {'context_precision': 0.8833333332991666, 'context_recall': 0.8666666666666666, 'faithfulness': 1.0}
-
-  [AutoRAG [with-GT]] top_k=6
-    Q1: retrieved 6 ctxs, answer='The global implications of the USA Supreme Court ruling on abortion include fear'
-    Q2: retrieved 6 ctxs, answer='The main contributors to GHG emissions and their role in global warming, accordi'
-    Q3: retrieved 6 ctxs, answer='ExxonMobil, Chevron, and Peabody.'
-    Q4: retrieved 6 ctxs, answer='Amnesty International urged its supporters to sign petitions, write letters to g'
-    Q5: retrieved 6 ctxs, answer='Amnesty International recommends greater accountability for violence and harassm'
-    evaluating with ragas ...
-Evaluating:   0%|          | 0/20 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   5%|¨„         | 1/20 [00:01<00:37,  1.97s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  10%|¨€         | 2/20 [00:02<00:20,  1.14s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  15%|¨€¨„        | 3/20 [00:03<00:17,  1.02s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 4/20 [00:03<00:11,  1.36it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  25%|¨€¨€¨„       | 5/20 [00:06<00:20,  1.38s/it]Evaluating:  30%|¨€¨€¨€       | 6/20 [00:08<00:25,  1.79s/it]Evaluating:  35%|¨€¨€¨€¨„      | 7/20 [00:09<00:19,  1.51s/it]Evaluating:  40%|¨€¨€¨€¨€      | 8/20 [00:15<00:36,  3.01s/it]Evaluating:  45%|¨€¨€¨€¨€¨„     | 9/20 [00:16<00:25,  2.30s/it]Evaluating:  50%|¨€¨€¨€¨€¨€     | 10/20 [00:19<00:25,  2.56s/it]Evaluating:  55%|¨€¨€¨€¨€¨€¨„    | 11/20 [00:22<00:22,  2.54s/it]Evaluating:  65%|¨€¨€¨€¨€¨€¨€¨„   | 13/20 [00:22<00:10,  1.50s/it]Evaluating:  70%|¨€¨€¨€¨€¨€¨€¨€   | 14/20 [00:23<00:07,  1.20s/it]Evaluating:  75%|¨€¨€¨€¨€¨€¨€¨€¨„  | 15/20 [00:23<00:05,  1.04s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 16/20 [00:25<00:04,  1.16s/it]Evaluating:  85%|¨€¨€¨€¨€¨€¨€¨€¨€¨„ | 17/20 [00:25<00:02,  1.11it/s]Evaluating:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 18/20 [00:28<00:02,  1.46s/it]Evaluating:  95%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨„| 19/20 [00:29<00:01,  1.26s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:33<00:00,  2.22s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:33<00:00,  1.69s/it]
-2026-05-25 15:12:28 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
-      scores: {'context_precision': 0.9277777777501852, 'context_recall': 1.0, 'faithfulness': 1.0}
-
-  -> Best config [with-GT]: top_k=6 (context_recall=1.000)
-
-  Building shared embeddings + vector store [no-GT] ...
-
-  [AutoRAG [no-GT]] top_k=1
-    Q1: retrieved 1 ctxs, answer='The global implications include fear of anti-abortion legislative attacks in oth'
-    Q2: retrieved 1 ctxs, answer='Major oil and gas producers and coal mining companies are the main contributors '
-    Q3: retrieved 1 ctxs, answer='The context does not provide specific names of private companies in the Americas'
-    Q4: retrieved 1 ctxs, answer='Amnesty International urged its supporters to sign petitions, write letters to g'
-    Q5: retrieved 1 ctxs, answer="Amnesty International's recommendations to the Special Rapporteur often include "
-    evaluating with ragas ...
-Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:36,  2.58s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:14,  1.13s/it]Evaluating:  20%|¨€¨€        | 3/15 [00:03<00:09,  1.21it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:07,  1.56it/s]Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:04,  2.23it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:04<00:03,  2.31it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:04<00:03,  2.27it/s]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:04<00:03,  2.29it/s]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:05<00:03,  1.82it/s]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:06<00:02,  1.84it/s]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:11<00:08,  2.03s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:14<00:07,  2.38s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:16<00:04,  2.21s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:18<00:00,  1.53s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:18<00:00,  1.21s/it]
-2026-05-25 15:12:59 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
-      scores: {'context_precision': 0.79999999992, 'faithfulness': 1.0}
-
-  [AutoRAG [no-GT]] top_k=3
-    Q1: retrieved 3 ctxs, answer='The global implications include fear of anti-abortion legislative attacks in oth'
-    Q2: retrieved 3 ctxs, answer='Major oil and gas producers and coal mining companies are the main contributors '
-    Q3: retrieved 3 ctxs, answer='ExxonMobil, Chevron, and Peabody.'
-    Q4: retrieved 3 ctxs, answer='Amnesty International urged its supporters to sign petitions, write letters to g'
-    Q5: retrieved 3 ctxs, answer='Amnesty International recommends greater accountability for violence and harassm'
-    evaluating with ragas ...
-Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:32,  2.33s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:14,  1.09s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 3/15 [00:03<00:13,  1.13s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:04<00:06,  1.55it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:11<00:22,  2.55s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:11<00:15,  1.91s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:13<00:12,  1.73s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:13<00:07,  1.25s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:13<00:05,  1.04s/it]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:16<00:06,  1.56s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:21<00:07,  2.52s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:29<00:03,  3.29s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:30<00:00,  2.70s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:30<00:00,  2.05s/it]
-2026-05-25 15:13:48 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
-      scores: {'context_precision': 0.83333333328, 'faithfulness': 1.0}
-
-  [AutoRAG [no-GT]] top_k=6
-    Q1: retrieved 6 ctxs, answer='The global implications of the USA Supreme Court ruling on abortion include fear'
-    Q2: retrieved 6 ctxs, answer='The main contributors to GHG emissions and their role in global warming, accordi'
-    Q3: retrieved 6 ctxs, answer='ExxonMobil, Chevron, and Peabody.'
-    Q4: retrieved 6 ctxs, answer='Amnesty International urged its supporters to sign petitions, write letters to g'
-    Q5: retrieved 6 ctxs, answer='Amnesty International recommends greater accountability for violence and harassm'
-    evaluating with ragas ...
-Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:32,  2.29s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  13%|¨€¨†        | 2/15 [00:02<00:15,  1.16s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:06,  1.82it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:03<00:04,  2.40it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:17<00:41,  4.57s/it]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:20<00:32,  4.06s/it]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:20<00:21,  3.06s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:22<00:15,  2.62s/it]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:23<00:11,  2.23s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:24<00:03,  1.29s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:24<00:02,  1.10s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:25<00:00,  1.06it/s]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:25<00:00,  1.18it/s]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:25<00:00,  1.72s/it]
-2026-05-25 15:15:05 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 4 metrics
-      scores: {'context_precision': 0.7599999999674445, 'faithfulness': 1.0}
-
-  -> Best config [no-GT]: top_k=1 (faithfulness=1.000)
-
-==============================================================================
-STEP 5 / 6 -- DSPy before/after in BOTH GT modes
-==============================================================================
-  Best top_k -- with-GT: 6, no-GT: 1
-
-  Preparing records with top_k=6 for with-GT DSPy ...
-
-  DSPy before/after [with-GT]
-
-  (a) Running BASELINE (default RAG Signature) ...
-       evaluating baseline answers with ragas ...
-Evaluating:   0%|          | 0/20 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   5%|¨„         | 1/20 [00:02<00:46,  2.47s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  15%|¨€¨„        | 3/20 [00:03<00:15,  1.11it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 4/20 [00:03<00:11,  1.34it/s]Evaluating:  25%|¨€¨€¨„       | 5/20 [00:05<00:15,  1.06s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  30%|¨€¨€¨€       | 6/20 [00:05<00:12,  1.10it/s]Evaluating:  35%|¨€¨€¨€¨„      | 7/20 [00:08<00:17,  1.35s/it]Evaluating:  40%|¨€¨€¨€¨€      | 8/20 [00:13<00:31,  2.66s/it]Evaluating:  45%|¨€¨€¨€¨€¨„     | 9/20 [00:20<00:41,  3.75s/it]Evaluating:  50%|¨€¨€¨€¨€¨€     | 10/20 [00:20<00:27,  2.73s/it]Evaluating:  55%|¨€¨€¨€¨€¨€¨„    | 11/20 [00:24<00:27,  3.03s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 12/20 [00:24<00:17,  2.19s/it]Evaluating:  65%|¨€¨€¨€¨€¨€¨€¨„   | 13/20 [00:24<00:11,  1.60s/it]Evaluating:  70%|¨€¨€¨€¨€¨€¨€¨€   | 14/20 [00:25<00:08,  1.43s/it]Evaluating:  75%|¨€¨€¨€¨€¨€¨€¨€¨„  | 15/20 [00:25<00:05,  1.05s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 16/20 [00:26<00:03,  1.18it/s]Evaluating:  85%|¨€¨€¨€¨€¨€¨€¨€¨€¨„ | 17/20 [00:29<00:04,  1.60s/it]Evaluating:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 18/20 [00:31<00:03,  1.80s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:33<00:00,  1.29s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:33<00:00,  1.66s/it]
-2026/05/25 15:15:38 INFO dspy.teleprompt.mipro_optimizer_v2: 
-RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
-num_trials: 10
-minibatch: False
-num_fewshot_candidates: 6
-num_instruct_candidates: 3
-valset size: 4
-
-2026/05/25 15:15:38 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
-2026/05/25 15:15:38 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
-
-2026/05/25 15:15:38 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
-       baseline scores: {'context_precision': 0.8944444444151852, 'context_recall': 1.0, 'faithfulness': 0.96}
-
-  (b) Running MIPROv2 optimisation (with-GT path) ...
-Bootstrapping set 1/6
-Bootstrapping set 2/6
-Bootstrapping set 3/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.82s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.82s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 4/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.88s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.88s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 5/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.56s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.56s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 6/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.03s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:08<00:00,  8.05s/it]
-2026/05/25 15:16:10 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
-2026/05/25 15:16:10 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
-2026/05/25 15:16:25 INFO dspy.teleprompt.mipro_optimizer_v2: 
-Proposing N=3 instructions...
-
-2026/05/25 15:16:38 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:16:53 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:17:10 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:17:20 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:17:33 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:17:41 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
-
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: 0: Answer the question using only the retrieved context.
-
-Be concise. Do not invent facts that are not in the context.
-
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: 1: Generate a response to the question by extracting relevant information and forming a well-reasoned argument from the provided dataset, focusing on the global implications of the USA Supreme Court ruling on abortion. Ensure your response is concise and strictly adheres to the context given, refraining from adding any facts or conclusions that are not explicitly stated in the provided passages.
-
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: 2: Prompt the Language Model to analyze a passage from a dataset that details the legal, social, and environmental impacts of complex global issues, specifically focusing on the consequences of a recent Supreme Court decision. Using only the provided context, the LM must construct a reasoning that supports its answer to a question about the global implications of the decision, ensuring that the response is concise and directly references the context without adding any extraneous information. The scenario is a high-stakes international negotiation where the LM's answer could influence the outcome of human rights discussions and legislative policies.
-
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: 
-
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
-
-2026/05/25 15:17:50 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.78 / 1 (77.6%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 0.78 / 1 (77.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:22,  7.57s/it]Average Metric: 1.12 / 2 (56.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:22,  7.57s/it]Average Metric: 1.12 / 2 (56.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.71s/it]Average Metric: 1.94 / 3 (64.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:10<00:07,  3.71s/it]Average Metric: 1.94 / 3 (64.7%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.91s/it]Average Metric: 2.42 / 4 (60.6%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.91s/it]Average Metric: 2.42 / 4 (60.6%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  1.86s/it]Average Metric: 2.42 / 4 (60.6%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.70s/it]2026/05/25 15:18:01 INFO dspy.evaluate.evaluate: Average Metric: 2.4240197405222035 / 4 (60.6%)
-2026/05/25 15:18:01 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 60.6
-
-C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\optuna\_experimental.py:33: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
-  optuna_warn(
-2026/05/25 15:18:01 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.70 / 1 (69.8%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.70 / 1 (69.8%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:20,  6.95s/it]Average Metric: 1.25 / 2 (62.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:20,  6.95s/it]Average Metric: 1.25 / 2 (62.6%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.51s/it]Average Metric: 2.07 / 3 (68.9%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:07,  3.51s/it]Average Metric: 2.07 / 3 (68.9%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.31s/it]Average Metric: 2.59 / 4 (64.8%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.31s/it]Average Metric: 2.59 / 4 (64.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.16s/it]Average Metric: 2.59 / 4 (64.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.88s/it]2026/05/25 15:18:13 INFO dspy.evaluate.evaluate: Average Metric: 2.5901740019727986 / 4 (64.8%)
-2026/05/25 15:18:13 INFO dspy.teleprompt.mipro_optimizer_v2: [92mBest full score so far![0m Score: 64.75
-2026/05/25 15:18:13 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 64.75 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
-2026/05/25 15:18:13 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75]
-2026/05/25 15:18:13 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 64.75
-2026/05/25 15:18:13 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:18:13 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.54 / 1 (54.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 0.54 / 1 (54.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:21,  7.28s/it]Average Metric: 0.93 / 2 (46.4%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:21,  7.28s/it]Average Metric: 0.93 / 2 (46.4%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.61s/it]Average Metric: 1.65 / 3 (55.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:10<00:07,  3.61s/it]Average Metric: 1.65 / 3 (55.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.96s/it]Average Metric: 2.46 / 4 (61.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.96s/it]Average Metric: 2.46 / 4 (61.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  1.84s/it]Average Metric: 2.46 / 4 (61.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.66s/it]2026/05/25 15:18:23 INFO dspy.evaluate.evaluate: Average Metric: 2.4580817386777416 / 4 (61.5%)
-2026/05/25 15:18:23 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 61.45 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:18:23 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45]
-2026/05/25 15:18:23 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 64.75
-2026/05/25 15:18:23 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:18:23 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.86 / 1 (86.3%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.86 / 1 (86.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:20,  6.70s/it]Average Metric: 1.42 / 2 (70.8%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:09<00:20,  6.70s/it]Average Metric: 1.42 / 2 (70.8%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:09,  4.68s/it]Average Metric: 1.94 / 3 (64.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:09,  4.68s/it]Average Metric: 1.94 / 3 (64.7%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.33s/it]Average Metric: 2.81 / 4 (70.1%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:16<00:03,  3.33s/it]Average Metric: 2.81 / 4 (70.1%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:16<00:00,  4.04s/it]Average Metric: 2.81 / 4 (70.1%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:16<00:00,  4.20s/it]2026/05/25 15:18:40 INFO dspy.evaluate.evaluate: Average Metric: 2.8057214525530654 / 4 (70.1%)
-2026/05/25 15:18:40 INFO dspy.teleprompt.mipro_optimizer_v2: [92mBest full score so far![0m Score: 70.14
-2026/05/25 15:18:40 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 70.14 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:18:40 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14]
-2026/05/25 15:18:40 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:18:40 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:18:40 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.83 / 1 (82.9%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.83 / 1 (82.9%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.63s/it]Average Metric: 1.38 / 2 (69.2%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:19,  6.63s/it]Average Metric: 1.38 / 2 (69.2%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.37s/it]Average Metric: 2.00 / 3 (66.8%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:06,  3.37s/it]Average Metric: 2.00 / 3 (66.8%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.76s/it]Average Metric: 2.50 / 4 (62.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:02,  2.76s/it]Average Metric: 2.50 / 4 (62.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.38s/it]Average Metric: 2.50 / 4 (62.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.89s/it]2026/05/25 15:18:52 INFO dspy.evaluate.evaluate: Average Metric: 2.5004483970035083 / 4 (62.5%)
-2026/05/25 15:18:52 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 62.51 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/05/25 15:18:52 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51]
-2026/05/25 15:18:52 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:18:52 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:18:52 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.55 / 1 (55.4%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.55 / 1 (55.4%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.54s/it]Average Metric: 1.30 / 2 (65.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:16,  5.54s/it]Average Metric: 1.30 / 2 (65.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:08,  4.03s/it]Average Metric: 2.11 / 3 (70.5%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:08,  4.03s/it]Average Metric: 2.11 / 3 (70.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.75s/it]Average Metric: 2.64 / 4 (65.9%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:14<00:03,  3.75s/it]Average Metric: 2.64 / 4 (65.9%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:14<00:00,  3.11s/it]Average Metric: 2.64 / 4 (65.9%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:14<00:00,  3.52s/it]2026/05/25 15:19:06 INFO dspy.evaluate.evaluate: Average Metric: 2.637524015424507 / 4 (65.9%)
-2026/05/25 15:19:06 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 65.94 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:19:06 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51, 65.94]
-2026/05/25 15:19:06 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:19:06 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:19:06 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.54 / 1 (54.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 0.54 / 1 (54.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.69s/it]Average Metric: 1.35 / 2 (67.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.69s/it]Average Metric: 2.07 / 3 (69.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:15,  7.69s/it]Average Metric: 2.07 / 3 (69.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.83s/it]Average Metric: 2.46 / 4 (61.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.83s/it]Average Metric: 2.46 / 4 (61.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.17s/it]Average Metric: 2.46 / 4 (61.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.72s/it]2026/05/25 15:19:17 INFO dspy.evaluate.evaluate: Average Metric: 2.4580817386777416 / 4 (61.5%)
-2026/05/25 15:19:17 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 61.45 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:19:17 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51, 65.94, 61.45]
-2026/05/25 15:19:17 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:19:17 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:19:17 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.78 / 1 (77.6%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.78 / 1 (77.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.47s/it]Average Metric: 1.31 / 2 (65.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:10<00:19,  6.47s/it]Average Metric: 1.31 / 2 (65.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:10<00:10,  5.16s/it]Average Metric: 1.86 / 3 (62.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:10,  5.16s/it]Average Metric: 1.86 / 3 (62.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.22s/it]Average Metric: 2.68 / 4 (66.9%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:12<00:03,  3.22s/it]Average Metric: 2.68 / 4 (66.9%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:12<00:00,  2.49s/it]Average Metric: 2.68 / 4 (66.9%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:12<00:00,  3.25s/it]2026/05/25 15:19:30 INFO dspy.evaluate.evaluate: Average Metric: 2.6763744622941337 / 4 (66.9%)
-2026/05/25 15:19:30 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 66.91 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:19:30 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51, 65.94, 61.45, 66.91]
-2026/05/25 15:19:30 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:19:30 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:19:30 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.55 / 1 (55.4%):   0%|          | 0/4 [00:08<?, ?it/s]Average Metric: 0.55 / 1 (55.4%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:25,  8.50s/it]Average Metric: 1.35 / 2 (67.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:25,  8.50s/it]Average Metric: 1.35 / 2 (67.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.61s/it]Average Metric: 2.04 / 3 (68.2%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:07,  3.61s/it]Average Metric: 2.04 / 3 (68.2%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.11s/it]Average Metric: 2.57 / 4 (64.2%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:15<00:02,  2.11s/it]Average Metric: 2.57 / 4 (64.2%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  4.03s/it]Average Metric: 2.57 / 4 (64.2%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  3.99s/it]2026/05/25 15:19:46 INFO dspy.evaluate.evaluate: Average Metric: 2.5686733437893845 / 4 (64.2%)
-2026/05/25 15:19:46 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 64.22 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
-2026/05/25 15:19:46 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51, 65.94, 61.45, 66.91, 64.22]
-2026/05/25 15:19:46 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:19:46 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:19:46 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.78 / 1 (77.6%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.78 / 1 (77.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.42s/it]Average Metric: 1.33 / 2 (66.5%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:19,  6.42s/it]Average Metric: 1.33 / 2 (66.5%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.58s/it]Average Metric: 2.13 / 3 (71.1%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.58s/it]Average Metric: 2.13 / 3 (71.1%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.24s/it]Average Metric: 2.66 / 4 (66.6%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:18<00:02,  2.24s/it]Average Metric: 2.66 / 4 (66.6%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:18<00:00,  5.42s/it]Average Metric: 2.66 / 4 (66.6%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:18<00:00,  4.74s/it]2026/05/25 15:20:05 INFO dspy.evaluate.evaluate: Average Metric: 2.6631265990462705 / 4 (66.6%)
-2026/05/25 15:20:05 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 66.58 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:20:05 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51, 65.94, 61.45, 66.91, 64.22, 66.58]
-2026/05/25 15:20:05 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:20:05 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:20:05 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.86 / 1 (86.3%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.86 / 1 (86.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:15,  5.30s/it]Average Metric: 1.42 / 2 (70.8%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:15,  5.30s/it]Average Metric: 1.42 / 2 (70.8%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.98s/it]Average Metric: 2.28 / 3 (76.1%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:07,  3.98s/it]Average Metric: 2.28 / 3 (76.1%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.66s/it]Average Metric: 2.81 / 4 (70.1%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:13<00:03,  3.66s/it]Average Metric: 2.81 / 4 (70.1%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:13<00:00,  2.87s/it]Average Metric: 2.81 / 4 (70.1%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:13<00:00,  3.32s/it]2026/05/25 15:20:18 INFO dspy.evaluate.evaluate: Average Metric: 2.8057214525530654 / 4 (70.1%)
-2026/05/25 15:20:18 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 70.14 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:20:18 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [60.6, 64.75, 61.45, 70.14, 62.51, 65.94, 61.45, 66.91, 64.22, 66.58, 70.14]
-2026/05/25 15:20:18 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 70.14
-2026/05/25 15:20:18 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:20:18 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 70.14!
-2026-05-25 15:21:15 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 4 metrics
-
-       MIPROv2 done: 11 trials, best=70.14
-
-  (c) Running OPTIMIZED program on same records ...
-       evaluating optimised answers with ragas ...
-Evaluating:   0%|          | 0/20 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   5%|¨„         | 1/20 [00:01<00:37,  1.96s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  10%|¨€         | 2/20 [00:02<00:20,  1.15s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  15%|¨€¨„        | 3/20 [00:03<00:17,  1.03s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 4/20 [00:04<00:13,  1.16it/s]Evaluating:  25%|¨€¨€¨„       | 5/20 [00:04<00:11,  1.32it/s]Evaluating:  30%|¨€¨€¨€       | 6/20 [00:05<00:11,  1.25it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  35%|¨€¨€¨€¨„      | 7/20 [00:05<00:08,  1.60it/s]Evaluating:  40%|¨€¨€¨€¨€      | 8/20 [00:15<00:42,  3.53s/it]Evaluating:  45%|¨€¨€¨€¨€¨„     | 9/20 [00:19<00:40,  3.64s/it]Evaluating:  50%|¨€¨€¨€¨€¨€     | 10/20 [00:21<00:31,  3.18s/it]Evaluating:  55%|¨€¨€¨€¨€¨€¨„    | 11/20 [00:25<00:29,  3.32s/it]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 12/20 [00:26<00:21,  2.70s/it]Evaluating:  65%|¨€¨€¨€¨€¨€¨€¨„   | 13/20 [00:26<00:13,  1.94s/it]Evaluating:  70%|¨€¨€¨€¨€¨€¨€¨€   | 14/20 [00:28<00:11,  1.90s/it]Evaluating:  75%|¨€¨€¨€¨€¨€¨€¨€¨„  | 15/20 [00:31<00:10,  2.19s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 16/20 [00:32<00:07,  1.95s/it]Evaluating:  85%|¨€¨€¨€¨€¨€¨€¨€¨€¨„ | 17/20 [00:35<00:06,  2.11s/it]Evaluating:  90%|¨€¨€¨€¨€¨€¨€¨€¨€¨€ | 18/20 [00:35<00:03,  1.60s/it]Evaluating:  95%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨„| 19/20 [00:36<00:01,  1.45s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:39<00:00,  1.89s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 20/20 [00:39<00:00,  1.98s/it]
-2026-05-25 15:22:26 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
-       optimised scores: {'context_precision': 0.9277777777501852, 'context_recall': 1.0, 'faithfulness': 0.9666666666666668}
-
-  Delta (optimised - baseline): {'context_precision': 0.03333333333499999, 'context_recall': 0.0, 'faithfulness': 0.006666666666666821}
-
-  Preparing records with top_k=1 for no-GT DSPy ...
-
-  DSPy before/after [no-GT]
-
-  (a) Running BASELINE (default RAG Signature) ...
-       evaluating baseline answers with ragas ...
-Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:33,  2.41s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 3/15 [00:03<00:10,  1.17it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:08,  1.37it/s]Evaluating:  33%|¨€¨€¨€¨†      | 5/15 [00:04<00:07,  1.41it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:04<00:06,  1.38it/s]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:05<00:04,  1.88it/s]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:05<00:02,  2.77it/s]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:07<00:03,  1.28it/s]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:16<00:12,  3.06s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:17<00:06,  2.31s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:17<00:03,  1.84s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:18<00:01,  1.45s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:20<00:00,  1.67s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:20<00:00,  1.36s/it]
-2026/05/25 15:22:47 INFO dspy.teleprompt.mipro_optimizer_v2: 
-RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
-num_trials: 10
-minibatch: False
-num_fewshot_candidates: 6
-num_instruct_candidates: 3
-valset size: 4
-
-2026/05/25 15:22:47 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
-2026/05/25 15:22:47 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
-
-2026/05/25 15:22:47 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
-       baseline scores: {'context_precision': 0.79999999992, 'faithfulness': 1.0}
-
-  (b) Running MIPROv2 optimisation (with-GT path) ...
-Bootstrapping set 1/6
-Bootstrapping set 2/6
-Bootstrapping set 3/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:10<00:00, 10.22s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:10<00:00, 10.22s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 4/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.90s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.90s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 5/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:09<00:00,  9.72s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:09<00:00,  9.72s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 6/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:10<00:00, 10.98s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:10<00:00, 10.98s/it]
-2026/05/25 15:23:25 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
-2026/05/25 15:23:25 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
-2026/05/25 15:23:40 INFO dspy.teleprompt.mipro_optimizer_v2: 
-Proposing N=3 instructions...
-
-2026/05/25 15:23:55 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:24:06 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:24:22 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:24:34 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:24:49 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:25:01 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
-
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: 0: Answer the question using only the retrieved context.
-
-Be concise. Do not invent facts that are not in the context.
-
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: 1: Prompt the Language Model to analyze the context provided and generate an answer to the question, ensuring that the answer is derived solely from the context and is supported by a reasoning explanation that details how the answer is connected to the information in the context. The response should be concise and not include any invented facts.
-
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: 2: Prompt a Language Model to synthesize the global implications of the USA Supreme Court's 2022 abortion ruling by analyzing a provided context. The LM must extract information and provide a clear reasoning for the answers, adhering to the rule that the answer must be strictly based on the context given. This task requires the LM to interpret complex international implications and present them concisely, considering the high stakes on reproductive rights and public health across the globe.
-
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: 
-
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
-
-2026/05/25 15:25:06 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.39s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.39s/it]Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:05,  2.55s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.55s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.55s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.36s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.81s/it]2026/05/25 15:25:14 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:25:14 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 87.5
-
-C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\optuna\_experimental.py:33: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
-  optuna_warn(
-2026/05/25 15:25:14 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:09<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:09<00:27,  9.26s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:09<00:27,  9.26s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:07,  3.87s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:07,  3.87s/it] Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:03,  3.87s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  1.68s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.53s/it]2026/05/25 15:25:24 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:25:24 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
-2026/05/25 15:25:24 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5]
-2026/05/25 15:25:24 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:25:24 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:25:24 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.54s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.54s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.77s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:05,  2.77s/it] Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.56s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.56s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.01s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.54s/it]2026/05/25 15:25:34 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:25:34 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:25:34 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5]
-2026/05/25 15:25:34 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:25:34 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:25:34 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:21,  7.03s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:21,  7.03s/it] Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.17s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:06,  3.17s/it]Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.01s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.01s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  1.45s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  2.18s/it]2026/05/25 15:25:43 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:25:43 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:25:43 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:25:43 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:25:43 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:25:43 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.77s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.77s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.32s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:11<00:06,  3.32s/it] Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.38s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:03,  3.38s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.24s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.98s/it]2026/05/25 15:25:55 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:25:55 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/05/25 15:25:55 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:25:55 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:25:55 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:25:55 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.43s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:19,  6.43s/it]Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.85s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:05,  2.85s/it]Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.84s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:01,  1.84s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.00s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.41s/it]2026/05/25 15:26:04 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:26:04 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:26:04 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:26:04 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:26:04 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:26:04 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.43s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:16,  5.43s/it] Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.88s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.88s/it]Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.19s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.19s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  1.48s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  2.20s/it]2026/05/25 15:26:13 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:26:13 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:26:13 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:26:13 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:26:13 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:26:13 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 0.50 / 1 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:22,  7.53s/it]Average Metric: 1.50 / 2 (75.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:09<00:22,  7.53s/it]Average Metric: 1.50 / 2 (75.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:08,  4.23s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:08,  4.23s/it]Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.52s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.52s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.50s/it]2026/05/25 15:26:23 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:26:23 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:26:23 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:26:23 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:26:23 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:26:23 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.42s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:16,  5.42s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:06,  3.06s/it]Average Metric: 3.00 / 3 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.06s/it]Average Metric: 3.00 / 3 (100.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.93s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:01,  1.93s/it] Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.14s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.47s/it]2026/05/25 15:26:33 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:26:33 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
-2026/05/25 15:26:33 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:26:33 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:26:33 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:26:33 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.32s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:18,  6.32s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:07,  3.50s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.50s/it] Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.10s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.10s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  1.78s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.39s/it]2026/05/25 15:26:42 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:26:42 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:26:42 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:26:42 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:26:42 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:26:42 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:03<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:03<00:11,  3.96s/it]Average Metric: 2.00 / 2 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:11,  3.96s/it]Average Metric: 2.00 / 2 (100.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:04,  2.47s/it]Average Metric: 2.50 / 3 (83.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:04,  2.47s/it] Average Metric: 2.50 / 3 (83.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:06<00:01,  1.93s/it]Average Metric: 3.50 / 4 (87.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.93s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.44s/it]Average Metric: 3.50 / 4 (87.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.84s/it]2026/05/25 15:26:50 INFO dspy.evaluate.evaluate: Average Metric: 3.5 / 4 (87.5%)
-2026/05/25 15:26:50 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 87.5 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:26:50 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5, 87.5]
-2026/05/25 15:26:50 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 87.5
-2026/05/25 15:26:50 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:26:50 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 87.5!
-2026-05-25 15:27:13 INFO    ragdx.engines.ragas_adapter :: Running ragas.evaluate on 5 records with 3 metrics
-
-       MIPROv2 done: 11 trials, best=87.50
-
-  (c) Running OPTIMIZED program on same records ...
-       evaluating optimised answers with ragas ...
-Evaluating:   0%|          | 0/15 [00:00<?, ?it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:   7%|¨ƒ         | 1/15 [00:02<00:32,  2.29s/it]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  20%|¨€¨€        | 3/15 [00:02<00:09,  1.24it/s]LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-LLM returned 1 generations instead of requested 3. Proceeding with 1 generations.
-Evaluating:  27%|¨€¨€¨ƒ       | 4/15 [00:03<00:06,  1.64it/s]Evaluating:  40%|¨€¨€¨€¨€      | 6/15 [00:03<00:03,  2.85it/s]Evaluating:  47%|¨€¨€¨€¨€¨ƒ     | 7/15 [00:03<00:03,  2.43it/s]Evaluating:  53%|¨€¨€¨€¨€¨€¨†    | 8/15 [00:05<00:04,  1.57it/s]Evaluating:  60%|¨€¨€¨€¨€¨€¨€    | 9/15 [00:05<00:03,  1.75it/s]Evaluating:  67%|¨€¨€¨€¨€¨€¨€¨ƒ   | 10/15 [00:05<00:02,  2.19it/s]Evaluating:  73%|¨€¨€¨€¨€¨€¨€¨€¨†  | 11/15 [00:13<00:10,  2.63s/it]Evaluating:  80%|¨€¨€¨€¨€¨€¨€¨€¨€  | 12/15 [00:15<00:06,  2.33s/it]Evaluating:  87%|¨€¨€¨€¨€¨€¨€¨€¨€¨ƒ | 13/15 [00:15<00:03,  1.81s/it]Evaluating:  93%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨†| 14/15 [00:18<00:01,  1.98s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:22<00:00,  2.61s/it]Evaluating: 100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 15/15 [00:22<00:00,  1.49s/it]
-2026/05/25 15:27:36 INFO dspy.teleprompt.mipro_optimizer_v2: 
-RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
-num_trials: 10
-minibatch: False
-num_fewshot_candidates: 6
-num_instruct_candidates: 3
-valset size: 4
-
-2026/05/25 15:27:36 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
-2026/05/25 15:27:36 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
-
-2026/05/25 15:27:36 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
-       optimised scores: {'context_precision': 0.79999999992, 'faithfulness': 1.0}
-
-  Delta (optimised - baseline): {'context_precision': 0.0, 'faithfulness': 0.0}
-
-==============================================================================
-STEP 6 / 6 -- DSPy MIPROv2 trial chart (with-GT vs no-GT)
-==============================================================================
-  Re-running MIPROv2 in both GT modes just to expose the
-  metric_kind contrast (token-F1 vs LLM-as-judge).
-
-  Running MIPROv2 (with-GT) for trial-score contrast ...
-Bootstrapping set 1/6
-Bootstrapping set 2/6
-Bootstrapping set 3/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.20s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.20s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 4/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:06<00:00,  6.27s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:06<00:00,  6.27s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 5/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.12s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.12s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 6/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:04<00:00,  4.00s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:04<00:00,  4.00s/it]
-2026/05/25 15:28:01 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
-2026/05/25 15:28:01 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
-2026/05/25 15:28:10 INFO dspy.teleprompt.mipro_optimizer_v2: 
-Proposing N=3 instructions...
-
-2026/05/25 15:28:14 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:28:20 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:28:28 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:28:35 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:28:42 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:28:47 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
-
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: 0: Answer the question using only the retrieved context.
-
-Be concise. Do not invent facts that are not in the context.
-
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: 1: Prompt the Language Model to generate a reasoning and answer based on the provided context. The reasoning must be derived exclusively from the context and should explain how the answer was arrived at. The answer should be concise and should not include any facts that are not present in the context. Focus on the global implications of legal decisions and ensure that the response addresses consequences, demographic effects, international relations, and policy changes, considering aspects like health, economics, and human rights.
-
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: 2: Prompt a Language Model to generate a reasoning and an answer to complex questions about the global political and social implications of significant legal decisions. Ensure that the response is derived exclusively from the provided context, is concise, and reflects a high stakes scenario where the consequences of incorrect reasoning or facts could have far-reaching international effects on human rights, policy, and diplomatic relations.
-
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: 
-
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
-
-2026/05/25 15:28:51 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.16 / 1 (16.5%):   0%|          | 0/4 [00:03<?, ?it/s]Average Metric: 0.16 / 1 (16.5%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:03<00:09,  3.24s/it]Average Metric: 0.54 / 2 (27.1%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:03<00:09,  3.24s/it]Average Metric: 0.54 / 2 (27.1%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:03<00:03,  1.67s/it]Average Metric: 1.03 / 3 (34.4%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:03<00:03,  1.67s/it]Average Metric: 1.45 / 4 (36.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:03<00:01,  1.67s/it]Average Metric: 1.45 / 4 (36.3%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:03<00:00,  1.51it/s]Average Metric: 1.45 / 4 (36.3%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:03<00:00,  1.02it/s]2026/05/25 15:28:55 INFO dspy.evaluate.evaluate: Average Metric: 1.4526755939540419 / 4 (36.3%)
-2026/05/25 15:28:55 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 36.32
-
-C:\Users\gengz\anaconda3\envs\ragdx311\Lib\site-packages\optuna\_experimental.py:33: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
-  optuna_warn(
-2026/05/25 15:28:55 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.45 / 1 (45.2%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.45 / 1 (45.2%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.55s/it]Average Metric: 0.91 / 2 (45.7%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.55s/it]Average Metric: 0.91 / 2 (45.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:04,  2.43s/it]Average Metric: 1.25 / 3 (41.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:04,  2.43s/it]Average Metric: 1.55 / 4 (38.8%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.43s/it]Average Metric: 1.55 / 4 (38.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.54s/it]Average Metric: 1.55 / 4 (38.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.95s/it]2026/05/25 15:29:03 INFO dspy.evaluate.evaluate: Average Metric: 1.5508137024266058 / 4 (38.8%)
-2026/05/25 15:29:03 INFO dspy.teleprompt.mipro_optimizer_v2: [92mBest full score so far![0m Score: 38.77
-2026/05/25 15:29:03 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 38.77 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
-2026/05/25 15:29:03 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77]
-2026/05/25 15:29:03 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 38.77
-2026/05/25 15:29:03 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:29:03 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.46 / 1 (45.7%):   0%|          | 0/4 [00:04<?, ?it/s]Average Metric: 0.46 / 1 (45.7%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:12,  4.04s/it]Average Metric: 0.70 / 2 (35.1%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [02:05<00:12,  4.04s/it]Average Metric: 0.70 / 2 (35.1%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [02:05<02:26, 73.30s/it]Average Metric: 0.91 / 3 (30.5%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [02:07<02:26, 73.30s/it]Average Metric: 0.91 / 3 (30.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [02:07<00:40, 40.58s/it]Average Metric: 1.46 / 4 (36.6%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [02:07<00:40, 40.58s/it]Average Metric: 1.46 / 4 (36.6%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [02:07<00:00, 24.61s/it]Average Metric: 1.46 / 4 (36.6%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [02:07<00:00, 31.90s/it]2026/05/25 15:31:10 INFO dspy.evaluate.evaluate: Average Metric: 1.463362638522455 / 4 (36.6%)
-2026/05/25 15:31:10 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 36.58 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:31:10 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58]
-2026/05/25 15:31:10 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 38.77
-2026/05/25 15:31:10 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:31:10 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.45 / 1 (45.2%):   0%|          | 0/4 [00:03<?, ?it/s]Average Metric: 0.45 / 1 (45.2%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:03<00:11,  3.76s/it]Average Metric: 0.75 / 2 (37.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:11,  3.76s/it]Average Metric: 0.75 / 2 (37.6%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:05,  2.57s/it]Average Metric: 1.21 / 3 (40.4%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:05,  2.57s/it]Average Metric: 1.55 / 4 (38.8%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.57s/it]Average Metric: 1.55 / 4 (38.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  1.81s/it]Average Metric: 1.55 / 4 (38.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  2.06s/it]2026/05/25 15:31:19 INFO dspy.evaluate.evaluate: Average Metric: 1.5508137024266058 / 4 (38.8%)
-2026/05/25 15:31:19 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 38.77 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:31:19 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77]
-2026/05/25 15:31:19 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 38.77
-2026/05/25 15:31:19 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:31:19 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.41 / 1 (41.3%):   0%|          | 0/4 [00:04<?, ?it/s]Average Metric: 0.41 / 1 (41.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:14,  4.95s/it]Average Metric: 0.86 / 2 (43.1%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:14,  4.95s/it]Average Metric: 0.86 / 2 (43.1%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:04,  2.28s/it]Average Metric: 1.42 / 3 (47.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:04,  2.28s/it]Average Metric: 1.42 / 3 (47.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:06<00:01,  1.62s/it]2026/05/25 15:31:33 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
-Average Metric: 1.95 / 4 (48.8%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:14<00:01,  1.62s/it]Average Metric: 1.95 / 4 (48.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:14<00:00,  4.24s/it]Average Metric: 1.95 / 4 (48.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:14<00:00,  3.61s/it]2026/05/25 15:31:33 INFO dspy.evaluate.evaluate: Average Metric: 1.9511592337461852 / 4 (48.8%)
-2026/05/25 15:31:33 INFO dspy.teleprompt.mipro_optimizer_v2: [92mBest full score so far![0m Score: 48.78
-2026/05/25 15:31:33 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 48.78 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/05/25 15:31:33 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78]
-2026/05/25 15:31:33 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:31:33 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:31:33 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.39 / 1 (39.0%):   0%|          | 0/4 [00:03<?, ?it/s]Average Metric: 0.39 / 1 (39.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:03<00:10,  3.41s/it]Average Metric: 0.93 / 2 (46.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:10,  3.41s/it]Average Metric: 0.93 / 2 (46.6%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:05,  2.57s/it]Average Metric: 1.22 / 3 (40.6%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.57s/it]Average Metric: 1.22 / 3 (40.6%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:06<00:01,  1.98s/it]Average Metric: 1.64 / 4 (40.9%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.98s/it]Average Metric: 1.64 / 4 (40.9%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.45s/it]Average Metric: 1.64 / 4 (40.9%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.82s/it]2026/05/25 15:31:40 INFO dspy.evaluate.evaluate: Average Metric: 1.6376859082189197 / 4 (40.9%)
-2026/05/25 15:31:40 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 40.94 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:31:40 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78, 40.94]
-2026/05/25 15:31:40 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:31:40 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:31:40 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.46 / 1 (46.4%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.46 / 1 (46.4%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.33s/it]Average Metric: 1.01 / 2 (50.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.33s/it]Average Metric: 1.01 / 2 (50.6%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.86s/it]Average Metric: 1.26 / 3 (41.9%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:05,  2.86s/it]Average Metric: 1.26 / 3 (41.9%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.53s/it]Average Metric: 1.47 / 4 (36.7%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:02,  2.53s/it]Average Metric: 1.47 / 4 (36.7%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.69s/it]Average Metric: 1.47 / 4 (36.7%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.95s/it]2026/05/25 15:31:52 INFO dspy.evaluate.evaluate: Average Metric: 1.469987897321627 / 4 (36.7%)
-2026/05/25 15:31:52 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 36.75 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:31:52 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78, 40.94, 36.75]
-2026/05/25 15:31:52 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:31:52 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:31:52 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.45 / 1 (44.9%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.45 / 1 (44.9%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.03s/it]Average Metric: 0.87 / 2 (43.4%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.03s/it]Average Metric: 0.87 / 2 (43.4%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.58s/it]Average Metric: 1.43 / 3 (47.5%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:05,  2.58s/it]Average Metric: 1.43 / 3 (47.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.33s/it]Average Metric: 1.87 / 4 (46.7%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:15<00:02,  2.33s/it]Average Metric: 1.87 / 4 (46.7%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  4.19s/it]Average Metric: 1.87 / 4 (46.7%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  3.82s/it]2026/05/25 15:32:08 INFO dspy.evaluate.evaluate: Average Metric: 1.8672181250716942 / 4 (46.7%)
-2026/05/25 15:32:08 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 46.68 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:32:08 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78, 40.94, 36.75, 46.68]
-2026/05/25 15:32:08 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:32:08 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:32:08 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.30 / 1 (30.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.30 / 1 (30.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.23s/it]Average Metric: 0.75 / 2 (37.6%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.23s/it]Average Metric: 0.75 / 2 (37.6%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.72s/it]Average Metric: 1.21 / 3 (40.4%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.72s/it]Average Metric: 1.55 / 4 (38.8%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.72s/it]Average Metric: 1.55 / 4 (38.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  1.57s/it]Average Metric: 1.55 / 4 (38.8%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:08<00:00,  2.07s/it]2026/05/25 15:32:16 INFO dspy.evaluate.evaluate: Average Metric: 1.5508137024266058 / 4 (38.8%)
-2026/05/25 15:32:16 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 38.77 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
-2026/05/25 15:32:16 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78, 40.94, 36.75, 46.68, 38.77]
-2026/05/25 15:32:16 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:32:16 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:32:16 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.56 / 1 (55.7%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.56 / 1 (55.7%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.26s/it]Average Metric: 0.97 / 2 (48.5%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.26s/it]Average Metric: 0.97 / 2 (48.5%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.68s/it]Average Metric: 1.42 / 3 (47.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:05,  2.68s/it]Average Metric: 1.42 / 3 (47.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.72s/it]Average Metric: 1.86 / 4 (46.5%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:20<00:01,  1.72s/it]Average Metric: 1.86 / 4 (46.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:20<00:00,  6.20s/it]Average Metric: 1.86 / 4 (46.5%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:20<00:00,  5.02s/it]2026/05/25 15:32:36 INFO dspy.evaluate.evaluate: Average Metric: 1.8605616990604297 / 4 (46.5%)
-2026/05/25 15:32:36 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 46.51 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:32:36 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78, 40.94, 36.75, 46.68, 38.77, 46.51]
-2026/05/25 15:32:36 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:32:36 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:32:36 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.41 / 1 (41.3%):   0%|          | 0/4 [00:04<?, ?it/s]Average Metric: 0.41 / 1 (41.3%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:12,  4.30s/it]Average Metric: 0.86 / 2 (43.1%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:12,  4.30s/it]Average Metric: 0.86 / 2 (43.1%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:04<00:03,  1.97s/it]Average Metric: 1.42 / 3 (47.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:03,  1.97s/it]Average Metric: 1.42 / 3 (47.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:05<00:01,  1.33s/it]Average Metric: 1.89 / 4 (47.2%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:14<00:01,  1.33s/it]Average Metric: 1.89 / 4 (47.2%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:14<00:00,  4.33s/it]Average Metric: 1.89 / 4 (47.2%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:14<00:00,  3.53s/it]2026/05/25 15:32:50 INFO dspy.evaluate.evaluate: Average Metric: 1.886036342311677 / 4 (47.2%)
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 47.15 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [36.32, 38.77, 36.58, 38.77, 48.78, 40.94, 36.75, 46.68, 38.77, 46.51, 47.15]
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 48.78
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 48.78!
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: 
-RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
-num_trials: 10
-minibatch: False
-num_fewshot_candidates: 6
-num_instruct_candidates: 3
-valset size: 4
-
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
-
-2026/05/25 15:32:50 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
-
-
-  Running MIPROv2 (no-GT) for trial-score contrast ...
-Bootstrapping set 1/6
-Bootstrapping set 2/6
-Bootstrapping set 3/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.97s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.97s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 4/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:04<00:00,  4.92s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:04<00:00,  4.92s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 5/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.10s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:07<00:00,  7.10s/it]
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-Bootstrapping set 6/6
-  0%|          | 0/1 [00:00<?, ?it/s]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:05<00:00,  5.25s/it]100%|¨€¨€¨€¨€¨€¨€¨€¨€¨€¨€| 1/1 [00:05<00:00,  5.25s/it]
-2026/05/25 15:33:15 INFO dspy.teleprompt.mipro_optimizer_v2: 
-==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
-2026/05/25 15:33:15 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
-2026/05/25 15:33:22 INFO dspy.teleprompt.mipro_optimizer_v2: 
-Proposing N=3 instructions...
-
-2026/05/25 15:33:27 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:33:32 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:33:43 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:33:51 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:34:01 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['max_depth']. Expected fields: ['program_code', 'program_example', 'program_description', 'module'].
-2026/05/25 15:34:09 WARNING dspy.predict.predict: Input contains fields not in signature. These fields will be ignored: ['previous_instructions']. Expected fields: ['dataset_description', 'program_code', 'program_description', 'module', 'module_description', 'task_demos', 'basic_instruction', 'tip'].
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
-
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: 0: Answer the question using only the retrieved context.
-
-Be concise. Do not invent facts that are not in the context.
-
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: 1: Prompt the Language Model to generate a fact-based answer and reasoning for a given question, using only the provided context material. The answer must be concise and should not include any information that is not directly supported by the context. Emphasize the importance of constructing a logical connection between the context and the answer, adhering to the principles of the Predict module.
-
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: 2: Use the provided context to answer the following question with precision, ensuring that your reasoning is solely based on the information given. Remember, the answer must be concise and should not include any extraneous facts. This task is critical for an emergency response team that needs to understand the global implications of a legal ruling for international diplomatic relations. Please generate a reasoning and answer that would be suitable for an urgent briefing.
-
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: 
-
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
-
-2026/05/25 15:34:13 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
-Bootstrapped 1 full traces after 0 examples for up to 1 rounds, amounting to 1 attempts.
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:17,  5.76s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:17,  5.76s/it]Average Metric: 0.00 / 3 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:11,  5.76s/it]Average Metric: 0.00 / 3 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.21s/it]Average Metric: 0.00 / 4 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.21s/it]Average Metric: 0.00 / 4 (0.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.05s/it]Average Metric: 0.00 / 4 (0.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:09<00:00,  2.36s/it]2026/05/25 15:34:23 INFO dspy.evaluate.evaluate: Average Metric: 0.0 / 4 (0.0%)
-2026/05/25 15:34:23 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 0.0
-
-2026/05/25 15:34:23 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.28s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:18,  6.28s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.20s/it]Average Metric: 0.00 / 3 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:06,  3.20s/it]Average Metric: 0.00 / 3 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.61s/it]2026/05/25 15:34:36 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
-Average Metric: 1.00 / 4 (25.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:15<00:02,  2.61s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  3.93s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  3.80s/it]2026/05/25 15:34:38 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 4 (25.0%)
-2026/05/25 15:34:38 INFO dspy.teleprompt.mipro_optimizer_v2: [92mBest full score so far![0m Score: 25.0
-2026/05/25 15:34:38 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 25.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
-2026/05/25 15:34:38 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0]
-2026/05/25 15:34:38 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 25.0
-2026/05/25 15:34:38 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:34:38 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:04<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:14,  4.95s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:14,  4.95s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:05<00:05,  2.51s/it]Average Metric: 0.00 / 3 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:05,  2.51s/it]Average Metric: 0.00 / 3 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:02,  2.18s/it]Average Metric: 1.00 / 4 (25.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:15<00:02,  2.18s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  4.61s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:15<00:00,  3.97s/it]2026/05/25 15:34:54 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 4 (25.0%)
-2026/05/25 15:34:54 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 25.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:34:54 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0]
-2026/05/25 15:34:54 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 25.0
-2026/05/25 15:34:54 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:34:54 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:04<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:04<00:14,  4.70s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:14,  4.70s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:06,  3.24s/it]Average Metric: 0.00 / 3 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.24s/it]Average Metric: 0.00 / 3 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:01,  1.97s/it]2026/05/25 15:35:11 WARNING dspy.clients.lm: LM response was truncated due to exceeding max_tokens=400. You can inspect the latest LM interactions with `dspy.inspect_history()`. To avoid truncation, consider passing a larger max_tokens when setting up dspy.LM. You may also consider increasing the temperature (currently 0.01)  if the reason for truncation is repetition.
-Average Metric: 1.00 / 4 (25.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:19<00:01,  1.97s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:19<00:00,  5.84s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:19<00:00,  4.79s/it]2026/05/25 15:35:13 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 4 (25.0%)
-2026/05/25 15:35:13 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 25.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:35:13 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0]
-2026/05/25 15:35:13 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 25.0
-2026/05/25 15:35:13 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:35:13 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:16,  5.53s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:16,  5.53s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.36s/it]Average Metric: 1.00 / 3 (33.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:07<00:06,  3.36s/it]Average Metric: 2.00 / 4 (50.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:07<00:03,  3.36s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.29s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:07<00:00,  1.87s/it]2026/05/25 15:35:20 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 4 (50.0%)
-2026/05/25 15:35:20 INFO dspy.teleprompt.mipro_optimizer_v2: [92mBest full score so far![0m Score: 50.0
-2026/05/25 15:35:20 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 50.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/05/25 15:35:20 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0]
-2026/05/25 15:35:20 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:35:20 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:35:20 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:07<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:07<00:23,  7.91s/it]Average Metric: 1.00 / 2 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:23,  7.91s/it]Average Metric: 1.00 / 2 (50.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:06,  3.48s/it]Average Metric: 1.00 / 3 (33.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:06,  3.48s/it]Average Metric: 1.00 / 3 (33.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.20s/it]Average Metric: 1.00 / 4 (25.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:13<00:02,  2.20s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:13<00:00,  2.94s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:13<00:00,  3.26s/it]2026/05/25 15:35:33 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 4 (25.0%)
-2026/05/25 15:35:33 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 25.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:35:33 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0, 25.0]
-2026/05/25 15:35:33 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:35:33 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:35:33 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:20,  6.88s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:09<00:20,  6.88s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:09,  4.52s/it]Average Metric: 0.00 / 3 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:10<00:09,  4.52s/it]Average Metric: 0.00 / 3 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.69s/it]Average Metric: 1.00 / 4 (25.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:17<00:02,  2.69s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:17<00:00,  4.67s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:17<00:00,  4.49s/it]2026/05/25 15:35:51 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 4 (25.0%)
-2026/05/25 15:35:51 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 25.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
-2026/05/25 15:35:51 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0, 25.0, 25.0]
-2026/05/25 15:35:51 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:35:51 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:35:51 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):   0%|          | 0/4 [00:08<?, ?it/s]Average Metric: 1.00 / 1 (100.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:24,  8.27s/it]Average Metric: 1.00 / 2 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:24,  8.27s/it] Average Metric: 1.00 / 2 (50.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.59s/it]Average Metric: 1.00 / 3 (33.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:07,  3.59s/it]Average Metric: 1.00 / 3 (33.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.13s/it]Average Metric: 2.00 / 4 (50.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:11<00:02,  2.13s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.14s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:11<00:00,  2.78s/it]2026/05/25 15:36:03 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 4 (50.0%)
-2026/05/25 15:36:03 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 50.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:36:03 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0, 25.0, 25.0, 50.0]
-2026/05/25 15:36:03 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:36:03 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:36:03 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.14s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:18,  6.14s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.71s/it]Average Metric: 0.00 / 3 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:05,  2.71s/it]Average Metric: 0.00 / 3 (0.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:08<00:02,  2.28s/it]Average Metric: 1.00 / 4 (25.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:17<00:02,  2.28s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:17<00:00,  5.01s/it]Average Metric: 1.00 / 4 (25.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:17<00:00,  4.35s/it]2026/05/25 15:36:20 INFO dspy.evaluate.evaluate: Average Metric: 1.0 / 4 (25.0%)
-2026/05/25 15:36:20 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 25.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
-2026/05/25 15:36:20 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0, 25.0, 25.0, 50.0, 25.0]
-2026/05/25 15:36:20 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:36:20 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
-
-
-2026/05/25 15:36:20 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:05<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:05<00:15,  5.25s/it]Average Metric: 0.00 / 2 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:08<00:15,  5.25s/it]Average Metric: 0.00 / 2 (0.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:08<00:08,  4.34s/it]Average Metric: 1.00 / 3 (33.3%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:10<00:08,  4.34s/it]Average Metric: 1.00 / 3 (33.3%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.97s/it]Average Metric: 2.00 / 4 (50.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.97s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  1.86s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.62s/it]2026/05/25 15:36:30 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 4 (50.0%)
-2026/05/25 15:36:30 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 50.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
-2026/05/25 15:36:30 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0, 25.0, 25.0, 50.0, 25.0, 50.0]
-2026/05/25 15:36:30 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:36:30 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:36:30 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
-
-  0%|          | 0/4 [00:00<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):   0%|          | 0/4 [00:06<?, ?it/s]Average Metric: 0.00 / 1 (0.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:20,  6.89s/it]Average Metric: 1.00 / 2 (50.0%):  25%|â–ˆâ–ˆâ–Œ       | 1/4 [00:06<00:20,  6.89s/it]Average Metric: 1.00 / 2 (50.0%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:06<00:05,  2.90s/it]Average Metric: 2.00 / 3 (66.7%):  50%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ     | 2/4 [00:09<00:05,  2.90s/it]Average Metric: 2.00 / 3 (66.7%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:09<00:02,  2.81s/it]Average Metric: 2.00 / 4 (50.0%):  75%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–Œ  | 3/4 [00:10<00:02,  2.81s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  1.93s/it]Average Metric: 2.00 / 4 (50.0%): 100%|â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ| 4/4 [00:10<00:00,  2.57s/it]2026/05/25 15:36:41 INFO dspy.evaluate.evaluate: Average Metric: 2.0 / 4 (50.0%)
-2026/05/25 15:36:41 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 50.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
-2026/05/25 15:36:41 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [0.0, 25.0, 25.0, 25.0, 50.0, 25.0, 25.0, 50.0, 25.0, 50.0, 50.0]
-2026/05/25 15:36:41 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 50.0
-2026/05/25 15:36:41 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
-
-
-2026/05/25 15:36:41 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 50.0!
-
-
-  Structured result saved -> D:\work\RAGdx-main\RAGdx-main\.ragdx_optimize_demo\result.json
-
-==============================================================================
-SUMMARY
-==============================================================================
-  [with-GT] AutoRAG winner : top_k=6 (context_recall=1.000)
-  [with-GT] DSPy baseline  : {'context_precision': 0.8944444444151852, 'context_recall': 1.0, 'faithfulness': 0.96}
-  [with-GT] DSPy optimized : {'context_precision': 0.9277777777501852, 'context_recall': 1.0, 'faithfulness': 0.9666666666666668}
-  [with-GT] Delta          : {'context_precision': 0.03333333333499999, 'context_recall': 0.0, 'faithfulness': 0.006666666666666821}
-
-  [no-GT] AutoRAG winner : top_k=1 (faithfulness=1.000)
-  [no-GT] DSPy baseline  : {'context_precision': 0.79999999992, 'faithfulness': 1.0}
-  [no-GT] DSPy optimized : {'context_precision': 0.79999999992, 'faithfulness': 1.0}
-  [no-GT] Delta          : {'context_precision': 0.0, 'faithfulness': 0.0}
-
-2026/05/25 15:39:13 ERROR dspy.utils.parallelizer: Error for Example({'question': 'What action did Amnesty International urge its supporters to take in response to the killing of the Ogoni 9?', 'contexts': [], 'context': '', 'answer': "Amnesty International urged its supporters to send appeals for the defenders' freedom to Nigerian authorities and later to send letters of outrage."}) (input_keys={'question', 'context'}): cannot schedule new futures after shutdown. Set `provide_traceback=True` for traceback.
-2026/05/25 15:39:15 ERROR dspy.utils.parallelizer: Error for Example({'question': 'Which private companies in the Americas are the largest GHG emitters according to the Carbon Majors database?', 'contexts': [], 'context': '', 'answer': 'The largest private companies in the Americas that are the largest GHG emitters according to the Carbon Majors database are ExxonMobil, Chevron, and Peabody.'}) (input_keys={'question', 'context'}): cannot schedule new futures after shutdown. Set `provide_traceback=True` for traceback.
-2026/05/25 15:39:20 ERROR dspy.utils.parallelizer: Error for Example({'question': 'Which companies are the main contributors to GHG emissions and their role in global warming according to the Carbon Majors database?', 'contexts': [], 'context': '', 'answer': 'According to the Carbon Majors database, the main contributors to GHG emissions and their role in global warming are fossil fuel companies. These companies, both state-owned and private, have produced almost a trillion tons of GHG emissions in 150 years. The database shows that 100 existing fossil fuel companies, along with eight that no longer exist, are responsible for 71% of all GHG emissions since 1988. In the Americas, the private companies that have contributed the most emissions are ExxonMobil, Chevron, and Peabody, all from the United States. Among state-owned companies in the Americas, the largest emitter is Mexican company Pemex, followed by Venezuelan company Petr¨®leos de Venezuela, S.A. It is important to note that while people with fewer resources, particularly from countries in the global South, do not significantly contribute to climate change, they are the ones most affected by its impacts. Approximately half of the global population lives in areas that are "very vulnerable" to climate change, and it is people with limited development opportunities who face the greatest risks. This unequal impact disproportionately affects the human rights of those with fewer resources and greater vulnerability in the context of climate change in the global South. Additionally, between 2010 and 2020, human mortality due to climate disasters was 15 times higher in vulnerable regions and populations.'}) (input_keys={'question', 'context'}): cannot schedule new futures after shutdown. Set `provide_traceback=True` for traceback.

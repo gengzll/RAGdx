@@ -1,18 +1,17 @@
 """
 Optimization Components
 
-Main Idea:
-This package contains optimization algorithms and adapters for RAG pipeline tuning. It provides Bayesian optimization, LLM-based planning, and integration with popular RAG frameworks for automated parameter optimization.
+This package contains the optimization pieces used by the end-to-end
+``experiment`` pipeline:
 
-Functionalities:
-- planner: Optimization planning with rule-based and LLM-enhanced strategies
-- executor: Execution engine for optimization experiments
-- Adapters for RAG frameworks: LangChain, LlamaIndex, DSPy, AutoRAG
-- Bayesian optimization: Heavy-duty Bayesian optimization for complex parameter spaces
+- ``planner``: rule-based / LLM-enhanced optimization planning
+- ``bayes_search``: Bayesian search over RAG-config axes
+- ``dspy_adapter``: DSPy prompt optimization (MIPROv2 / GEPA)
+- ``objectives``: the composite scoring objective
+- ``stages``: chunking / retrieval / generation / joint stage optimizers
 
-Usage:
-Import optimization components:
+Usage::
 
     from ragdx.optim.planner import OptimizationPlanner
-    from ragdx.optim.executor import OptimizationExecutor
+    from ragdx.optim.bayes_search import BayesianSearch
 """

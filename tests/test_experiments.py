@@ -513,7 +513,12 @@ def test_cli_experiment_signature_matches_python_api():
     api_params = set(inspect.signature(run_experiment).parameters)
     # These Python-API knobs are intentionally not surfaced as CLI flags
     # (lists / objects / save flag mapped differently):
-    api_only = {"top_ks", "chunk_sizes", "chunk_overlaps", "objective_overrides", "save"}
+    api_only = {
+        "top_ks", "chunk_sizes", "chunk_overlaps", "objective_overrides", "save",
+        # Callback for programmatic progress (e.g. the Streamlit studio);
+        # not a shell flag.
+        "progress_callback",
+    }
     missing = api_params - cli_params - api_only
     assert not missing, f"CLI is missing flags for Python-API params: {missing}"
 

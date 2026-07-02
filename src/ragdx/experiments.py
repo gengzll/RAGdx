@@ -82,6 +82,47 @@ from ragdx.schemas.rag_config import (
 ExperimentMode = Literal["with_gt", "no_gt", "both", "auto"]
 logger = logging.getLogger(__name__)
 
+# Progress events fired through ``run_experiment(progress_callback=...)``.
+# Each event is a dict ``{"stage", "mode", "pct", "detail"}``. Consumers
+# (e.g. the Streamlit studio) render a progress bar from ``pct`` and a
+# label from ``stage`` / ``detail``. ``progress_callback=None`` (the
+# default) makes the whole mechanism a no-op, so existing callers and
+# tests are unaffected. Per-trial detail is additionally available on the
+# ``ragdx`` logger via the MIPRO/GEPA score-capture handlers.
+ProgressCallback = Callable[[dict[str, Any]], None]
+
+
+class _ProgressReporter:
+    """Maps coarse per-mode stage events to a monotonic global ``pct``.
+
+    The global bar reserves ``[0.05, 0.98]`` for the per-mode work and
+    splits it evenly across the modes being run, so a single-mode run
+    and a ``both`` run both advance smoothly to completion.
+    """
+
+    def __init__(self, callback: ProgressCallback | None, modes: list[str]) -> None:
+        self._callback = callback
+        self._n = max(1, len(modes))
+
+    def emit(self, stage: str, *, mode: str | None = None, pct: float, detail: str = "") -> None:
+        if self._callback is None:
+            return
+        try:
+            self._callback(
+                {"stage": stage, "mode": mode, "pct": max(0.0, min(1.0, pct)), "detail": detail}
+            )
+        except Exception:  # pragma: no cover - defensive; UI must never break the run
+            logger.debug("progress callback raised", exc_info=True)
+
+    def mode_progress(self, mode_index: int, mode: str) -> Callable[[str, float, str], None]:
+        """Return a ``progress(stage, within_frac, detail)`` closure for one mode."""
+
+        def progress(stage: str, within_frac: float, detail: str = "") -> None:
+            pct = 0.05 + 0.93 * (mode_index + within_frac) / self._n
+            self.emit(stage, mode=mode, pct=pct, detail=detail)
+
+        return progress
+
 
 # =====================================================================
 # Default system instruction (single source of truth)
@@ -1036,6 +1077,7 @@ def _run_one_mode(
     mode: str,
     *,
     ckpts: _ExperimentCheckpoints | None = None,
+    progress: Callable[[str, float, str], None] | None = None,
 ) -> dict:
     """Drive one GT mode through Joint (BO) + Generation (DSPy MIPROv2).
 
@@ -1051,6 +1093,11 @@ def _run_one_mode(
     phase. ``None`` (the default, and what unit tests pass implicitly)
     keeps the no-checkpoint behaviour.
     """
+    def _emit(stage: str, frac: float, detail: str = "") -> None:
+        if progress is not None:
+            progress(stage, frac, detail)
+
+    _emit("mode_start", 0.0, f"Starting {mode} mode")
     objective = (cfg.objective_overrides or {}).get(mode) or default_objective(mode)
     metrics = _build_ragas_metrics_for_mode(mode)
     base_rag_config = _make_rag_config(cfg, runtime)
@@ -1077,9 +1124,11 @@ def _run_one_mode(
         checkpoint=ckpt_joint,
         checkpoint_store=ckpt_store,
     )
+    _emit("bo_start", 0.02, f"Bayesian RAG-config search ({cfg.n_bo_trials} trials)")
     joint_result = JointOptimizer().optimize(joint_ctx)
     if ckpts is not None:
         ckpts.complete(ckpt_joint)
+    _emit("bo_done", 0.55, "Bayesian search complete")
 
     # --- Build the BO winner's pipeline + pre-retrieve records --------
     # GenerationOptimizer operates on records that already carry
@@ -1120,9 +1169,11 @@ def _run_one_mode(
         checkpoint=ckpt_gen,
         checkpoint_store=ckpt_store,
     )
+    _emit("dspy_start", 0.58, "DSPy prompt optimization (before/after)")
     gen_result = GenerationOptimizer().optimize(gen_ctx)
     if ckpts is not None:
         ckpts.complete(ckpt_gen)
+    _emit("dspy_done", 0.92, "Prompt optimization complete")
 
     # --- Stage 3: deepeval supplement (item 1) -----------------------
     # ragas gives us context_precision / faithfulness / answer_relevancy.
@@ -1161,6 +1212,7 @@ def _run_one_mode(
     except Exception as exc:  # pragma: no cover - depends on judge LM
         logger.warning("deepeval supplement skipped: %s", exc)
 
+    _emit("mode_done", 1.0, f"{mode} mode complete")
     return {
         "bayes_search": joint_result.to_bayes_search_bundle(),
         # GenerationOptimizer parks the dashboard-shaped payload in
@@ -1873,6 +1925,7 @@ def run_experiment(
     save: bool = True,
     resume: str = "",
     no_checkpoint: bool = False,
+    progress_callback: ProgressCallback | None = None,
 ) -> ExperimentResult:
     """Run the complete demo pipeline once and return the bundle.
 
@@ -1944,6 +1997,11 @@ def run_experiment(
         instruction -- MIPROv2 may then evolve it further on top.
     save:
         If True (default), write ``output_dir/result.json``.
+    progress_callback:
+        Optional ``callback(event: dict)`` invoked at each coarse stage
+        boundary with ``{"stage", "mode", "pct", "detail"}``. Used by the
+        Streamlit studio to drive a live progress bar. ``None`` (default)
+        makes it a no-op.
 
     Returns
     -------
@@ -1971,8 +2029,15 @@ def run_experiment(
         system_instruction=system_instruction,
     )
 
+    modes_to_run = ["with_gt", "no_gt"] if cfg.mode == "both" else (
+        [cfg.mode] if cfg.mode in ("with_gt", "no_gt") else ["no_gt"]
+    )
+    reporter = _ProgressReporter(progress_callback, modes_to_run)
+    reporter.emit("start", pct=0.0, detail="Loading corpus")
+
     runtime = _build_runtime(cfg)
     chunks_master, base_records, source_meta = _load_corpus_and_records(cfg, runtime)
+    reporter.emit("corpus_loaded", pct=0.05, detail=f"{len(chunks_master)} chunks loaded")
 
     # Checkpointing: one Checkpoint per (mode, stage), grouped by an
     # experiment id. ``resume="auto"`` (or a group id) picks the run
@@ -1997,6 +2062,7 @@ def run_experiment(
         results_by_mode["with_gt"] = _run_one_mode(
             cfg, runtime, chunks_master, records_gt, "with_gt",
             ckpts=ckpts,
+            progress=reporter.mode_progress(modes_to_run.index("with_gt"), "with_gt"),
         )
     if cfg.mode in ("no_gt", "both"):
         records_no = [
@@ -2008,6 +2074,7 @@ def run_experiment(
         results_by_mode["no_gt"] = _run_one_mode(
             cfg, runtime, chunks_master, records_no, "no_gt",
             ckpts=ckpts,
+            progress=reporter.mode_progress(modes_to_run.index("no_gt"), "no_gt"),
         )
 
     # Pop the in-memory final configs before serializing the bundle;
@@ -2031,6 +2098,7 @@ def run_experiment(
                 logger.info("final deliverable written: %s", p)
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("final deliverables skipped: %s", exc)
+    reporter.emit("bundle_written", pct=1.0, detail=f"Report ready: {output_path}")
     return result
 
 
@@ -2039,6 +2107,7 @@ __all__ = [
     "ExperimentConfig",
     "ExperimentMode",
     "ExperimentResult",
+    "ProgressCallback",
     "migrate_legacy_bundle",
     "run_experiment",
 ]
