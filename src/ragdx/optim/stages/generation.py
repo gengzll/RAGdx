@@ -27,6 +27,17 @@ from ragdx.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _stage_progress(ctx, event: dict) -> None:
+    """Fire ``ctx.progress_cb`` (best-effort; never sinks the stage)."""
+    cb = getattr(ctx, "progress_cb", None)
+    if cb is None:
+        return
+    try:
+        cb(event)
+    except Exception:  # pragma: no cover - progress must never break the run
+        pass
+
+
 class GenerationOptimizer(StageOptimizer):
     """Optimize only the generator prompt via DSPy MIPROv2."""
 
@@ -189,6 +200,7 @@ class GenerationOptimizer(StageOptimizer):
             }
         else:
             logger.info("[DSPy/%s] (a) baseline run", ctx.label)
+            _stage_progress(ctx, {"phase": "baseline"})
             baseline_answered = _run_program(baseline_program)
             baseline_eval = _evaluate_with_ragas(
                 baseline_answered,
@@ -347,8 +359,14 @@ class GenerationOptimizer(StageOptimizer):
         else:
             _phase_marks["baseline_s"] = round(_time.time() - _t0, 2)
             logger.info("[DSPy/%s] (b) MIPROv2 optimisation", ctx.label)
+            _stage_progress(ctx, {"phase": "optimize"})
+
+            def _opt_step(n: int, last: dict) -> None:
+                _stage_progress(ctx, {"phase": "opt_step", "i": n, "last": last})
+
             capture = _MIPROTrialScoreCapture()
             capture.setLevel(logging.INFO)
+            capture.on_trial = _opt_step
             mipro_logger = logging.getLogger(
                 "dspy.teleprompt.mipro_optimizer_v2"
             )
@@ -364,6 +382,7 @@ class GenerationOptimizer(StageOptimizer):
             from ragdx.experiments import _GEPATrialScoreCapture
             gepa_capture = _GEPATrialScoreCapture()
             gepa_capture.setLevel(logging.INFO)
+            gepa_capture.on_trial = _opt_step
             gepa_logger = logging.getLogger("dspy.teleprompt.gepa.gepa")
             gepa_logger.addHandler(gepa_capture)
             gepa_prior = gepa_logger.level
@@ -590,6 +609,7 @@ class GenerationOptimizer(StageOptimizer):
                 _time.time() - _t0 - _phase_marks.get("baseline_s", 0.0), 2,
             )
             logger.info("[DSPy/%s] (c) optimised re-run", ctx.label)
+            _stage_progress(ctx, {"phase": "re_eval"})
             optimised_answered = _run_program(opt_result["optimized_program"])
             opt_eval = _evaluate_with_ragas(
                 optimised_answered,

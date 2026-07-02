@@ -99,6 +99,13 @@ class StageContext:
     """Optional :class:`ragdx.checkpoint.CheckpointStore` for the
     per-trial save. Ignored when ``checkpoint`` is ``None``."""
 
+    progress_cb: Any = None
+    """Optional ``Callable[[dict], None]`` for fine-grained progress.
+    The BO loop calls it after every trial with ``{done, total,
+    composite, best, replayed?}``; the generation stage calls it with
+    ``{phase, i?, last?}`` events. Exceptions are swallowed — progress
+    reporting must never sink an optimization."""
+
     dspy_optimizer: str = "gepa"
     """Which DSPy teleprompter ``--stage generation`` should run:
 
@@ -250,6 +257,23 @@ class StageOptimizer(ABC):
         per-pipeline)."""
         return {}
 
+    @staticmethod
+    def _notify_progress(ctx: StageContext, trials_out: list, *, replayed: int = 0) -> None:
+        """Fire ``ctx.progress_cb`` with the current trial tally (best-effort)."""
+        cb = getattr(ctx, "progress_cb", None)
+        if cb is None or not trials_out:
+            return
+        try:
+            cb({
+                "done": len(trials_out),
+                "total": max(ctx.n_bo_trials, len(trials_out)),
+                "composite": trials_out[-1].composite_score,
+                "best": max(t.composite_score for t in trials_out),
+                "replayed": replayed,
+            })
+        except Exception:  # pragma: no cover - progress must never sink the run
+            pass
+
     # ------------------------------------------------------------------
     # Default BO-driven optimize loop
     # ------------------------------------------------------------------
@@ -321,6 +345,7 @@ class StageOptimizer(ABC):
                     records=list(ct.records),
                     elapsed_seconds=ct.elapsed_seconds,
                 ))
+            self._notify_progress(ctx, trials_out, replayed=len(trials_out))
 
         while bo.has_next():
             params = bo.next_params()
@@ -432,6 +457,7 @@ class StageOptimizer(ABC):
                         "checkpoint save failed (continuing optimization): %s",
                         exc,
                     )
+            self._notify_progress(ctx, trials_out)
 
         best = bo.best_trial
         best_config = (

@@ -303,6 +303,17 @@ class _MIPROTrialScoreCapture(logging.Handler):
         self.trials: list[dict] = []
         self._current_trial: int | None = None
         self._current_kind: str | None = None
+        self.on_trial: Callable[[int, dict], None] | None = None
+        """Optional hook fired after each captured trial with
+        ``(n_trials_so_far, last_trial_dict)`` — used by the studio to
+        surface live optimizer progress. Exceptions are swallowed."""
+
+    def _notify(self) -> None:
+        if self.on_trial is not None and self.trials:
+            try:
+                self.on_trial(len(self.trials), self.trials[-1])
+            except Exception:  # pragma: no cover - progress must never break capture
+                pass
 
     def emit(self, record: logging.LogRecord) -> None:
         msg = record.getMessage()
@@ -343,6 +354,7 @@ class _MIPROTrialScoreCapture(logging.Handler):
                     "kind": "default",
                     "params": None,
                 })
+                self._notify()
             except Exception:
                 pass
             return
@@ -362,6 +374,7 @@ class _MIPROTrialScoreCapture(logging.Handler):
                         # it as a code fragment.
                         "params": params_str,
                     })
+                    self._notify()
                 except Exception:
                     pass
 
@@ -444,6 +457,15 @@ class _GEPATrialScoreCapture(logging.Handler):
         # State carried between log lines (one iteration spans
         # several records: Selected -> Proposed -> subsample [-> full]).
         self._current: dict | None = None
+        self.on_trial: Callable[[int, dict], None] | None = None
+        """Optional live-progress hook; see _MIPROTrialScoreCapture."""
+
+    def _notify(self) -> None:
+        if self.on_trial is not None and self.trials:
+            try:
+                self.on_trial(len(self.trials), self.trials[-1])
+            except Exception:  # pragma: no cover
+                pass
 
     def emit(self, record: logging.LogRecord) -> None:
         msg = record.getMessage()
@@ -465,6 +487,7 @@ class _GEPATrialScoreCapture(logging.Handler):
                 "kind": "default (baseline program)",
                 "params": "Program 0 (seed)",
             })
+            self._notify()
             return
 
         # Iteration X Selected program Y score Z -- starts a new iter.
@@ -508,6 +531,7 @@ class _GEPATrialScoreCapture(logging.Handler):
                 "kind": kind,
                 "params": params,
             })
+            self._notify()
             return
 
         # Iteration X Found a better program on the valset with score Z.
@@ -521,6 +545,7 @@ class _GEPATrialScoreCapture(logging.Handler):
                 "kind": "full valset eval (accepted)",
                 "params": f"Iter {iter_num}: confirmed at full valset",
             })
+            self._notify()
             return
 
         # Iteration X New program candidate index: I -- annotation only,
@@ -1115,6 +1140,47 @@ def _run_one_mode(
     re_chunk_fn = _make_pdf_re_chunk_fn(cfg, chunks_master)
     ckpt_store = ckpts.store if ckpts is not None else None
 
+    # --- Fine-grained progress: BO trials map into the [0.02, 0.55]
+    # window; DSPy phases/steps into [0.58, 0.90]. Labels carry exact
+    # counts; the optimizer-step fraction is an estimate (the DSPy
+    # inner loop's total step count isn't knowable upfront).
+    def _bo_progress(ev: dict) -> None:
+        done, total = int(ev.get("done") or 0), int(ev.get("total") or 1)
+        frac = 0.02 + 0.53 * min(1.0, done / max(1, total))
+        replayed = int(ev.get("replayed") or 0)
+        if replayed:
+            detail = f"Bayesian search — replayed {replayed}/{total} trial(s) from checkpoint"
+        else:
+            detail = (
+                f"Bayesian search — trial {done}/{total}"
+                f" · composite {ev.get('composite'):.3f} · best {ev.get('best'):.3f}"
+            )
+        _emit("bo_trial", frac, detail)
+
+    _opt_expected_steps = {
+        "gepa": {"light": 10, "medium": 25, "heavy": 60},
+        "mipro": {"light": 20, "medium": 35, "heavy": 60},
+        "copro": {"light": 30, "medium": 30, "heavy": 30},
+    }.get(cfg.dspy_optimizer, {}).get(cfg.mipro_auto, 20)
+
+    def _gen_progress(ev: dict) -> None:
+        phase = ev.get("phase")
+        if phase == "baseline":
+            _emit("dspy_step", 0.60, "Prompt optimization — evaluating baseline prompt")
+        elif phase == "optimize":
+            _emit("dspy_step", 0.64, f"Prompt optimization — {cfg.dspy_optimizer} search running")
+        elif phase == "opt_step":
+            i = int(ev.get("i") or 0)
+            frac = 0.64 + 0.20 * min(1.0, i / max(1, _opt_expected_steps))
+            last = ev.get("last") or {}
+            score = last.get("score")
+            score_txt = f" · score {score:.2f}" if isinstance(score, (int, float)) else ""
+            kind = last.get("kind") or ""
+            kind_txt = f" ({kind})" if kind else ""
+            _emit("dspy_step", frac, f"{cfg.dspy_optimizer} step {i}{kind_txt}{score_txt}")
+        elif phase == "re_eval":
+            _emit("dspy_step", 0.86, "Prompt optimization — re-evaluating optimized prompt")
+
     # --- Stage 1: Joint BO over (chunk_size, chunk_overlap, top_k) ----
     ckpt_joint = ckpts.get(mode, "joint") if ckpts is not None else None
     joint_ctx = StageContext(
@@ -1134,6 +1200,7 @@ def _run_one_mode(
         top_ks=cfg.top_ks,
         checkpoint=ckpt_joint,
         checkpoint_store=ckpt_store,
+        progress_cb=_bo_progress,
     )
     _emit("bo_start", 0.02, f"Bayesian RAG-config search ({cfg.n_bo_trials} trials)")
     joint_result = JointOptimizer().optimize(joint_ctx)
@@ -1181,6 +1248,7 @@ def _run_one_mode(
         checkpoint_store=ckpt_store,
         dspy_optimizer=cfg.dspy_optimizer,
         mipro_auto=cfg.mipro_auto,
+        progress_cb=_gen_progress,
     )
     _emit("dspy_start", 0.58, f"Prompt optimization ({cfg.dspy_optimizer}, {cfg.mipro_auto})")
     gen_result = GenerationOptimizer().optimize(gen_ctx)
