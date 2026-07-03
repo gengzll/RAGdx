@@ -46,6 +46,33 @@ _STAGE_CHECKLIST: list[tuple[str, str]] = [
 # later and to resume an interrupted run from its checkpoints.
 _RUNS_ROOT = Path(".ragdx_ui_runs")
 
+# Process-wide registry of the single in-flight run. ``st.session_state``
+# is per-browser-session: a page refresh resets it to idle while the
+# engine daemon thread keeps running — and a user who then clicks
+# Resume again stacks a SECOND engine thread onto the same endpoint
+# (observed in production: 240 threads fighting over one rate-limited
+# endpoint, every ragas job timing out). New sessions adopt the run
+# recorded here instead of believing nothing is running.
+_ACTIVE_RUN: dict[str, Any] = {}
+
+
+def _active_run_alive() -> bool:
+    t = _ACTIVE_RUN.get("thread")
+    return t is not None and t.is_alive()
+
+
+def _adopt_active_run(ss) -> None:
+    """Re-attach a fresh browser session to the in-flight run, sharing
+    the same queue/event/log objects the worker writes into."""
+    ss.phase = "running"
+    ss.run_name = _ACTIVE_RUN["name"]
+    ss.queue = _ACTIVE_RUN["queue"]
+    ss.events = _ACTIVE_RUN["events"]
+    ss.logs = _ACTIVE_RUN["logs"]
+    ss.output_dir = _ACTIVE_RUN["output_dir"]
+    ss.thread = _ACTIVE_RUN["thread"]
+    ss._checklist_state = None
+
 
 def _slugify(name: str) -> str:
     """Filesystem- and checkpoint-group-safe experiment name."""
@@ -134,6 +161,12 @@ def _run_app() -> None:
     ss.setdefault("error", None)
     ss.setdefault("confirm_upload", False)
     ss.setdefault("confirm_settings", False)
+
+    # A page refresh resets session_state but not the engine thread —
+    # re-attach to the in-flight run so this session shows its progress
+    # (and the Run/Resume buttons stay correctly disabled).
+    if ss.phase != "running" and _active_run_alive():
+        _adopt_active_run(ss)
 
     # ------------------------------------------------- sidebar: connection
     with st.sidebar:
@@ -724,6 +757,16 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
     threads. The worker also keeps ``meta.json`` up to date so the run
     can be found, viewed, and resumed across app restarts.
     """
+    # Hard guard against stacking a second engine thread (e.g. Resume
+    # clicked in a fresh session while an adopted-run check was missed).
+    if _active_run_alive():
+        ss.error = (
+            f"Experiment `{_ACTIVE_RUN.get('name')}` is still running — "
+            "wait for it to finish before starting another."
+        )
+        ss.phase = "error"
+        return
+
     ss.events = []
     ss.logs = []
     ss.bundle = None
@@ -822,6 +865,17 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
     t = threading.Thread(target=_worker, daemon=True)
     t.start()
     ss.thread = t
+    # Register process-wide so fresh browser sessions (page refresh)
+    # adopt this run instead of stacking another engine thread.
+    _ACTIVE_RUN.clear()
+    _ACTIVE_RUN.update(
+        name=meta["name"],
+        queue=q,
+        thread=t,
+        events=ss.events,
+        logs=ss.logs,
+        output_dir=str(run_dir / "out"),
+    )
 
 
 class _QueueLogHandler(logging.Handler):
