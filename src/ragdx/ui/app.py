@@ -173,10 +173,9 @@ def _run_app() -> None:
         st.header("Connection")
         st.caption("LLM endpoint used for generation, judging, and prompt tuning.")
         model = st.text_input(
-            "Model", value="openai/glm-4-airx",
-            help="LiteLLM id at the endpoint below. glm-4-airx is Zhipu's "
-            "fast-inference model (paid). Free alternatives: "
-            "openai/glm-4-flash, openai/glm-4.5-flash (slower). "
+            "Model", value="openai/glm-4-flash",
+            help="LiteLLM id at the endpoint below. Faster Zhipu options: "
+            "openai/glm-4-flashx, openai/glm-4-airx, openai/glm-4.5-flash. "
             "Any OpenAI-compatible endpoint works (e.g. gpt-4o-mini).",
         )
         api_base = st.text_input("API base URL", value="https://open.bigmodel.cn/api/paas/v4")

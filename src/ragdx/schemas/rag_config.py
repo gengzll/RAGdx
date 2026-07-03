@@ -166,7 +166,7 @@ class GeneratorSpec(BaseModel):
     transparently handles OpenAI-compatible endpoints (Zhipu, vLLM,
     LM Studio, ...) used in ragdx's demos."""
 
-    model: str = "openai/glm-4-airx"
+    model: str = "openai/glm-4-flash"
     api_base: str = "https://open.bigmodel.cn/api/paas/v4"
     api_key: str | None = None
     """If unset, runtime resolves from ``ZHIPU_API_KEY`` /
