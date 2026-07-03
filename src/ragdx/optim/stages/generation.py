@@ -117,7 +117,21 @@ class GenerationOptimizer(StageOptimizer):
         runtime = ctx.runtime
         records_with_ctxs = ctx.records
 
-        dspy.configure(lm=runtime.dspy_lm)
+        # Best-effort global default only: dspy 3.x allows ``configure``
+        # solely from the thread that first configured it, and the studio
+        # runs every experiment in a fresh worker thread — so a second
+        # run in the same process would crash here. Every actual dspy
+        # call in this stage (program invocations, ``adapter.optimize``'s
+        # compile, judge metrics) is wrapped in thread-local
+        # ``dspy.context(lm=...)``, which does not need the global.
+        try:
+            dspy.configure(lm=runtime.dspy_lm)
+        except RuntimeError:
+            logger.info(
+                "[DSPy/%s] global dspy.configure owned by another thread; "
+                "relying on per-call dspy.context (thread-local).",
+                ctx.label,
+            )
         adapter = DSPyAdapter()
         # Hand the same system instruction to the DSPy baseline so its
         # before/after comparison shares the exact prompt the BO stage used.
