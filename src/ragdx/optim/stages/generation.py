@@ -116,6 +116,14 @@ class GenerationOptimizer(StageOptimizer):
 
         runtime = ctx.runtime
         records_with_ctxs = ctx.records
+        # Display label for log lines — the phase messages predate
+        # multi-optimizer support and used to hardcode "MIPROv2".
+        _opt_label = {
+            "mipro": "MIPROv2",
+            "copro": "COPRO",
+            "bootstrap_fewshot": "BootstrapFewShot",
+            "gepa": "GEPA",
+        }.get(getattr(ctx, "dspy_optimizer", "mipro"), "DSPy")
 
         # Best-effort global default only: dspy 3.x allows ``configure``
         # solely from the thread that first configured it, and the studio
@@ -332,9 +340,10 @@ class GenerationOptimizer(StageOptimizer):
         # ``winning_instruction`` text (cheap) and skip MIPROv2 entirely.
         if phase_done in {"miprov2", "re_eval"}:
             logger.info(
-                "[DSPy/%s] (b) MIPROv2 -- resumed from checkpoint, "
+                "[DSPy/%s] (b) %s -- resumed from checkpoint, "
                 "skipping ~%d trial(s)",
                 ctx.label,
+                _opt_label,
                 len(artifacts.get("trial_scores", [])),
             )
             winning_instruction_ck = artifacts.get("winning_instruction", "")
@@ -372,7 +381,7 @@ class GenerationOptimizer(StageOptimizer):
             _patch_installed = False
         else:
             _phase_marks["baseline_s"] = round(_time.time() - _t0, 2)
-            logger.info("[DSPy/%s] (b) MIPROv2 optimisation", ctx.label)
+            logger.info("[DSPy/%s] (b) %s optimisation", ctx.label, _opt_label)
             _stage_progress(ctx, {"phase": "optimize"})
 
             def _opt_step(n: int, last: dict) -> None:
