@@ -193,6 +193,21 @@ class RagasAdapter:
                     "Unable to extract scores from ragas result; install pandas or upgrade ragas."
                 ) from None
 
+        # A metric whose mean is NaN (every per-record judge call failed
+        # or was unparsable) must not silently vanish: it means the
+        # composite objective is optimizing WITHOUT that signal. Warn
+        # loudly, then drop it (NaN would poison downstream arithmetic).
+        nan_metrics = [k for k, v in raw_scores.items() if v != v]
+        if nan_metrics:
+            logger.warning(
+                "ragas produced NaN for metric(s) %s across all %d "
+                "record(s) — they contribute NOTHING to composite scores "
+                "for this evaluation. Common causes: judge output "
+                "unparsable for that metric, or per-job timeouts.",
+                nan_metrics, len(records),
+            )
+            raw_scores = {k: v for k, v in raw_scores.items() if v == v}
+
         out = self.normalize_scores(raw_scores)
         out.metadata.update(
             {

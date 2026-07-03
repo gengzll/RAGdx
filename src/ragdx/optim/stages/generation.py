@@ -152,15 +152,33 @@ class GenerationOptimizer(StageOptimizer):
         )
 
         def _run_program(program):
+            import time as _t
+
             out = []
+            n_attempts = max(1, int(getattr(runtime, "llm_max_retries", 3)))
             for r in records_with_ctxs:
                 ctx_str = "\n".join(r.contexts) if r.contexts else ""
-                try:
-                    with dspy.context(lm=runtime.dspy_lm):
-                        pred = program(question=r.question, context=ctx_str)
-                    ans = str(getattr(pred, "answer", "") or "")
-                except Exception as e:  # pragma: no cover - live LLM
-                    ans = f"<error: {e}>"
+                ans = ""
+                # Transient endpoint errors (connection resets, 5xx) must
+                # not leak error text into the eval set — retry with
+                # backoff; a record that still fails is left with an
+                # empty answer, which the evaluator excludes from scoring.
+                for attempt in range(n_attempts):
+                    try:
+                        with dspy.context(lm=runtime.dspy_lm):
+                            pred = program(question=r.question, context=ctx_str)
+                        ans = str(getattr(pred, "answer", "") or "")
+                        break
+                    except Exception as e:  # pragma: no cover - live LLM
+                        if attempt + 1 >= n_attempts:
+                            logger.warning(
+                                "[DSPy/%s] generation failed after %d attempts "
+                                "for question %r: %s — record excluded from eval",
+                                ctx.label, n_attempts, r.question[:60], e,
+                            )
+                            ans = ""
+                        else:
+                            _t.sleep(min(2 ** attempt, 15))
                 out.append(
                     DatasetRecord(
                         question=r.question,

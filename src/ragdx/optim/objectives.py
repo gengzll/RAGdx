@@ -287,6 +287,7 @@ def default_objective(mode: GTMode) -> CompositeObjective:
                 "answer_correctness": 1.5,
                 "context_recall": 1.0,
                 "context_precision": 1.0,
+                "context_entities_recall": 0.5,
                 "answer_relevancy": 0.5,
                 "g_eval": 0.5,
                 "hallucination": 0.5,

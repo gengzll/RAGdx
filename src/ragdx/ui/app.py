@@ -486,17 +486,51 @@ def _run_app() -> None:
         "metrics (hallucination/bias/toxicity) are auto-inverted."
     )
     _gt_mode_now = "with_gt" if gt_file is not None else "no_gt"
-    _default_weights = dict(default_objective(_gt_mode_now).metrics)
+    # Always show the FULL metric set (with-GT superset); GT-only
+    # metrics are disabled in no-GT mode instead of hidden, so users
+    # can see what providing ground truth would unlock.
+    _full_defaults = dict(default_objective("with_gt").metrics)
+    _mode_defaults = dict(default_objective(_gt_mode_now).metrics)
+    _gt_only = set(_full_defaults) - set(default_objective("no_gt").metrics)
+    # Which metrics are actually computed PER TRIAL during the RAG
+    # search vs only once on the final answers (deepeval supplement).
+    _final_only = {"g_eval", "hallucination", "bias", "toxicity"}
     objective_weights: dict[str, float] = {}
     with st.expander("Adjust metric weights", expanded=False):
+        def _weight_row(metric: str, wdefault: float) -> None:
+            gt_locked = metric in _gt_only and _gt_mode_now == "no_gt"
+            val = st.number_input(
+                metric + (" (needs GT)" if gt_locked else ""),
+                0.0, 10.0, float(wdefault), step=0.1,
+                disabled=running or gt_locked,
+                key=f"w_{metric}",
+                help="Requires a ground-truth file — upload one to enable."
+                if gt_locked else None,
+            )
+            if not gt_locked:
+                objective_weights[metric] = val
+
+        st.markdown(
+            "**Computed per trial during the RAG search** — these weights "
+            "directly steer the Bayesian optimization:"
+        )
+        live_metrics = [m for m in _full_defaults if m not in _final_only]
         wcols = st.columns(3)
-        for i, (metric, wdefault) in enumerate(_default_weights.items()):
+        for i, m in enumerate(live_metrics):
             with wcols[i % 3]:
-                objective_weights[metric] = st.number_input(
-                    metric, 0.0, 10.0, float(wdefault), step=0.1,
-                    disabled=running, key=f"w_{metric}",
-                )
-    weights_customized = objective_weights != _default_weights
+                _weight_row(m, _full_defaults[m])
+
+        st.markdown(
+            "**Computed once on the final answers** (deepeval supplement) — "
+            "these weight the report's headline composite but do NOT steer "
+            "the per-trial search:"
+        )
+        fcols = st.columns(4)
+        for i, m in enumerate(sorted(_final_only)):
+            with fcols[i % 4]:
+                _weight_row(m, _full_defaults[m])
+
+    weights_customized = objective_weights != _mode_defaults
     if weights_customized:
         st.info("Custom objective weights will be used for this run.")
 

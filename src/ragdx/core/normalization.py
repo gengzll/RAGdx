@@ -32,6 +32,11 @@ RAGAS_MAP: dict[str, tuple[str, str]] = {
     "context_precision": ("retrieval", "context_precision"),
     "context_recall": ("retrieval", "context_recall"),
     "context_entity_recall": ("retrieval", "context_entities_recall"),
+    # ragas' classic relevancy metric reports as ``answer_relevancy``.
+    # This entry was missing, which silently dropped the metric from
+    # every result — the composite objective weighted a score that
+    # never existed, so the BO search was blind to relevancy.
+    "answer_relevancy": ("generation", "answer_relevancy"),
     "response_relevancy": ("generation", "response_relevancy"),
     "faithfulness": ("generation", "faithfulness"),
     "noise_sensitivity": ("generation", "noise_sensitivity"),

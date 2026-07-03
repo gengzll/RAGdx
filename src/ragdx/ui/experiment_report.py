@@ -408,69 +408,6 @@ def _render_causal_graph_svg(signals: list[dict], graph: dict | None = None) -> 
     )
 
 
-def _render_answer_diff(baseline: str, optimized: str) -> str:
-    """Phase 4b: word-level baseline-vs-optimized diff with colours.
-
-    Uses ``difflib.ndiff`` on word tokens. The shape:
-    * equal tokens render plain.
-    * tokens only in baseline render struck-through in red ("removed").
-    * tokens only in optimized render bold in green ("added").
-    Whitespace is preserved verbatim. Empty diff (identical strings)
-    returns ``""`` so the caller can skip the section entirely.
-    """
-    import difflib
-    import re as _re
-
-    if not baseline and not optimized:
-        return ""
-    if baseline == optimized:
-        return (
-            '<p class="caption"><em>(Baseline and optimized answers '
-            'are identical -- prompt change had no textual effect on '
-            'this record.)</em></p>'
-        )
-
-    # Tokenise by word boundaries while keeping the separators. Newlines
-    # get their own token so paragraph breaks survive.
-    def _tokens(text: str) -> list[str]:
-        return [t for t in _re.split(r'(\s+)', text) if t != ""]
-
-    base_toks = _tokens(baseline)
-    opt_toks = _tokens(optimized)
-
-    sm = difflib.SequenceMatcher(a=base_toks, b=opt_toks, autojunk=False)
-    parts: list[str] = []
-    for tag, i1, i2, j1, j2 in sm.get_opcodes():
-        if tag == "equal":
-            parts.append(_esc("".join(base_toks[i1:i2])))
-        elif tag == "delete":
-            parts.append(
-                f'<span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">'
-                f'{_esc("".join(base_toks[i1:i2]))}</span>'
-            )
-        elif tag == "insert":
-            parts.append(
-                f'<span style="background:#dcfce7;font-weight:600;color:#166534">'
-                f'{_esc("".join(opt_toks[j1:j2]))}</span>'
-            )
-        elif tag == "replace":
-            parts.append(
-                f'<span style="background:#fee2e2;text-decoration:line-through;color:#991b1b">'
-                f'{_esc("".join(base_toks[i1:i2]))}</span>'
-            )
-            parts.append(
-                f'<span style="background:#dcfce7;font-weight:600;color:#166534">'
-                f'{_esc("".join(opt_toks[j1:j2]))}</span>'
-            )
-    return (
-        '<h4>Answer diff (baseline -> optimized)</h4>'
-        '<p class="caption">Red strikethrough = removed by optimization. '
-        'Green bold = added. Plain = unchanged.</p>'
-        f'<pre style="white-space:pre-wrap;background:#fafbfc;padding:12px;'
-        f'border:1px solid var(--line);border-radius:6px">{"".join(parts)}</pre>'
-    )
-
-
 def _render_run_cost(bundle: dict) -> str:
     """Phase 4e: surface "what did this run cost" -- per-trial wall
     time, mean per-question latency, total runtime. Token / dollar
@@ -1669,7 +1606,12 @@ def _render_dspy_a_b(bundle: dict) -> str:
                 '<code>params</code> describes what the optimizer tried on '
                 'that trial (candidate indices for MIPROv2, proposal-vs-prior '
                 'summaries for GEPA). Combine with the candidate list above '
-                'to see which prompt got tried on which trial.</p>'
+                'to see which prompt got tried on which trial. '
+                '<strong>Reading GEPA rows:</strong> "subsample (accepted → '
+                'full eval)" only means the candidate advanced to a full '
+                'valset check — the selected program changes <em>only</em> '
+                'when a "full valset eval (accepted)" row follows. A run can '
+                'accept several subsamples yet still keep the seed prompt.</p>'
             )
             rows_t = []
             for t in trial_log:
@@ -1753,15 +1695,6 @@ def _render_dspy_a_b(bundle: dict) -> str:
                 qa_rows.append({"field": "optimized answer",
                                 "content": r.get("optimized_answer", "")})
                 inspector += _table(qa_rows, cols=["field", "content"])
-                # Phase 4b: word-level diff between baseline and optimized.
-                # Helps the reader spot where the prompt change actually
-                # moved the wording vs where DSPy just kept the seed text.
-                diff_html = _render_answer_diff(
-                    r.get("baseline_answer", "") or "",
-                    r.get("optimized_answer", "") or "",
-                )
-                if diff_html:
-                    inspector += diff_html
             parts.append(_details(
                 f"Per-record before/after (first {len(show)} of {len(recs)})",
                 inspector,

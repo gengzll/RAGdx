@@ -531,7 +531,14 @@ class _GEPATrialScoreCapture(logging.Handler):
             sub_score = float(m.group(2))
             rejected = bool(m.group(3))
             old_score = float(m.group(4))
-            kind = "subsample (rejected)" if rejected else "subsample (accepted)"
+            # "accepted" at the subsample stage only promotes the
+            # candidate to a full valset evaluation — it does NOT make
+            # it the winner. Only a subsequent "full valset eval
+            # (accepted)" row changes the selected program.
+            kind = (
+                "subsample (rejected)" if rejected
+                else "subsample (accepted → full eval)"
+            )
             params = (
                 f"Iter {iter_num}: proposed score {sub_score:.2f} vs prior best {old_score:.2f}"
             )
@@ -929,14 +936,23 @@ def _make_rag_config(cfg: ExperimentConfig, runtime: _Runtime) -> RAGConfig:
 
 def _build_ragas_metrics_for_mode(mode: str) -> list:
     from ragas.metrics import (
+        answer_correctness,
         answer_relevancy,
+        context_entity_recall,
         context_precision,
         context_recall,
         faithfulness,
     )
 
     if mode == "with_gt":
-        return [faithfulness, answer_relevancy, context_precision, context_recall]
+        # NOTE: keep this in sync with ``default_objective("with_gt")`` —
+        # every weighted metric the BO stage is supposed to optimize must
+        # actually be computed per trial (answer_correctness and
+        # context_entity_recall were historically weighted but missing).
+        return [
+            faithfulness, answer_relevancy, answer_correctness,
+            context_precision, context_recall, context_entity_recall,
+        ]
     return [faithfulness, answer_relevancy, context_precision]
 
 
@@ -956,6 +972,25 @@ def _evaluate_with_ragas(
     concurrency on strict rate-limit endpoints; pass ``None`` to let
     ragas use its own defaults (``max_workers=16``).
     """
+    # Exclude records whose generation FAILED (the answer is an error
+    # sentinel or empty). Scoring an error string poisons every metric
+    # — faithfulness 0, hallucination 1 — and those aren't measurements
+    # of the RAG config, they're transport noise.
+    valid_indices = [
+        i for i, r in enumerate(records)
+        if (r.answer or "").strip() and not (r.answer or "").lstrip().startswith(("<error", "<generation error"))
+    ]
+    valid = [records[i] for i in valid_indices]
+    n_failed = len(records) - len(valid)
+    if n_failed:
+        logger.warning(
+            "_evaluate_with_ragas: excluding %d/%d record(s) whose "
+            "generation failed (error/empty answers) from scoring.",
+            n_failed, len(records),
+        )
+    if not valid:
+        return {"error": "all generations failed", "scores": {}, "generation_failures": n_failed}
+
     evaluator = UnifiedEvaluator()
     try:
         ragas_kwargs: dict[str, Any] = {
@@ -964,18 +999,26 @@ def _evaluate_with_ragas(
         if run_config is not None:
             ragas_kwargs["run_config"] = run_config
         result = evaluator.evaluate(
-            records,
+            valid,
             use_ragas=True, run_ragas=True,
             use_ragchecker=False, use_embedding=False,
             ragas_kwargs=ragas_kwargs,
         )
+        # Re-align per-record rows with the CALLER's record list (failed
+        # records get an empty dict) so positional zips stay correct.
+        per_rec_valid = result.metadata.get("per_record_scores", []) or []
+        per_rec_full: list[dict] = [{} for _ in records]
+        for pos, orig_idx in enumerate(valid_indices):
+            if pos < len(per_rec_valid):
+                per_rec_full[orig_idx] = per_rec_valid[pos]
         return {
             "scores": {**result.retrieval, **result.generation, **result.e2e},
             "skipped": result.metadata.get("skipped_metrics", {}),
+            "generation_failures": n_failed,
             # Phase 4a: forward per-record metric rows so trial bundles
             # can carry them through to the HTML report. Empty list when
             # the underlying ragas Result couldn't expose them.
-            "per_record_scores": result.metadata.get("per_record_scores", []),
+            "per_record_scores": per_rec_full if per_rec_valid else [],
         }
     except Exception as e:  # pragma: no cover - live LLM
         # Surface the error so silent eval failures don't get buried.
@@ -1350,6 +1393,15 @@ def _run_one_mode(
         "baseline": comp_base,
         "optimized": comp_opt,
         "delta": comp_opt["score"] - comp_base["score"],
+    }
+    # Recompute the per-metric delta over the SUPPLEMENTED score union —
+    # the stage computed it before the deepeval metrics existed, which
+    # left them rendering as N/A in the before/after table.
+    gen_result.extras["delta"] = {
+        m: (
+            opt_scores.get(m, float("nan")) - base_scores.get(m, float("nan"))
+        )
+        for m in sorted(set(base_scores) | set(opt_scores))
     }
     gen_result.extras["final_scores"] = opt_scores
 

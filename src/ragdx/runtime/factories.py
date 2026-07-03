@@ -208,7 +208,7 @@ def build_llm_callable(spec: GeneratorSpec, *, max_retries: int = 5) -> Callable
     return llm_callable
 
 
-def build_dspy_lm(spec: GeneratorSpec) -> Any:
+def build_dspy_lm(spec: GeneratorSpec, *, max_retries: int = 5) -> Any:
     """Return a ``dspy.LM`` configured for the generator."""
     import dspy
 
@@ -219,6 +219,10 @@ def build_dspy_lm(spec: GeneratorSpec) -> Any:
         temperature=spec.temperature,
         max_tokens=max(spec.max_tokens, 400),  # DSPy programs sometimes need more
         cache=False,
+        # Transport-layer retries (litellm) — without this, a single
+        # connection blip mid-optimization surfaced as an exception and
+        # poisoned the answer set with error text.
+        num_retries=max_retries,
     )
 
 
@@ -397,7 +401,7 @@ def build_runtime(config: RAGConfig) -> RagdxRuntime:
 
     embedder = build_embedder(config.embedder)
     llm_callable = build_llm_callable(gen, max_retries=config.judge.llm_max_retries)
-    dspy_lm = build_dspy_lm(gen)
+    dspy_lm = build_dspy_lm(gen, max_retries=config.judge.llm_max_retries)
     ragas_embeddings = build_ragas_embeddings(embedder)
     ragas_judge = build_ragas_judge(config.judge, fallback=gen)
     ragas_run_config = build_ragas_run_config(config.judge)
