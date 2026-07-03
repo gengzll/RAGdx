@@ -53,7 +53,16 @@ _RUNS_ROOT = Path(".ragdx_ui_runs")
 # (observed in production: 240 threads fighting over one rate-limited
 # endpoint, every ragas job timing out). New sessions adopt the run
 # recorded here instead of believing nothing is running.
-_ACTIVE_RUN: dict[str, Any] = {}
+#
+# CRITICAL: streamlit re-executes this script (fresh module namespace)
+# on every rerun, so a plain module global here would reset each time.
+# Anchor the dict on the ``ragdx.ui`` package, which lives in
+# ``sys.modules`` and survives for the whole server process.
+import ragdx.ui as _ragdx_ui_pkg  # noqa: E402 — must follow the registry docstring block
+
+if not hasattr(_ragdx_ui_pkg, "_ACTIVE_RUN_REGISTRY"):
+    _ragdx_ui_pkg._ACTIVE_RUN_REGISTRY = {}
+_ACTIVE_RUN: dict[str, Any] = _ragdx_ui_pkg._ACTIVE_RUN_REGISTRY
 
 
 def _active_run_alive() -> bool:
@@ -811,6 +820,13 @@ def _launch_worker(*, ss, run_experiment, run_dir, meta, api_key, resume) -> Non
         except Exception:  # pragma: no cover - meta is best-effort
             pass
 
+    # Persist "running" (and drop any error from a previous failed
+    # attempt) to disk immediately — the viewer re-reads meta.json on
+    # every rerun and would otherwise keep showing the stale error
+    # banner for the whole resumed run.
+    meta_snapshot.pop("error", None)
+    _update_meta(status="running")
+
     def _worker() -> None:
         handler = _QueueLogHandler(q)
         handler.setLevel(logging.INFO)
@@ -1029,7 +1045,10 @@ def _render_run_viewer(*, ss, st, name, render_report, run_experiment, api_key) 
     c1.metric("Status", badge)
     c2.metric("Created", meta.get("created_at", "—"))
     c3.metric("Finished", meta.get("finished_at", "—"))
-    if meta.get("error"):
+    # Only surface the stored error while the run is actually IN the
+    # error state — a resumed (running) or completed run must not keep
+    # showing a stale banner from an earlier failed attempt.
+    if meta.get("error") and status == "error":
         st.error(meta["error"])
 
     with st.expander("Configuration", expanded=(status != "done")):
