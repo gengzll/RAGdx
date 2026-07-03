@@ -375,6 +375,7 @@ def _run_app() -> None:
     # Defaults that apply when a sub-section is hidden by the scope.
     n_bo_trials, n_bo_init = 8, 3
     dspy_optimizer, mipro_auto = "gepa", "light"
+    reflection_model = ""
     search_space_ok = True
 
     if stages in ("all", "rag"):
@@ -475,8 +476,20 @@ def _run_app() -> None:
             mipro_auto = st.selectbox(
                 "Optimizer budget", ["light", "medium", "heavy"], index=0, disabled=running,
                 help="How hard the optimizer searches. GEPA: ~30 / 100 / 300 LLM "
-                "calls. Use 'light' for a quick run.",
+                "calls. 'light' is a quick smoke run — if you want the "
+                "optimizer to actually beat the baseline prompt, use "
+                "'medium' or higher.",
             )
+        reflection_model = st.text_input(
+            "Reflection model (GEPA, optional)",
+            value="",
+            disabled=running,
+            help="A separate, STRONGER model that writes GEPA's candidate "
+            "prompts (e.g. openai/glm-4-plus, gpt-4o). Leave empty to use "
+            "the generator model. This is the single biggest lever for "
+            "getting candidates that genuinely beat the seed prompt — a "
+            "weak reflector mostly proposes paraphrases.",
+        )
 
     st.markdown("#### Composite objective weights")
     st.caption(
@@ -625,6 +638,7 @@ def _run_app() -> None:
                 system_instruction=system_instruction or None,
                 dspy_optimizer=dspy_optimizer,
                 mipro_auto=mipro_auto,
+                reflection_model=reflection_model or "",
                 stages=stages,
                 chunk_sizes=sorted(chunk_sizes),
                 chunk_overlaps=sorted(chunk_overlaps),

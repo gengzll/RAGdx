@@ -99,6 +99,11 @@ class StageContext:
     """Optional :class:`ragdx.checkpoint.CheckpointStore` for the
     per-trial save. Ignored when ``checkpoint`` is ``None``."""
 
+    reflection_model: str = ""
+    """Optional separate LM id for GEPA's reflection step (writes the
+    candidate prompts). Empty = generator model. Stronger reflectors
+    produce materially better candidates."""
+
     progress_cb: Any = None
     """Optional ``Callable[[dict], None]`` for fine-grained progress.
     The BO loop calls it after every trial with ``{done, total,

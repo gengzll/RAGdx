@@ -538,9 +538,26 @@ class GenerationOptimizer(StageOptimizer):
                 # be able to exceed the seed prompt's length (the demo
                 # seed alone is ~5000 chars), so give the reflection
                 # copy generous headroom.
-                _reflection_lm = runtime.dspy_lm
+                _reflection_model = getattr(ctx, "reflection_model", "") or ""
+                if _reflection_model:
+                    # A dedicated (typically stronger) LM writes the
+                    # candidate prompts. Weak reflectors mostly emit
+                    # paraphrases of the seed, which is the main reason
+                    # small-model GEPA runs keep the baseline prompt.
+                    from ragdx.runtime.factories import build_dspy_lm
+                    _spec = ctx.base_config.generator.model_copy(
+                        update={"model": _reflection_model, "max_tokens": 4000},
+                    )
+                    _reflection_lm = build_dspy_lm(_spec)
+                    logger.info(
+                        "[DSPy/%s] GEPA reflection model: %s",
+                        ctx.label, _reflection_model,
+                    )
+                else:
+                    _reflection_lm = runtime.dspy_lm
                 try:
-                    _reflection_lm = runtime.dspy_lm.copy(max_tokens=4000)
+                    if not _reflection_model:
+                        _reflection_lm = runtime.dspy_lm.copy(max_tokens=4000)
                 except Exception:  # pragma: no cover - older dspy
                     logger.warning(
                         "[DSPy/%s] dspy.LM.copy unavailable; GEPA "

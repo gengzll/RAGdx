@@ -214,6 +214,14 @@ class ExperimentConfig:
     MIPROv2 it is the ``auto`` preset. Bigger budgets search harder but
     cost proportionally more LLM calls."""
 
+    reflection_model: str = ""
+    """Optional separate LM for GEPA's reflection step (the model that
+    READS execution traces and WRITES candidate prompts). Empty = use
+    the generator model. A stronger reflection model (e.g.
+    ``openai/glm-4-plus``, ``gpt-4o``) markedly improves candidate
+    quality — weak reflectors mostly propose paraphrases of the seed,
+    which is why small-model runs often keep the baseline prompt."""
+
     stages: str = "all"
     """Which optimization stages to run: ``"all"`` (default), ``"rag"``
     (Bayesian config search only — the BO winner is the final system),
@@ -1333,6 +1341,7 @@ def _run_one_mode(
         checkpoint_store=ckpt_store,
         dspy_optimizer=cfg.dspy_optimizer,
         mipro_auto=cfg.mipro_auto,
+        reflection_model=cfg.reflection_model,
         progress_cb=_gen_progress,
     )
     _emit("dspy_start", 0.58, f"Prompt optimization ({cfg.dspy_optimizer}, {cfg.mipro_auto})")
@@ -2148,6 +2157,7 @@ def run_experiment(
     system_instruction: str | None = None,
     dspy_optimizer: str = "gepa",
     mipro_auto: str = "light",
+    reflection_model: str = "",
     stages: str = "all",
     save: bool = True,
     resume: str = "",
@@ -2257,6 +2267,7 @@ def run_experiment(
         system_instruction=system_instruction,
         dspy_optimizer=dspy_optimizer,
         mipro_auto=mipro_auto,
+        reflection_model=reflection_model,
         stages=stages,
     )
 
