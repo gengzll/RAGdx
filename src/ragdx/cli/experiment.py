@@ -110,12 +110,6 @@ def experiment(
         "maps to max_metric_calls (30 / 100 / 300); for MIPROv2 the "
         "'auto' preset. Bigger = more thorough but more LLM calls.",
     ),
-    reflection_model: str = typer.Option(
-        "", "--reflection-model",
-        help="Separate LM for GEPA's reflection step (writes candidate "
-        "prompts). Empty = the generator model. A stronger reflector "
-        "(e.g. openai/glm-4-plus) markedly improves candidates.",
-    ),
     stages: str = typer.Option(
         "all", "--stages",
         help="Which optimization stages to run: 'all' (default), 'rag' "
@@ -213,7 +207,6 @@ def experiment(
             system_instruction=resolved_instruction,
             dspy_optimizer=dspy_optimizer,
             mipro_auto=mipro_auto,
-            reflection_model=reflection_model,
             stages=stages,
             save=not no_save,
             resume=resume,
