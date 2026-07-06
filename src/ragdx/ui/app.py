@@ -375,6 +375,7 @@ def _run_app() -> None:
     # Defaults that apply when a sub-section is hidden by the scope.
     n_bo_trials, n_bo_init = 8, 3
     dspy_optimizer, mipro_auto = "gepa", "light"
+    dspy_metric = "auto"
     search_space_ok = True
 
     if stages in ("all", "rag"):
@@ -475,8 +476,22 @@ def _run_app() -> None:
             mipro_auto = st.selectbox(
                 "Optimizer budget", ["light", "medium", "heavy"], index=0, disabled=running,
                 help="How hard the optimizer searches. GEPA: ~30 / 100 / 300 LLM "
-                "calls. Use 'light' for a quick run.",
+                "calls. Use 'light' for a quick run; 'medium'+ gives the "
+                "optimizer a real chance to beat the baseline prompt.",
             )
+        dspy_metric = st.selectbox(
+            "Inner-loop metric",
+            ["auto", "pairwise", "embed_rubric", "ragas", "token_f1"],
+            index=0,
+            disabled=running,
+            help="How the prompt optimizer scores each candidate. "
+            "'auto' = pairwise for no-GT, token-F1 for with-GT. "
+            "'pairwise': an LLM judge compares the candidate's answer "
+            "against the BASELINE answer for the same question "
+            "(win=1 / tie=0.5 / loss=0) — a relative signal that cannot "
+            "saturate, recommended when absolute judge scores all come "
+            "back ~1.0. 'token_f1' needs ground truth.",
+        )
 
     st.markdown("#### Composite objective weights")
     st.caption(
@@ -625,6 +640,7 @@ def _run_app() -> None:
                 system_instruction=system_instruction or None,
                 dspy_optimizer=dspy_optimizer,
                 mipro_auto=mipro_auto,
+                dspy_metric=dspy_metric,
                 stages=stages,
                 chunk_sizes=sorted(chunk_sizes),
                 chunk_overlaps=sorted(chunk_overlaps),

@@ -264,17 +264,41 @@ class GenerationOptimizer(StageOptimizer):
             )
 
         # ----- Pick the inner-loop DSPy metric (PR6+) -----------------
-        # Default for no-GT: ``embed_rubric`` (2 embedding cosines + a
-        # single multi-output LLM rubric). Cheaper and more
-        # discriminative than the ragas composite, which wastes a slot
-        # on the retrieval-only ``context_precision`` and another on
-        # ``faithfulness`` (saturates on permissive judges). Default
+        # Default for no-GT: ``pairwise`` — the judge compares each
+        # candidate answer AGAINST THE BASELINE ANSWER for the same
+        # question (win=1 / tie=0.5 / loss=0). Absolute judge scores
+        # saturate on permissive LMs (everything gets ~1.0, candidates
+        # tie with the seed); a relative comparison cannot saturate,
+        # and its one-line verdict feeds GEPA's reflection. Default
         # for with-GT stays token-F1 vs GT. Users override via
-        # ``--dspy-metric {embed_rubric, ragas, llm_judge, token_f1}``.
+        # ``--dspy-metric {pairwise, embed_rubric, ragas, llm_judge, token_f1}``.
         dspy_metric_choice = getattr(ctx, "dspy_metric", "auto")
         if dspy_metric_choice == "auto":
-            dspy_metric_choice = "embed_rubric" if ctx.label == "no_gt" else "token_f1"
+            dspy_metric_choice = "pairwise" if ctx.label == "no_gt" else "token_f1"
         custom_metric = None
+        if dspy_metric_choice == "pairwise":
+            from ragdx.optim._pairwise_dspy_metric import make_pairwise_metric
+            try:
+                _baseline_answer_map = {
+                    r.question: (r.answer or "") for r in baseline_answered
+                }
+                custom_metric = make_pairwise_metric(
+                    judge_lm=runtime.dspy_lm,
+                    baseline_answers=_baseline_answer_map,
+                    with_feedback=(getattr(ctx, "dspy_optimizer", "") == "gepa"),
+                )
+                logger.info(
+                    "[DSPy/%s] using pairwise judge (candidate vs baseline "
+                    "answer, win=1/tie=0.5/loss=0) as inner-loop metric — "
+                    "relative comparison, cannot saturate",
+                    ctx.label,
+                )
+            except ImportError:
+                logger.warning(
+                    "[DSPy/%s] dspy not available for pairwise; falling "
+                    "back to embed_rubric", ctx.label,
+                )
+                dspy_metric_choice = "embed_rubric"
         if dspy_metric_choice == "embed_rubric":
             from ragdx.optim._embed_rubric_metric import make_embed_rubric_metric
             try:

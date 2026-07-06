@@ -393,8 +393,14 @@ class DSPyAdapter:
                 trace: Any = None,
                 pred_name: Any = None,
                 pred_trace: Any = None,
-            ) -> float:
-                return float(_inner_metric(gold, pred, trace))
+            ) -> Any:
+                out = _inner_metric(gold, pred, trace)
+                # Metrics may return ``dspy.Prediction(score=..., feedback=...)``
+                # (e.g. the pairwise judge) — GEPA consumes the feedback
+                # text in its reflection step. Pass it through untouched.
+                if hasattr(out, "score"):
+                    return out
+                return float(out)
 
             metric = _gepa_metric_adapter
         if optimizer not in teleprompters:

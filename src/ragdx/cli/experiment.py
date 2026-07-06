@@ -110,6 +110,13 @@ def experiment(
         "maps to max_metric_calls (30 / 100 / 300); for MIPROv2 the "
         "'auto' preset. Bigger = more thorough but more LLM calls.",
     ),
+    dspy_metric: str = typer.Option(
+        "auto", "--dspy-metric",
+        help="Prompt-optimizer inner-loop metric: 'auto' (pairwise for "
+        "no-GT, token-F1 for with-GT), 'pairwise' (judge compares "
+        "candidate vs baseline answer — cannot saturate), "
+        "'embed_rubric', 'ragas', 'llm_judge', or 'token_f1'.",
+    ),
     stages: str = typer.Option(
         "all", "--stages",
         help="Which optimization stages to run: 'all' (default), 'rag' "
@@ -207,6 +214,7 @@ def experiment(
             system_instruction=resolved_instruction,
             dspy_optimizer=dspy_optimizer,
             mipro_auto=mipro_auto,
+            dspy_metric=dspy_metric,
             stages=stages,
             save=not no_save,
             resume=resume,

@@ -214,6 +214,12 @@ class ExperimentConfig:
     MIPROv2 it is the ``auto`` preset. Bigger budgets search harder but
     cost proportionally more LLM calls."""
 
+    dspy_metric: str = "auto"
+    """Inner-loop metric for the prompt optimizer: ``"auto"`` (pairwise
+    for no-GT, token-F1 for with-GT), ``"pairwise"`` (LLM judge compares
+    candidate vs baseline answer — win/tie/loss; cannot saturate),
+    ``"embed_rubric"``, ``"ragas"``, ``"llm_judge"``, or ``"token_f1"``."""
+
     stages: str = "all"
     """Which optimization stages to run: ``"all"`` (default), ``"rag"``
     (Bayesian config search only — the BO winner is the final system),
@@ -1333,6 +1339,7 @@ def _run_one_mode(
         checkpoint_store=ckpt_store,
         dspy_optimizer=cfg.dspy_optimizer,
         mipro_auto=cfg.mipro_auto,
+        dspy_metric=cfg.dspy_metric,
         progress_cb=_gen_progress,
     )
     _emit("dspy_start", 0.58, f"Prompt optimization ({cfg.dspy_optimizer}, {cfg.mipro_auto})")
@@ -2148,6 +2155,7 @@ def run_experiment(
     system_instruction: str | None = None,
     dspy_optimizer: str = "gepa",
     mipro_auto: str = "light",
+    dspy_metric: str = "auto",
     stages: str = "all",
     save: bool = True,
     resume: str = "",
@@ -2257,6 +2265,7 @@ def run_experiment(
         system_instruction=system_instruction,
         dspy_optimizer=dspy_optimizer,
         mipro_auto=mipro_auto,
+        dspy_metric=dspy_metric,
         stages=stages,
     )
 
