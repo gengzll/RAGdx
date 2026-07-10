@@ -160,3 +160,6 @@ mem0_chroma/
 !docs/**/*.pdf
 # Demo transcripts live in docs/examples/ as committed reference output
 !docs/examples/*.log
+
+# Locally prepared eval datasets (scripts/prepare_dataset.py output + raw downloads)
+datasets/
